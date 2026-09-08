@@ -81,7 +81,7 @@ const StoryViewer = ({ stories, initialStoryIndex = 0, onClose, onDelete, onUser
         ? Math.min(videoDuration || 60000, 60000)
         : 5000;
 
-    const LIVE_API = "https://synapse-backend.pralayd140.workers.dev";
+    const LIVE_API = "https://synapse-backend.mrpralay2005.workers.dev";
     const token = Cookies.get('synapse_token');
 
     // --- Effects ---

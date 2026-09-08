@@ -39,7 +39,7 @@ const SettingsView = ({ user, onUpdateUser, onLogout }) => {
     const [loading, setLoading] = useState(false);
     const [statusMsg, setStatusMsg] = useState({ type: '', text: '' });
 
-    const apiUrl = "https://synapse-backend.pralayd140.workers.dev";
+    const apiUrl = "https://synapse-backend.mrpralay2005.workers.dev";
     const token = Cookies.get('synapse_token');
 
     // Vital Sync: Fetch latest user data on mount if email or isPrivate is missing

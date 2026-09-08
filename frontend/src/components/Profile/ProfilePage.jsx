@@ -9,7 +9,7 @@ const ProfilePage = ({ user, onLogout }) => {
     React.useEffect(() => {
         let isActive = true;
         if (activeTab === 'admin' && user.role === 'ADMIN') {
-            const apiUrl = "https://synapse-backend.pralayd140.workers.dev";
+            const apiUrl = "https://synapse-backend.mrpralay2005.workers.dev";
             fetch(`${apiUrl}/api/admin/users`, {
                 headers: { 'Authorization': `Bearer ${user.token}` }
             })

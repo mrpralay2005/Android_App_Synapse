@@ -19,7 +19,7 @@ const ProfileView = ({ user, currentUser, posts: parentPosts = [], onOpenCreateP
 
     // String matching to ensure IDs connect regardless of type (Number vs String)
     const isOwnProfile = String(currentUser?.id) === String(user.id);
-    const apiUrl = "https://synapse-backend.pralayd140.workers.dev";
+    const apiUrl = "https://synapse-backend.mrpralay2005.workers.dev";
     const token = Cookies.get('synapse_token');
 
     useEffect(() => {

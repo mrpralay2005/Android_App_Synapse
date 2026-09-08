@@ -52,7 +52,7 @@ const LoginBox = ({ onSwitch, onBack, onLoginSuccess, onForgot }) => {
         setStatus({ type: 'loading', message: 'Analyzing Neural Patterns...' });
 
         try {
-            const apiUrl = "https://synapse-backend.pralayd140.workers.dev";
+            const apiUrl = "https://synapse-backend.mrpralay2005.workers.dev";
             const response = await fetch(`${apiUrl}/api/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

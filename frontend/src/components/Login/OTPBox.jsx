@@ -46,7 +46,7 @@ const OTPBox = ({ email, onVerified, onBack }) => {
         setStatus({ type: 'loading', message: 'Decrypting Neural Code...' });
 
         try {
-            const apiUrl = "https://synapse-backend.pralayd140.workers.dev";
+            const apiUrl = "https://synapse-backend.mrpralay2005.workers.dev";
             const response = await fetch(`${apiUrl}/api/auth/verify-otp`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

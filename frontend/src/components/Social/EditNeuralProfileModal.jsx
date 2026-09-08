@@ -171,7 +171,7 @@ const EditNeuralProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
     const handleIdentitySync = async () => {
         setIsAnalyzing(true);
         try {
-            const apiUrl = "https://synapse-backend.pralayd140.workers.dev";
+            const apiUrl = "https://synapse-backend.mrpralay2005.workers.dev";
             const token = Cookies.get('synapse_token');
 
             const updatedProfileData = {
@@ -205,7 +205,7 @@ const EditNeuralProfileModal = ({ isOpen, onClose, user, onUpdate }) => {
     const handleSave = async () => {
         setIsAnalyzing(true);
         try {
-            const apiUrl = "https://synapse-backend.pralayd140.workers.dev";
+            const apiUrl = "https://synapse-backend.mrpralay2005.workers.dev";
             const token = Cookies.get('synapse_token');
             let profileImageUrl = user.profileImage;
 

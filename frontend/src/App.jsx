@@ -32,7 +32,7 @@ function App() {
         console.log('👀 View changed to:', view);
     }, [view]);
 
-    const LIVE_API = "https://synapse-backend.pralayd140.workers.dev";
+    const LIVE_API = "https://synapse-backend.mrpralay2005.workers.dev";
 
     useEffect(() => {
         let scrollTimeout;

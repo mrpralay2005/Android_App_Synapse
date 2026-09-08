@@ -13,7 +13,7 @@ const ReelItem = ({ post }) => {
     const [showHeart, setShowHeart] = useState(false);
     const [showMenu, setShowMenu] = useState(false);
 
-    const apiUrl = "https://synapse-backend.pralayd140.workers.dev";
+    const apiUrl = "https://synapse-backend.mrpralay2005.workers.dev";
     const token = Cookies.get('synapse_token');
 
     useEffect(() => {

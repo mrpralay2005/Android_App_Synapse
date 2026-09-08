@@ -94,7 +94,7 @@ const PostCard = ({ post, onInteraction, onCinemaMode, index = 0 }) => {
         }
     };
 
-    const apiUrl = "https://synapse-backend.pralayd140.workers.dev";
+    const apiUrl = "https://synapse-backend.mrpralay2005.workers.dev";
     const token = Cookies.get('synapse_token');
 
     const handleLike = async () => {

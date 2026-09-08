@@ -114,7 +114,7 @@ const InstagramLayout = ({ currentUser, onLogout }) => {
 
             // 5. SILENT NETWORK UPDATE (Stale-while-revalidate)
             try {
-                const apiUrl = "https://synapse-backend.pralayd140.workers.dev";
+                const apiUrl = "https://synapse-backend.mrpralay2005.workers.dev";
                 const token = Cookies.get('synapse_token');
 
                 const fetchOptions = {
@@ -208,7 +208,7 @@ const InstagramLayout = ({ currentUser, onLogout }) => {
                     if (window._synapseStoryCache.has(story.id)) return;
 
                     try {
-                        const res = await fetch(`https://synapse-backend.pralayd140.workers.dev/api/social/stories/${story.id}/details`, {
+                        const res = await fetch(`https://synapse-backend.mrpralay2005.workers.dev/api/social/stories/${story.id}/details`, {
                             headers: { 'Authorization': `Bearer ${token}` }
                         });
 
@@ -264,7 +264,7 @@ const InstagramLayout = ({ currentUser, onLogout }) => {
 
     const handleCreatePost = async (postData) => {
         try {
-            const apiUrl = "https://synapse-backend.pralayd140.workers.dev";
+            const apiUrl = "https://synapse-backend.mrpralay2005.workers.dev";
             const token = Cookies.get('synapse_token');
             let finalMediaUrl = postData.mediaUrl;
 
@@ -341,7 +341,7 @@ const InstagramLayout = ({ currentUser, onLogout }) => {
 
     const handleStoryUpload = async (storyData) => {
         try {
-            const apiUrl = "https://synapse-backend.pralayd140.workers.dev";
+            const apiUrl = "https://synapse-backend.mrpralay2005.workers.dev";
             const token = Cookies.get('synapse_token');
             let finalMediaUrl = storyData.mediaUrl;
 
@@ -421,7 +421,7 @@ const InstagramLayout = ({ currentUser, onLogout }) => {
 
     const handleDeleteStory = async (storyId) => {
         try {
-            const apiUrl = "https://synapse-backend.pralayd140.workers.dev";
+            const apiUrl = "https://synapse-backend.mrpralay2005.workers.dev";
             const token = Cookies.get('synapse_token');
             const res = await fetch(`${apiUrl}/api/social/stories/${storyId}`, {
                 method: 'DELETE',
