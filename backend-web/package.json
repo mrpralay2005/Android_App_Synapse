@@ -1,0 +1,28 @@
+{
+    "name": "backend-web",
+    "version": "1.0.0",
+    "type": "module",
+    "description": "SynapseX Neural Core",
+    "main": "server.js",
+    "scripts": {
+        "dev": "wrangler dev --env dev",
+        "dev-local": "JWT_SECRET=\"synapse_x_quantum_secure_2026\" wrangler dev",
+        "deploy": "wrangler deploy"
+    },
+    "dependencies": {
+        "@aws-sdk/client-s3": "^3.978.0",
+        "@aws-sdk/s3-request-presigner": "^3.978.0",
+        "@neondatabase/serverless": "^0.6.0",
+        "@prisma/adapter-neon": "^5.22.0",
+        "@prisma/client": "^5.22.0",
+        "bcryptjs": "^2.4.3",
+        "hono": "^4.6.0",
+        "jsonwebtoken": "^9.0.2",
+        "nodemailer": "^6.9.7",
+        "ws": "^8.19.0"
+    },
+    "devDependencies": {
+        "prisma": "^5.22.0",
+        "wrangler": "^4.61.0"
+    }
+}

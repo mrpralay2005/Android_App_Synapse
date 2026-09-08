@@ -1,0 +1,152 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider     = "postgresql"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id            Int           @id @default(autoincrement())
+  email         String        @unique
+  username      String        @unique
+  password      String
+  name          String?
+  bio           String?       @default("Quantum Explorer in the SynapseX Realm")
+  profileImage  String?       // No default value as requested
+  role          Role          @default(USER)
+  riskScore     Float?        @default(0.0)
+  lastLogin     DateTime?
+  posts         Post[]
+  likes         Like[]
+  comments      Comment[]
+  stories       Story[]
+  savedPosts    SavedPost[]
+  followers     Follow[]      @relation("Following")
+  following     Follow[]      @relation("Follower")
+  sessions      Session[]
+  storyViews    StoryView[]
+  storyMessages StoryMessage[]
+  isVerified    Boolean       @default(false)
+  isPrivate     Boolean       @default(false)
+  otp           String?
+  otpExpires    DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+}
+
+model Post {
+  id            Int         @id @default(autoincrement())
+  caption       String?
+  mediaUrl      String      // Generic URL for both image and video
+  thumbnailUrl  String?     // For video previews
+  type          MediaType   @default(IMAGE)
+  postPassword  String?     // Password protection for specific posts
+  userId        Int
+  user          User        @relation(fields: [userId], references: [id])
+  likes         Like[]
+  comments      Comment[]
+  savedBy       SavedPost[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Follow {
+  id          Int      @id @default(autoincrement())
+  followerId  Int
+  followingId Int
+  follower    User     @relation("Follower", fields: [followerId], references: [id])
+  following   User     @relation("Following", fields: [followingId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+}
+
+model Like {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  postId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  post      Post     @relation(fields: [postId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, postId])
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  content   String
+  userId    Int
+  postId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  post      Post     @relation(fields: [postId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model Story {
+  id        Int       @id @default(autoincrement())
+  mediaUrl  String
+  type      MediaType @default(IMAGE)
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id])
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  views     StoryView[]
+  messages  StoryMessage[]
+}
+
+model StoryView {
+  id        Int      @id @default(autoincrement())
+  storyId   Int
+  userId    Int
+  story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  viewedAt  DateTime @default(now())
+
+  @@unique([storyId, userId])
+}
+
+model StoryMessage {
+  id        Int      @id @default(autoincrement())
+  content   String
+  storyId   Int
+  userId    Int
+  story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model SavedPost {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  postId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  post      Post     @relation(fields: [postId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, postId])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       Int
+  user         User     @relation(fields: [userId], references: [id])
+  userAgent    String?
+  ipAddress    String?
+  lastActive   DateTime @default(now())
+  createdAt    DateTime @default(now())
+  expiresAt    DateTime
+}

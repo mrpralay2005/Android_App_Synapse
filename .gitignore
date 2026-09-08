@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+.venv/
+venv/
+env/
+.env
+.dev.vars
+.env.local
+.env.development
+.env.production
+
+# Mobile Build Tools (Huge Files)
+jdk/
+android_sdk/
+
+# Build outputs
+dist/
+build/
+android/app/build/
+android/.gradle/
+*.apk
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Editor
+.vscode/
+.idea/
+.DS_Store

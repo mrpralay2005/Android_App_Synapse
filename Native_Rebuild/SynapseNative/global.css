@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  .App {
+    @apply flex-1 bg-black;
+  }
+}
+
+.glass-card {
+  background-color: rgba(18, 18, 18, 0.7);
+  border-width: 1px;
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.login-btn {
+  background-color: #10b981;
+  padding: 12px;
+  border-radius: 8px;
+  align-items: center;
+  justify-content: center;
+}

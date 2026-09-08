@@ -1,0 +1,21 @@
+name = "synapse-backend"
+main = "server.js"
+compatibility_date = "2025-01-01"
+compatibility_flags = [ "nodejs_compat" ]
+
+# Hyperdrive setup for accelerated DB queries
+# (Optional) To accelerate, run: wrangler hyperdrive create synapse-db --connection-string="..."
+# Then add the [[hyperdrive]] block here with the provided ID.
+
+[vars]
+# DATABASE_URL = "Use secrets for this instead (wrangler secret put DATABASE_URL)"
+AI_BACKEND_URL = "https://your-ai-backend.onrender.com"
+
+# Supabase Storage is handled via S3-Compatible API in code, no wrangler binding needed.
+
+# Local development environment
+[env.dev]
+vars = { JWT_SECRET = "synapse_x_quantum_secure_2026" }
+
+[observability]
+enabled = true

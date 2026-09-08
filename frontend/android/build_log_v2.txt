@@ -1,0 +1,74 @@
+Initialized native services in: /home/pralay/.gradle/native
+Initialized jansi services in: /home/pralay/.gradle/native
+Found daemon DaemonInfo{pid=81397, address=[047b70c8-f863-4e53-aa22-8ca6578e26cd port:46539, addresses:[/127.0.0.1]], state=Idle, lastBusy=1770108773365, context=DefaultDaemonContext[uid=d941b6d4-1b68-437f-84de-2d65f20a73c7,javaHome=/usr/lib/jvm/java-21-openjdk-amd64,javaVersion=21,javaVendor=Debian,daemonRegistryDir=/home/pralay/.gradle/daemon,pid=81397,idleTimeout=10800000,priority=NORMAL,applyInstrumentationAgent=true,nativeServicesMode=ENABLED,daemonOpts=-Xmx1536m,-Dfile.encoding=UTF-8,-Duser.country=US,-Duser.language=en,-Duser.variant]} however its context does not match the desired criteria.
+JVM is incompatible.
+Wanted: DaemonRequestContext{jvmCriteria=/home/pralay/ANTIGRAVITY_NEW/Ai_Integrated_React_Web_Mobile/jdk (no JDK specified, using current Java home), daemonOpts=[-Xmx1536m, -Dfile.encoding=US-ASCII, -Duser.country=US, -Duser.language=en, -Duser.variant], applyInstrumentationAgent=true, nativeServicesMode=ENABLED, priority=NORMAL}
+Actual: DefaultDaemonContext[uid=d941b6d4-1b68-437f-84de-2d65f20a73c7,javaHome=/usr/lib/jvm/java-21-openjdk-amd64,javaVersion=21,javaVendor=Debian,daemonRegistryDir=/home/pralay/.gradle/daemon,pid=81397,idleTimeout=10800000,priority=NORMAL,applyInstrumentationAgent=true,nativeServicesMode=ENABLED,daemonOpts=-Xmx1536m,-Dfile.encoding=UTF-8,-Duser.country=US,-Duser.language=en,-Duser.variant]
+
+  Looking for a different daemon...
+The client will now receive all logging from the daemon (pid: 92222). The daemon log file: /home/pralay/.gradle/daemon/8.14.3/daemon-92222.out.log
+Starting 6th build in daemon [uptime: 5 mins 5.091 secs, performance: 99%, GC rate: 0.00/s, heap usage: 0% of 1.5 GiB]
+Using 12 worker leases.
+Now considering [/home/pralay/ANTIGRAVITY_NEW/Ai_Integrated_React_Web_Mobile/frontend/android] as hierarchies to watch
+Watching the file system is configured to be enabled if available
+File system watching is active
+Starting Build
+Settings evaluated using settings file '/home/pralay/ANTIGRAVITY_NEW/Ai_Integrated_React_Web_Mobile/frontend/android/settings.gradle'.
+Projects loaded. Root project using build file '/home/pralay/ANTIGRAVITY_NEW/Ai_Integrated_React_Web_Mobile/frontend/android/build.gradle'.
+Included projects: [root project 'android', project ':app', project ':capacitor-android', project ':capacitor-cordova-android-plugins']
+
+> Configure project :
+Evaluating root project 'android' using build file '/home/pralay/ANTIGRAVITY_NEW/Ai_Integrated_React_Web_Mobile/frontend/android/build.gradle'.
+Caching disabled for Groovy DSL script compilation (cp_dsl) because:
+  Build cache is disabled
+  Not worth caching.
+Compiling script '/home/pralay/ANTIGRAVITY_NEW/Ai_Integrated_React_Web_Mobile/frontend/android/variables.gradle' using SubsetScriptTransformer.
+Caching disabled for Groovy DSL script compilation (dsl) because:
+  Build cache is disabled
+  Not worth caching.
+Compiling script '/home/pralay/ANTIGRAVITY_NEW/Ai_Integrated_React_Web_Mobile/frontend/android/variables.gradle' using BuildScriptTransformer.
+
+> Configure project :app
+Evaluating project ':app' using build file '/home/pralay/ANTIGRAVITY_NEW/Ai_Integrated_React_Web_Mobile/frontend/android/app/build.gradle'.
+Using default execution profile
+google-services.json not found, google-services plugin not applied. Push Notifications won't work
+WARNING: Using flatDir should be avoided because it doesn't support any meta-data formats.
+
+> Configure project :capacitor-android
+Evaluating project ':capacitor-android' using build file '/home/pralay/ANTIGRAVITY_NEW/Ai_Integrated_React_Web_Mobile/frontend/node_modules/@capacitor/android/capacitor/build.gradle'.
+Using default execution profile
+
+> Configure project :capacitor-cordova-android-plugins
+Evaluating project ':capacitor-cordova-android-plugins' using build file '/home/pralay/ANTIGRAVITY_NEW/Ai_Integrated_React_Web_Mobile/frontend/android/capacitor-cordova-android-plugins/build.gradle'.
+Using default execution profile
+WARNING: Using flatDir should be avoided because it doesn't support any meta-data formats.
+All projects evaluated.
+Task path ':app:assembleDebug' matched project ':app'
+Task name matched 'assembleDebug'
+Selected primary task 'assembleDebug' from project :app
+Checking the license for package Android SDK Build-Tools 35 in /home/pralay/ANTIGRAVITY_NEW/Ai_Integrated_React_Web_Mobile/android_sdk/licenses
+Warning: License for package Android SDK Build-Tools 35 not accepted.
+Checking the license for package Android SDK Platform 34 in /home/pralay/ANTIGRAVITY_NEW/Ai_Integrated_React_Web_Mobile/android_sdk/licenses
+Warning: License for package Android SDK Platform 34 not accepted.
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Could not determine the dependencies of task ':app:compileDebugJavaWithJavac'.
+> Failed to install the following Android SDK packages as some licences have not been accepted.
+     build-tools;35.0.0 Android SDK Build-Tools 35
+     platforms;android-34 Android SDK Platform 34
+  To build this project, accept the SDK license agreements and install the missing components using the Android Studio SDK Manager.
+  All licenses can be accepted using the sdkmanager command line tool:
+  sdkmanager.bat --licenses
+  Or, to transfer the license agreements from one workstation to another, see https://developer.android.com/studio/intro/update.html#download-with-gradle
+  
+  Using Android SDK: /home/pralay/ANTIGRAVITY_NEW/Ai_Integrated_React_Web_Mobile/android_sdk
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 1s
