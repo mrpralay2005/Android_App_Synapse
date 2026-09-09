@@ -81,6 +81,48 @@ export const verifyOTP = async (c) => {
     }
 };
 
+export const resendOTP = async (c) => {
+    try {
+        const { email } = await c.req.json();
+        const prisma = getPrisma(c.env.DATABASE_URL);
+
+        if (!email) {
+            return c.json({ success: false, error: "Email required for resend" }, 400);
+        }
+
+        const user = await prisma.user.findUnique({ where: { email } });
+
+        if (!user) {
+            return c.json({ success: false, error: "Neural record not found" }, 404);
+        }
+
+        if (user.isVerified) {
+            return c.json({ success: false, error: "This identity is already verified" }, 400);
+        }
+
+        const otp = Math.floor(1000 + Math.random() * 9000).toString();
+        const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+
+        await prisma.user.update({
+            where: { id: user.id },
+            data: {
+                otp,
+                otpExpires
+            }
+        });
+
+        const emailSent = await sendOTP(email, otp, c.env);
+
+        return c.json({
+            success: emailSent,
+            message: emailSent ? "New neural access code transmitted to your email" : "Failed to resend verification code"
+        });
+    } catch (error) {
+        console.error("Resend OTP Error:", error);
+        return c.json({ success: false, error: `Resend failed: ${error.message}` }, 500);
+    }
+};
+
 export const login = async (c) => {
     try {
         const { username, password, behaviorData } = await c.req.json();

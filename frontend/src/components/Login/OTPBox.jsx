@@ -65,6 +65,30 @@ const OTPBox = ({ email, onVerified, onBack }) => {
         }
     };
 
+    const handleResendOTP = async () => {
+        setStatus({ type: 'loading', message: 'Resending Neural Access Code...' });
+
+        try {
+            const apiUrl = "https://synapse-backend.mrpralay2005.workers.dev";
+            const response = await fetch(`${apiUrl}/api/auth/resend-otp`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                setStatus({ type: 'success', message: data.message || 'New Neural Code Sent' });
+                setOtp(['', '', '', '']);
+                inputRefs[0].current?.focus();
+            } else {
+                setStatus({ type: 'error', message: data.error || 'Failed to resend code' });
+            }
+        } catch (error) {
+            setStatus({ type: 'error', message: 'Connection Interrupted' });
+        }
+    };
+
     return (
         <div className="relative min-h-screen w-full flex items-center justify-center p-4 md:p-8 overflow-hidden">
             {/* Background Floating Elements */}
@@ -162,6 +186,7 @@ const OTPBox = ({ email, onVerified, onBack }) => {
                             <div className="flex justify-center flex-col items-center gap-4">
                                 <button
                                     type="button"
+                                    onClick={handleResendOTP}
                                     className="text-[10px] text-gray-500 hover:text-emerald-400 uppercase tracking-widest font-bold transition-colors"
                                 >
                                     Resend Code

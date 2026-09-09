@@ -1,11 +1,12 @@
 import { Hono } from 'hono';
-import { register, login, verifyOTP, forgotPassword, resetPassword, logout, getMe } from '../controllers/authController.js';
+import { register, login, verifyOTP, resendOTP, forgotPassword, resetPassword, logout, getMe } from '../controllers/authController.js';
 
 const auth = new Hono();
 
 auth.post('/register', register);
 auth.post('/login', login);
 auth.post('/verify-otp', verifyOTP);
+auth.post('/resend-otp', resendOTP);
 auth.post('/forgot-password', forgotPassword);
 auth.post('/reset-password', resetPassword);
 auth.post('/logout', logout);
