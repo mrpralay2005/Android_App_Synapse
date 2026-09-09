@@ -1,0 +1,56 @@
+.mobile-auth-screen {
+    height: 100%;
+    min-height: 0;
+    padding: max(0.75rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-right)) max(0.75rem, env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left));
+    background: #04080d;
+}
+
+.mobile-auth-back {
+    top: max(0.75rem, env(safe-area-inset-top)) !important;
+    left: max(0.75rem, env(safe-area-inset-left)) !important;
+    width: 2.75rem;
+    height: 2.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 !important;
+}
+
+.mobile-auth-card {
+    width: min(100%, 28rem) !important;
+    max-height: calc(100dvh - 1.5rem);
+    border-radius: 1.5rem !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    scrollbar-width: none;
+}
+
+.mobile-auth-card::-webkit-scrollbar {
+    display: none;
+}
+
+.mobile-auth-card > .flex-1 {
+    padding: 1.5rem 1.25rem !important;
+}
+
+@media (max-height: 760px) {
+    .mobile-auth-screen {
+        padding-top: max(0.5rem, env(safe-area-inset-top));
+        padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+    }
+
+    .mobile-auth-card {
+        max-height: calc(100dvh - 1rem);
+        border-radius: 1.25rem !important;
+    }
+
+    .mobile-auth-card > .flex-1 {
+        padding: 1.125rem 1rem !important;
+    }
+
+    .mobile-auth-card .mb-10 { margin-bottom: 1.25rem !important; }
+    .mobile-auth-card .mb-8 { margin-bottom: 1rem !important; }
+    .mobile-auth-card .mt-10 { margin-top: 1.25rem !important; }
+    .mobile-auth-card .mt-8 { margin-top: 1rem !important; }
+    .mobile-auth-card .space-y-8 > :not([hidden]) ~ :not([hidden]) { margin-top: 1rem !important; }
+}

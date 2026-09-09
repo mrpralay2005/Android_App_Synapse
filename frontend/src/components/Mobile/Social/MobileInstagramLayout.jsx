@@ -9,7 +9,7 @@ import ReelsView from './ReelsView';
 import CreatePostModal from './CreatePostModal';
 import CreateStoryModal from './CreateStoryModal';
 import StoryViewer from './StoryViewer';
-import { saveToCache, loadFromCache } from '../../utils/synapseCache';
+import { saveToCache, loadFromCache } from '../../../utils/synapseCache';
 
 const MobileInstagramLayout = ({ currentUser, onLogout }) => {
     const [view, setView] = useState(() => localStorage.getItem('synapse_mobile_social_tab') || 'feed');

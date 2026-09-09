@@ -6,8 +6,14 @@ import SignUpBox from './components/Login/SignUpBox';
 import OTPBox from './components/Login/OTPBox';
 import ForgotPasswordBox from './components/Login/ForgotPasswordBox';
 import LandingPage from './components/Login/LandingPage';
-import InstagramLayout from './components/Social/InstagramLayout';
-import MobileInstagramLayout from './components/Social/MobileInstagramLayout';
+import MobileLandingPage from './components/Mobile/LandingPageMobile';
+import InstagramLayout from './components/Desktop/Social/InstagramLayout';
+import MobileInstagramLayout from './components/Mobile/Social/MobileInstagramLayout';
+import MobileLoginBox from './components/Mobile/Auth/LoginBox';
+import MobileSignUpBox from './components/Mobile/Auth/SignUpBox';
+import MobileOTPBox from './components/Mobile/Auth/OTPBox';
+import MobileForgotPasswordBox from './components/Mobile/Auth/ForgotPasswordBox';
+import './components/Mobile/Auth/mobileAuth.css';
 
 // Synapse Core Logo
 const SynapseLogo = ({ size = 60 }) => (
@@ -49,6 +55,54 @@ function App() {
 
         return () => window.removeEventListener('resize', handleResize);
     }, []);
+
+    useEffect(() => {
+        if (isMobileView) {
+            document.body.style.margin = '0';
+            document.body.style.padding = '0';
+            document.body.style.overflow = 'hidden';
+            document.body.style.background = '#0a0a0a';
+            document.body.style.overscrollBehavior = 'none';
+            document.body.style.width = '100vw';
+            document.body.style.height = '100vh';
+            document.documentElement.style.margin = '0';
+            document.documentElement.style.padding = '0';
+            document.documentElement.style.overflow = 'hidden';
+            document.documentElement.style.background = '#0a0a0a';
+            document.documentElement.style.width = '100%';
+            document.documentElement.style.height = '100%';
+        } else {
+            document.body.style.margin = '';
+            document.body.style.padding = '';
+            document.body.style.overflow = '';
+            document.body.style.background = '';
+            document.body.style.overscrollBehavior = '';
+            document.body.style.width = '';
+            document.body.style.height = '';
+            document.documentElement.style.margin = '';
+            document.documentElement.style.padding = '';
+            document.documentElement.style.overflow = '';
+            document.documentElement.style.background = '';
+            document.documentElement.style.width = '';
+            document.documentElement.style.height = '';
+        }
+
+        return () => {
+            document.body.style.margin = '';
+            document.body.style.padding = '';
+            document.body.style.overflow = '';
+            document.body.style.background = '';
+            document.body.style.overscrollBehavior = '';
+            document.body.style.width = '';
+            document.body.style.height = '';
+            document.documentElement.style.margin = '';
+            document.documentElement.style.padding = '';
+            document.documentElement.style.overflow = '';
+            document.documentElement.style.background = '';
+            document.documentElement.style.width = '';
+            document.documentElement.style.height = '';
+        };
+    }, [isMobileView]);
 
     useEffect(() => {
         let scrollTimeout;
@@ -225,31 +279,63 @@ function App() {
     const pageVariants = { initial: { opacity: 0, x: 20 }, animate: { opacity: 1, x: 0 }, exit: { opacity: 0, x: -20 } };
 
     return (
-        <motion.div className="App bg-black min-h-screen">
+        <motion.div
+            className="App bg-black"
+            style={{
+                minHeight: isMobileView ? '100dvh' : '100vh',
+                height: isMobileView ? '100dvh' : 'auto',
+                overflow: isMobileView ? 'hidden' : 'visible',
+                position: isMobileView ? 'fixed' : 'relative',
+                inset: isMobileView ? '0' : 'auto',
+                width: '100%',
+                maxWidth: '100%',
+                boxSizing: 'border-box'
+            }}
+        >
             <AnimatePresence mode="wait">
                 {view === 'landing' && (
-                    <motion.div key="landing" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.5 }}>
-                        <LandingPage onLogin={() => setView('login')} onRegister={() => setView('signup')} onExit={() => setIsExited(true)} />
+                    <motion.div key="landing" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.5 }} className={isMobileView ? 'h-full' : undefined}>
+                        {isMobileView ? (
+                            <MobileLandingPage onLogin={() => setView('login')} onRegister={() => setView('signup')} onExit={() => setIsExited(true)} />
+                        ) : (
+                            <LandingPage onLogin={() => setView('login')} onRegister={() => setView('signup')} onExit={() => setIsExited(true)} />
+                        )}
                     </motion.div>
                 )}
                 {view === 'login' && (
-                    <motion.div key="login" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.4 }}>
-                        <LoginBox onSwitch={() => setView('signup')} onBack={() => setView('landing')} onLoginSuccess={handleLoginSuccess} onForgot={() => setView('forgot')} />
+                    <motion.div key="login" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.4 }} className={isMobileView ? 'h-full' : undefined}>
+                        {isMobileView ? (
+                            <MobileLoginBox onSwitch={() => setView('signup')} onBack={() => setView('landing')} onLoginSuccess={handleLoginSuccess} onForgot={() => setView('forgot')} />
+                        ) : (
+                            <LoginBox onSwitch={() => setView('signup')} onBack={() => setView('landing')} onLoginSuccess={handleLoginSuccess} onForgot={() => setView('forgot')} />
+                        )}
                     </motion.div>
                 )}
                 {view === 'forgot' && (
-                    <motion.div key="forgot" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.4 }}>
-                        <ForgotPasswordBox onBack={() => setView('login')} onSuccess={() => setView('login')} />
+                    <motion.div key="forgot" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.4 }} className={isMobileView ? 'h-full' : undefined}>
+                        {isMobileView ? (
+                            <MobileForgotPasswordBox onBack={() => setView('login')} onSuccess={() => setView('login')} />
+                        ) : (
+                            <ForgotPasswordBox onBack={() => setView('login')} onSuccess={() => setView('login')} />
+                        )}
                     </motion.div>
                 )}
                 {view === 'signup' && (
-                    <motion.div key="signup" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.4 }}>
-                        <SignUpBox onSwitch={() => setView('login')} onBack={() => setView('landing')} onSuccess={(email) => { setOtpEmail(email); setView('otp'); }} />
+                    <motion.div key="signup" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.4 }} className={isMobileView ? 'h-full' : undefined}>
+                        {isMobileView ? (
+                            <MobileSignUpBox onSwitch={() => setView('login')} onBack={() => setView('landing')} onSuccess={(email) => { setOtpEmail(email); setView('otp'); }} />
+                        ) : (
+                            <SignUpBox onSwitch={() => setView('login')} onBack={() => setView('landing')} onSuccess={(email) => { setOtpEmail(email); setView('otp'); }} />
+                        )}
                     </motion.div>
                 )}
                 {view === 'otp' && (
-                    <motion.div key="otp" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.4 }}>
-                        <OTPBox email={otpEmail} onVerified={() => setView('login')} onBack={() => setView('signup')} />
+                    <motion.div key="otp" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.4 }} className={isMobileView ? 'h-full' : undefined}>
+                        {isMobileView ? (
+                            <MobileOTPBox email={otpEmail} onVerified={() => setView('login')} onBack={() => setView('signup')} />
+                        ) : (
+                            <OTPBox email={otpEmail} onVerified={() => setView('login')} onBack={() => setView('signup')} />
+                        )}
                     </motion.div>
                 )}
                 {view === 'profile' && user && (
