@@ -85,7 +85,8 @@ const OTPBox = ({ email, onVerified, onBack }) => {
                 setStatus({ type: 'error', message: data.error || 'Failed to resend code' });
             }
         } catch (error) {
-            setStatus({ type: 'error', message: 'Connection Interrupted' });
+            console.error('Resend OTP failed:', error);
+            setStatus({ type: 'error', message: 'Could not reach the server. Refresh and try again.' });
         }
     };
 
