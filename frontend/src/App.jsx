@@ -7,6 +7,7 @@ import OTPBox from './components/Login/OTPBox';
 import ForgotPasswordBox from './components/Login/ForgotPasswordBox';
 import LandingPage from './components/Login/LandingPage';
 import InstagramLayout from './components/Social/InstagramLayout';
+import MobileInstagramLayout from './components/Social/MobileInstagramLayout';
 
 // Synapse Core Logo
 const SynapseLogo = ({ size = 60 }) => (
@@ -25,6 +26,10 @@ function App() {
     const [isLoading, setIsLoading] = useState(true);
     const [isExited, setIsExited] = useState(false);
     const [otpEmail, setOtpEmail] = useState('');
+    const [isMobileView, setIsMobileView] = useState(() => {
+        if (typeof window === 'undefined') return false;
+        return window.innerWidth < 768;
+    });
 
     // Persist view to localStorage
     useEffect(() => {
@@ -33,6 +38,17 @@ function App() {
     }, [view]);
 
     const LIVE_API = "https://synapse-backend.mrpralay2005.workers.dev";
+
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobileView(window.innerWidth < 768);
+        };
+
+        window.addEventListener('resize', handleResize);
+        handleResize();
+
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     useEffect(() => {
         let scrollTimeout;
@@ -238,7 +254,11 @@ function App() {
                 )}
                 {view === 'profile' && user && (
                     <motion.div key="profile" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.5 }}>
-                        <InstagramLayout currentUser={user} onLogout={handleLogout} />
+                        {isMobileView ? (
+                            <MobileInstagramLayout currentUser={user} onLogout={handleLogout} />
+                        ) : (
+                            <InstagramLayout currentUser={user} onLogout={handleLogout} />
+                        )}
                     </motion.div>
                 )}
             </AnimatePresence>
