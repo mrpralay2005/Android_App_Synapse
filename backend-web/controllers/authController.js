@@ -4,8 +4,23 @@ import { setCookie, deleteCookie } from 'hono/cookie';
 import getPrisma from '../prisma/db.js';
 import { sendOTP, sendResetOTP } from '../utils/email.js';
 
+const isPreviewMode = (c) => c.env.PREVIEW_MODE === 'true';
+const previewAccessDenied = (c) => c.json({ success: false, error: 'This private preview accepts only approved test accounts.' }, 403);
+
+const canUsePreview = (c, user) => {
+    if (!isPreviewMode(c)) return true;
+    const testUsers = (c.env.PREVIEW_TEST_USERS || '')
+        .split(',')
+        .map((username) => username.trim().toLowerCase())
+        .filter(Boolean);
+    return user?.role !== 'ADMIN' && testUsers.includes(user?.username?.toLowerCase());
+};
+
 export const register = async (c) => {
     try {
+        // Preview is intentionally a closed test environment. Accounts are
+        // prepared in its isolated Neon branch, never registered from the UI.
+        if (isPreviewMode(c)) return previewAccessDenied(c);
         const { name, username, email, password } = await c.req.json();
         const prisma = getPrisma(c.env.DATABASE_URL);
 
@@ -58,6 +73,7 @@ export const register = async (c) => {
 
 export const verifyOTP = async (c) => {
     try {
+        if (isPreviewMode(c)) return previewAccessDenied(c);
         const { email, otp } = await c.req.json();
         const prisma = getPrisma(c.env.DATABASE_URL);
 
@@ -85,6 +101,7 @@ export const verifyOTP = async (c) => {
 
 export const resendOTP = async (c) => {
     try {
+        if (isPreviewMode(c)) return previewAccessDenied(c);
         const { email } = await c.req.json();
         const prisma = getPrisma(c.env.DATABASE_URL);
 
@@ -138,6 +155,8 @@ export const login = async (c) => {
         if (!user) {
             return c.json({ success: false, error: "Access Denied: Neural mismatch" }, 401);
         }
+
+        if (!canUsePreview(c, user)) return previewAccessDenied(c);
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
@@ -237,6 +256,7 @@ export const login = async (c) => {
 
 export const forgotPassword = async (c) => {
     try {
+        if (isPreviewMode(c)) return previewAccessDenied(c);
         const { email } = await c.req.json();
         const prisma = getPrisma(c.env.DATABASE_URL);
 
@@ -279,6 +299,7 @@ export const forgotPassword = async (c) => {
 
 export const resetPassword = async (c) => {
     try {
+        if (isPreviewMode(c)) return previewAccessDenied(c);
         const { email, otp, newPassword } = await c.req.json();
         const prisma = getPrisma(c.env.DATABASE_URL);
 

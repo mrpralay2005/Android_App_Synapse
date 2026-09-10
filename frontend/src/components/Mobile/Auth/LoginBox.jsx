@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import bgImage from '../../../assets/dark_floating_pyramids_bg.png';
 import sideImage from '../../../assets/green_pyramid_login.png';
 
-const LoginBox = ({ onSwitch, onBack, onLoginSuccess, onForgot }) => {
+const LoginBox = ({ onSwitch, onBack, onLoginSuccess, onForgot, previewMode = false }) => {
     const [formData, setFormData] = useState({ username: '', password: '' });
     const [status, setStatus] = useState({ type: '', message: '' });
 
@@ -162,7 +162,7 @@ const LoginBox = ({ onSwitch, onBack, onLoginSuccess, onForgot }) => {
                             </div>
                         </div>
 
-                        <div className="flex justify-end p-1">
+                        {!previewMode && <div className="flex justify-end p-1">
                             <button
                                 type="button"
                                 onClick={onForgot}
@@ -170,7 +170,7 @@ const LoginBox = ({ onSwitch, onBack, onLoginSuccess, onForgot }) => {
                             >
                                 [ Forgot Password? ]
                             </button>
-                        </div>
+                        </div>}
 
                         <button type="submit" className="login-btn mt-2">
                             {status.type === 'loading' ? 'Analyzing...' : 'Secure Access'}
@@ -195,9 +195,13 @@ const LoginBox = ({ onSwitch, onBack, onLoginSuccess, onForgot }) => {
                         </div>
                     </div>
 
-                    <p className="mt-10 text-center text-xs text-gray-500">
-                        New entity? <button onClick={onSwitch} className="text-emerald-400 hover:text-emerald-300 font-semibold transition-colors bg-transparent border-none cursor-pointer">Register Identity</button>
-                    </p>
+                    {previewMode ? (
+                        <p className="mt-10 text-center text-[10px] font-bold uppercase tracking-[0.12em] text-amber-200/70">Private test environment · registration disabled</p>
+                    ) : (
+                        <p className="mt-10 text-center text-xs text-gray-500">
+                            New entity? <button onClick={onSwitch} className="text-emerald-400 hover:text-emerald-300 font-semibold transition-colors bg-transparent border-none cursor-pointer">Register Identity</button>
+                        </p>
+                    )}
                 </div>
 
                 {/* Right Section: Visual */}

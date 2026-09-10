@@ -22,6 +22,7 @@ AI_BACKEND_URL = "https://your-ai-backend.onrender.com"
 # configured as Cloudflare secrets and must point to a Neon staging branch.
 [env.staging.vars]
 AI_BACKEND_URL = "https://your-ai-backend.onrender.com"
+PREVIEW_MODE = "true"
 
 [observability]
 enabled = true

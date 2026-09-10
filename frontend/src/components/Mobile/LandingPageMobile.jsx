@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { Target, Shield, Zap, Globe, X } from 'lucide-react';
 
-const MobileLandingPage = ({ onLogin, onRegister, onExit }) => {
+const MobileLandingPage = ({ onLogin, onRegister, onExit, previewMode = false }) => {
     const features = [
         { icon: Shield, title: 'Quantum Security', desc: 'Military-grade encryption for your digital self.' },
         { icon: Zap, title: 'Instant Sync', desc: 'Real-time behavioral analysis and authentication.' },
@@ -164,12 +164,18 @@ const MobileLandingPage = ({ onLogin, onRegister, onExit }) => {
                         Access Neural Hub
                     </button>
 
-                    <button
-                        onClick={onRegister}
-                        className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-base font-black text-white backdrop-blur-md transition-transform hover:scale-[1.01]"
-                    >
-                        Initialize Identity
-                    </button>
+                    {previewMode ? (
+                        <div className="rounded-2xl border border-amber-300/15 bg-amber-300/[0.06] px-4 py-3 text-center text-[11px] font-bold uppercase tracking-[0.14em] text-amber-200">
+                            Private preview · approved test accounts only
+                        </div>
+                    ) : (
+                        <button
+                            onClick={onRegister}
+                            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-base font-black text-white backdrop-blur-md transition-transform hover:scale-[1.01]"
+                        >
+                            Initialize Identity
+                        </button>
+                    )}
                 </motion.div>
 
                 <motion.div

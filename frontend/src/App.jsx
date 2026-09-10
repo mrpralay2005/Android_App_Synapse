@@ -44,6 +44,11 @@ function App() {
     }, [view]);
 
     const LIVE_API = import.meta.env.VITE_API_URL || "https://synapse-backend.mrpralay2005.workers.dev";
+    const isPreviewMode = import.meta.env.VITE_PREVIEW_MODE === 'true';
+
+    useEffect(() => {
+        if (isPreviewMode && ['signup', 'otp', 'forgot'].includes(view)) setView('landing');
+    }, [isPreviewMode, view]);
 
     useEffect(() => {
         const handleResize = () => {
@@ -319,7 +324,7 @@ function App() {
                 {view === 'landing' && (
                     <motion.div key="landing" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.5 }} className={isMobileView ? 'h-full' : undefined}>
                         {isMobileView ? (
-                            <MobileLandingPage onLogin={() => setView('login')} onRegister={() => setView('signup')} onExit={() => setIsExited(true)} />
+                            <MobileLandingPage onLogin={() => setView('login')} onRegister={() => setView('signup')} onExit={() => setIsExited(true)} previewMode={isPreviewMode} />
                         ) : (
                             <LandingPage onLogin={() => setView('login')} onRegister={() => setView('signup')} onExit={() => setIsExited(true)} />
                         )}
@@ -328,7 +333,7 @@ function App() {
                 {view === 'login' && (
                     <motion.div key="login" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.4 }} className={isMobileView ? 'h-full' : undefined}>
                         {isMobileView ? (
-                            <MobileLoginBox onSwitch={() => setView('signup')} onBack={() => setView('landing')} onLoginSuccess={handleLoginSuccess} onForgot={() => setView('forgot')} />
+                            <MobileLoginBox onSwitch={() => setView('signup')} onBack={() => setView('landing')} onLoginSuccess={handleLoginSuccess} onForgot={() => setView('forgot')} previewMode={isPreviewMode} />
                         ) : (
                             <LoginBox onSwitch={() => setView('signup')} onBack={() => setView('landing')} onLoginSuccess={handleLoginSuccess} onForgot={() => setView('forgot')} />
                         )}
