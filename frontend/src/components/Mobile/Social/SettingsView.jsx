@@ -304,7 +304,7 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
 
                     <button
                         onClick={onLogout}
-                        className="mt-auto flex h-[44px] w-full items-center gap-3 rounded-xl border border-red-500/20 bg-red-500/[0.08] px-4 text-left text-sm font-bold text-red-400"
+                        className="mt-1 flex h-[44px] w-full shrink-0 items-center gap-3 rounded-xl border border-red-500/20 bg-red-500/[0.08] px-4 text-left text-sm font-bold text-red-400"
                     >
                         <ChevronLeft size={18} className="rotate-180" />
                         <span>Sever Connection</span>
