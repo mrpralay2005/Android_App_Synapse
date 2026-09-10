@@ -20,6 +20,9 @@ android/app/build/
 android/.gradle/
 *.apk
 
+# Cloudflare Wrangler local development bundles
+backend-web/.wrangler/
+
 # Logs
 npm-debug.log*
 yarn-debug.log*
