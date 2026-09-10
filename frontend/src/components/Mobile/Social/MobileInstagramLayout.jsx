@@ -62,7 +62,11 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                 }
 
                 const cachedSuggested = loadFromCache('synapse_suggested');
-                if (cachedSuggested && active) setSuggestedUsers(cachedSuggested);
+                if (cachedSuggested && active) {
+                    setSuggestedUsers(cachedSuggested.filter(user =>
+                        user?.role !== 'ADMIN' && user?.username?.toUpperCase() !== 'ADMIN'
+                    ));
+                }
 
                 if (view === 'feed' || view === 'reels') {
                     const cachedFeed = loadFromCache('synapse_feed_posts');
@@ -97,8 +101,11 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                 const userRes = await fetch(`${apiUrl}/api/user/suggested?limit=10`, fetchOptions);
                 const userData = await userRes.json();
                 if (active && userData.success) {
-                    setSuggestedUsers(userData.data);
-                    saveToCache('synapse_suggested', userData.data);
+                    const publicSuggestions = userData.data.filter(user =>
+                        user?.role !== 'ADMIN' && user?.username?.toUpperCase() !== 'ADMIN'
+                    );
+                    setSuggestedUsers(publicSuggestions);
+                    saveToCache('synapse_suggested', publicSuggestions);
                 }
 
                 if (view === 'feed' || view === 'reels') {

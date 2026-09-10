@@ -47,6 +47,7 @@ model User {
   creatorAnonymousShield          Boolean          @default(false)
   creatorDeepAnalytics            Boolean          @default(false)
   links                           Json?
+  notificationClearedAt           DateTime?
   otp                             String?
   otpExpires                      DateTime?
   createdAt                       DateTime         @default(now())

@@ -140,11 +140,15 @@ const FeedView = ({ posts, stories = [], suggestedUsers = [], onCreateClick, loa
     const maxVisible = 5;
 
     const combinedList = React.useMemo(() => {
+        // This is also applied by the API.  Keeping the UI guard means an older
+        // cached response cannot briefly surface an administrative account.
+        const isAdminAccount = (account) => account?.role === 'ADMIN' || account?.username?.toUpperCase() === 'ADMIN';
+
         // 1. Filter out 'Me' from Stories (Fix duplicate story circle)
         const otherStories = stories.filter(s => {
             const isMe = currentUser && (s.userId === currentUser.id || s.userId === currentUser.userId);
             const inMyStories = myStories.find(ms => ms.id === s.id);
-            return !isMe && !inMyStories;
+            return !isMe && !inMyStories && !isAdminAccount(s.user);
         });
 
         const userMap = new Map();
@@ -161,7 +165,7 @@ const FeedView = ({ posts, stories = [], suggestedUsers = [], onCreateClick, loa
         if (uniqueUserStories.length === 0) {
             // 2. Filter out 'Me' from Suggestions (Fix duplicate profile circle)
             return suggestedUsers
-                .filter(u => !isStartUser(u))
+                .filter(u => !isStartUser(u) && !isAdminAccount(u))
                 .map(user => ({
                     id: `user-${user.id}`,
                     user: user,
@@ -173,7 +177,7 @@ const FeedView = ({ posts, stories = [], suggestedUsers = [], onCreateClick, loa
             const storyUserIds = new Set(uniqueUserStories.map(s => s.userId));
             // Filter suggestions: Must not be in stories AND must not be 'Me'
             const filteredSuggested = suggestedUsers.filter(u =>
-                !storyUserIds.has(u.id) && !isStartUser(u)
+                !storyUserIds.has(u.id) && !isStartUser(u) && !isAdminAccount(u)
             );
 
             const remainingSlots = maxVisible - uniqueUserStories.length;

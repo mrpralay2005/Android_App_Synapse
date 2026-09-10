@@ -66,6 +66,8 @@ export const getNotifications = async (c) => {
         if (!viewerId) return c.json({ success: false, error: 'Neural authorization missing' }, 401);
         const prisma = getPrisma(c.env.DATABASE_URL);
         const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+        const viewer = await prisma.user.findUnique({ where: { id: viewerId }, select: { notificationClearedAt: true } });
+        const activitySince = viewer?.notificationClearedAt && viewer.notificationClearedAt > since ? viewer.notificationClearedAt : since;
 
         const following = await prisma.follow.findMany({
             where: { followerId: viewerId },
@@ -75,19 +77,19 @@ export const getNotifications = async (c) => {
 
         const [posts, stories, sessions] = await Promise.all([
             prisma.post.findMany({
-                where: { userId: { in: followedIds }, createdAt: { gte: since } },
+                where: { userId: { in: followedIds }, createdAt: { gte: activitySince } },
                 take: 20,
                 orderBy: { createdAt: 'desc' },
                 select: { id: true, createdAt: true, user: { select: { username: true, name: true, profileImage: true } } }
             }),
             prisma.story.findMany({
-                where: { userId: { in: followedIds }, expiresAt: { gt: new Date() }, createdAt: { gte: since } },
+                where: { userId: { in: followedIds }, expiresAt: { gt: new Date() }, createdAt: { gte: activitySince } },
                 take: 20,
                 orderBy: { createdAt: 'desc' },
                 select: { id: true, createdAt: true, user: { select: { username: true, name: true, profileImage: true } } }
             }),
             prisma.session.findMany({
-                where: { userId: viewerId },
+                where: { userId: viewerId, createdAt: { gte: activitySince } },
                 take: 8,
                 orderBy: { createdAt: 'desc' },
                 select: { id: true, createdAt: true, userAgent: true, ipAddress: true }
@@ -104,6 +106,19 @@ export const getNotifications = async (c) => {
     } catch (error) {
         console.error('Notification stream error:', error);
         return c.json({ success: false, error: 'Unable to load your activity' }, 500);
+    }
+};
+
+export const clearNotifications = async (c) => {
+    try {
+        const viewerId = c.get('user')?.userId;
+        if (!viewerId) return c.json({ success: false, error: 'Neural authorization missing' }, 401);
+        const prisma = getPrisma(c.env.DATABASE_URL);
+        await prisma.user.update({ where: { id: viewerId }, data: { notificationClearedAt: new Date() } });
+        return c.json({ success: true, message: 'Activity cleared' });
+    } catch (error) {
+        console.error('Notification clear error:', error);
+        return c.json({ success: false, error: 'Unable to clear activity' }, 500);
     }
 };
 
@@ -303,14 +318,17 @@ export const getStories = async (c) => {
         // Fetch stories that haven't expired
         const stories = await prisma.story.findMany({
             where: {
-                expiresAt: { gt: now }
+                expiresAt: { gt: now },
+                // Admin accounts should never be surfaced in the public story rail.
+                user: { role: { not: 'ADMIN' } }
             },
             include: {
                 user: {
                     select: {
                         id: true,
                         username: true,
-                        profileImage: true
+                        profileImage: true,
+                        role: true
                     }
                 }
             },

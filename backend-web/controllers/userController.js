@@ -169,10 +169,17 @@ export const getSuggestedUsers = async (c) => {
         // Fetch users for the story bar (suggested users)
         const users = await prisma.user.findMany({
             take: limit,
+            // Administrative accounts are operational accounts, not social profiles.
+            // Keeping this rule in the API prevents them appearing in any story-bar
+            // fallback, including for clients with a fresh cache.
+            where: {
+                role: { not: 'ADMIN' }
+            },
             select: {
                 id: true,
                 username: true,
-                profileImage: true
+                profileImage: true,
+                role: true
             },
             orderBy: { createdAt: 'desc' }
         });
