@@ -55,15 +55,16 @@ model User {
 }
 
 model PlatformUpdate {
-  id          Int      @id @default(autoincrement())
-  title       String
-  summary     String
-  version     String
-  isPublished Boolean  @default(true)
-  authorId    Int
-  author      User     @relation(fields: [authorId], references: [id])
-  publishedAt DateTime @default(now())
-  createdAt   DateTime @default(now())
+  id              Int      @id @default(autoincrement())
+  title           String
+  summary         String
+  version         String
+  isPublished     Boolean  @default(true)
+  sourceCommitSha String?
+  authorId        Int
+  author          User     @relation(fields: [authorId], references: [id])
+  publishedAt     DateTime @default(now())
+  createdAt       DateTime @default(now())
 }
 
 enum MediaType {
