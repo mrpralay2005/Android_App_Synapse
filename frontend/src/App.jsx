@@ -44,7 +44,10 @@ function App() {
     }, [view]);
 
     const LIVE_API = import.meta.env.VITE_API_URL || "https://synapse-backend.mrpralay2005.workers.dev";
-    const isPreviewMode = import.meta.env.VITE_PREVIEW_MODE === 'true';
+    // The hostname check is a fail-safe: the protected staging URL remains a
+    // preview even if a Pages environment variable is stale for one build.
+    const isPreviewMode = import.meta.env.VITE_PREVIEW_MODE === 'true' || window.location.hostname.startsWith('staging.');
+    const previewTestUsername = import.meta.env.VITE_PREVIEW_TEST_USERNAME || '';
 
     useEffect(() => {
         if (isPreviewMode && ['signup', 'otp', 'forgot'].includes(view)) setView('landing');
@@ -333,7 +336,7 @@ function App() {
                 {view === 'login' && (
                     <motion.div key="login" variants={pageVariants} initial="initial" animate="animate" exit="exit" transition={{ duration: 0.4 }} className={isMobileView ? 'h-full' : undefined}>
                         {isMobileView ? (
-                            <MobileLoginBox onSwitch={() => setView('signup')} onBack={() => setView('landing')} onLoginSuccess={handleLoginSuccess} onForgot={() => setView('forgot')} previewMode={isPreviewMode} />
+                            <MobileLoginBox onSwitch={() => setView('signup')} onBack={() => setView('landing')} onLoginSuccess={handleLoginSuccess} onForgot={() => setView('forgot')} previewMode={isPreviewMode} previewTestUsername={previewTestUsername} />
                         ) : (
                             <LoginBox onSwitch={() => setView('signup')} onBack={() => setView('landing')} onLoginSuccess={handleLoginSuccess} onForgot={() => setView('forgot')} />
                         )}

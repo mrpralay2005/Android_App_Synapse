@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import bgImage from '../../../assets/dark_floating_pyramids_bg.png';
 import sideImage from '../../../assets/green_pyramid_login.png';
 
-const LoginBox = ({ onSwitch, onBack, onLoginSuccess, onForgot, previewMode = false }) => {
+const LoginBox = ({ onSwitch, onBack, onLoginSuccess, onForgot, previewMode = false, previewTestUsername = '' }) => {
     const [formData, setFormData] = useState({ username: '', password: '' });
     const [status, setStatus] = useState({ type: '', message: '' });
 
@@ -49,6 +49,12 @@ const LoginBox = ({ onSwitch, onBack, onLoginSuccess, onForgot, previewMode = fa
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        const enteredUsername = formData.username.trim().toLowerCase();
+        const approvedUsername = previewTestUsername.trim().toLowerCase();
+        if (previewMode && (!approvedUsername || enteredUsername !== approvedUsername)) {
+            setStatus({ type: 'error', message: 'Private preview: use the approved test account only.' });
+            return;
+        }
         setStatus({ type: 'loading', message: 'Analyzing Neural Patterns...' });
 
         try {
@@ -67,9 +73,11 @@ const LoginBox = ({ onSwitch, onBack, onLoginSuccess, onForgot, previewMode = fa
             });
 
             const data = await response.json();
-            if (response.ok) {
+            if (response.ok && !(previewMode && data.user?.role === 'ADMIN')) {
                 setStatus({ type: 'success', message: 'Identity Confirmed. Accessing Synapse...' });
                 setTimeout(() => onLoginSuccess(data), 1500);
+            } else if (previewMode && data.user?.role === 'ADMIN') {
+                setStatus({ type: 'error', message: 'Administrator accounts are unavailable in private preview.' });
             } else {
                 const errorMessage = data.details ? `${data.error}: ${data.details}` : data.error;
                 setStatus({ type: 'error', message: errorMessage });
