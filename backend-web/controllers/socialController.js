@@ -53,6 +53,55 @@ export const getFeed = async (c) => {
     }
 };
 
+// A personal activity stream. Security entries always belong to the signed-in
+// identity; social entries are limited to identities the user follows.
+export const getNotifications = async (c) => {
+    try {
+        const viewerId = c.get('user')?.userId;
+        if (!viewerId) return c.json({ success: false, error: 'Neural authorization missing' }, 401);
+        const prisma = getPrisma(c.env.DATABASE_URL);
+        const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+
+        const following = await prisma.follow.findMany({
+            where: { followerId: viewerId },
+            select: { followingId: true }
+        });
+        const followedIds = following.map(link => link.followingId);
+
+        const [posts, stories, sessions] = await Promise.all([
+            prisma.post.findMany({
+                where: { userId: { in: followedIds }, createdAt: { gte: since } },
+                take: 20,
+                orderBy: { createdAt: 'desc' },
+                select: { id: true, createdAt: true, user: { select: { username: true, name: true, profileImage: true } } }
+            }),
+            prisma.story.findMany({
+                where: { userId: { in: followedIds }, expiresAt: { gt: new Date() }, createdAt: { gte: since } },
+                take: 20,
+                orderBy: { createdAt: 'desc' },
+                select: { id: true, createdAt: true, user: { select: { username: true, name: true, profileImage: true } } }
+            }),
+            prisma.session.findMany({
+                where: { userId: viewerId },
+                take: 8,
+                orderBy: { createdAt: 'desc' },
+                select: { id: true, createdAt: true, userAgent: true, ipAddress: true }
+            })
+        ]);
+
+        const activity = [
+            ...posts.map(post => ({ id: `post-${post.id}`, type: 'POST', createdAt: post.createdAt, actor: post.user, title: `${post.user.name || post.user.username} shared a post`, detail: 'New post from an identity you follow.' })),
+            ...stories.map(story => ({ id: `story-${story.id}`, type: 'STORY', createdAt: story.createdAt, actor: story.user, title: `${story.user.name || story.user.username} added a story`, detail: 'A fresh story is available for the next 24 hours.' })),
+            ...sessions.map(session => ({ id: `session-${session.id}`, type: 'SECURITY', createdAt: session.createdAt, actor: null, title: 'New sign-in to your account', detail: `${session.userAgent || 'Unknown device'} · ${session.ipAddress || 'Location protected'}` }))
+        ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 30);
+
+        return c.json({ success: true, data: activity });
+    } catch (error) {
+        console.error('Notification stream error:', error);
+        return c.json({ success: false, error: 'Unable to load your activity' }, 500);
+    }
+};
+
 export const getUploadUrl = async (c) => {
     try {
         const { fileName, fileType } = await c.req.json();

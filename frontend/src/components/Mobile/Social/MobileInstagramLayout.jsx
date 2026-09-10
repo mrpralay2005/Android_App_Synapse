@@ -10,6 +10,7 @@ import CreatePostModal from './CreatePostModal';
 import CreateStoryModal from './CreateStoryModal';
 import StoryViewer from './StoryViewer';
 import { ReleaseUpdateNotice } from './ReleaseUpdateCenter';
+import NotificationCenter, { useNotificationCount } from './NotificationCenter';
 import { saveToCache, loadFromCache } from '../../../utils/synapseCache';
 
 const MobileInstagramLayout = ({ currentUser, onLogout }) => {
@@ -26,6 +27,8 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
     const [suggestedUsers, setSuggestedUsers] = useState([]);
     const [myStories, setMyStories] = useState([]);
     const [cinemaPost, setCinemaPost] = useState(null);
+    const [notificationsOpen, setNotificationsOpen] = useState(false);
+    const unreadNotifications = useNotificationCount();
 
     useEffect(() => {
         localStorage.setItem('synapse_mobile_social_tab', view);
@@ -386,8 +389,9 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                                 >
                                     <PlusSquare size={21} strokeWidth={2.1} />
                                 </button>
-                                <button className="transition-transform active:scale-90" aria-label="Activity">
+                                <button onClick={() => setNotificationsOpen(true)} className="relative transition-transform active:scale-90" aria-label={`Activity${unreadNotifications ? `, ${unreadNotifications} unread` : ''}`}>
                                     <Heart size={21} strokeWidth={2.1} />
+                                    {unreadNotifications > 0 && <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full border border-[#0a0a0a] bg-emerald-400 px-1 text-[9px] font-black text-black">{unreadNotifications > 9 ? '9+' : unreadNotifications}</span>}
                                 </button>
                                 <button
                                     onClick={() => handleNavigation('setting')}
@@ -513,6 +517,7 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                 )}
             </AnimatePresence>
             <ReleaseUpdateNotice />
+            <NotificationCenter open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
         </div>
     );
 };

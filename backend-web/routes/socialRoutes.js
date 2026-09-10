@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import {
     getFeed,
+    getNotifications,
     createPost,
     getUploadUrl,
     toggleLike,
@@ -20,6 +21,7 @@ const social = new Hono();
 
 // Public/Semi-public Feed
 social.get('/feed', getFeed);
+social.get('/notifications', authenticateToken, getNotifications);
 social.post('/upload-url', authenticateToken, getUploadUrl);
 
 // Protected Interaction Routes
