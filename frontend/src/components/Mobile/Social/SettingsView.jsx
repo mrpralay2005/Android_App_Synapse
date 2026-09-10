@@ -277,7 +277,7 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
     if (isMobile && !mobileDetailOpen) {
         return (
             <div className="flex h-full w-full flex-col bg-[#0a0a0a] px-3 pb-3 pt-2">
-                <div className="mb-1 flex h-10 items-center justify-between">
+                <div className="mb-3 flex h-10 items-center justify-between">
                     <button onClick={onBack} className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white transition-colors active:bg-white/10" aria-label="Back to feed">
                         <ChevronLeft size={18} />
                     </button>
