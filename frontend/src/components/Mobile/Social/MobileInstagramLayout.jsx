@@ -394,7 +394,7 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                                 </button>
                                 <button onClick={() => setNotificationsOpen(true)} className="relative transition-transform active:scale-90" aria-label={`Activity${unreadNotifications ? `, ${unreadNotifications} unread` : ''}`}>
                                     <Heart size={21} strokeWidth={2.1} />
-                                    {unreadNotifications > 0 && <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full border border-[#0a0a0a] bg-emerald-400 px-1 text-[9px] font-black text-black">{unreadNotifications > 9 ? '9+' : unreadNotifications}</span>}
+                                    {unreadNotifications > 0 && <><span className="absolute -right-2 -top-2 h-4 w-4 animate-ping rounded-full bg-emerald-400/55" aria-hidden="true" /><span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full border border-[#0a0a0a] bg-emerald-400 px-1 text-[9px] font-black text-black">{unreadNotifications > 9 ? '9+' : unreadNotifications}</span></>}
                                 </button>
                                 <button
                                     onClick={() => handleNavigation('setting')}
