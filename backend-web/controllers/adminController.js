@@ -99,28 +99,30 @@ export const publishPlatformUpdate = async (c) => {
     try {
         const { title, summary, version } = await c.req.json();
         if (![title, summary, version].every(value => typeof value === 'string' && value.trim())) return c.json({ success: false, error: 'Title, version, and summary are required' }, 400);
-        const deployHookUrl = c.env.PAGES_DEPLOY_HOOK_URL;
-        if (!deployHookUrl) {
-            return c.json({ success: false, error: 'Publishing is not configured. Add the Pages deploy-hook secret to the production backend.' }, 503);
+        const pagesDeployHookUrl = c.env.PAGES_DEPLOY_HOOK_URL;
+        const workerDeployHookUrl = c.env.WORKER_DEPLOY_HOOK_URL;
+        if (!pagesDeployHookUrl || !workerDeployHookUrl) {
+            return c.json({ success: false, error: 'Publishing is not configured. Both the Pages and backend deploy-hook secrets are required.' }, 503);
         }
 
-        // The hook URL is an administrator-owned secret. It is never accepted from
+        // Both URLs are administrator-owned secrets. They are never accepted from
         // the browser or returned in a response, which prevents an untrusted client
-        // from triggering a public release.
-        let deploymentResponse;
+        // from triggering either public deployment.
+        let pagesResponse;
+        let workerResponse;
         try {
-            deploymentResponse = await fetch(deployHookUrl, {
-                method: 'POST',
-                headers: { 'User-Agent': 'SynapseX-Admin-Release/1.0' }
-            });
+            [workerResponse, pagesResponse] = await Promise.all([
+                fetch(workerDeployHookUrl, { method: 'POST', headers: { 'User-Agent': 'SynapseX-Admin-Release/1.0' } }),
+                fetch(pagesDeployHookUrl, { method: 'POST', headers: { 'User-Agent': 'SynapseX-Admin-Release/1.0' } })
+            ]);
         } catch (error) {
-            console.error('Pages release hook request failed:', error);
+            console.error('Release hook request failed:', error);
             return c.json({ success: false, error: 'Cloudflare could not be reached. No release was published.' }, 502);
         }
 
-        if (!deploymentResponse.ok) {
-            console.error('Pages release hook rejected:', deploymentResponse.status);
-            return c.json({ success: false, error: 'Cloudflare did not accept this release. No release note was published.' }, 502);
+        if (!workerResponse.ok || !pagesResponse.ok) {
+            console.error('Release hook rejected:', { worker: workerResponse.status, pages: pagesResponse.status });
+            return c.json({ success: false, error: 'Cloudflare did not accept both deployments. No release note was published.' }, 502);
         }
 
         const admin = c.get('user');
@@ -129,7 +131,7 @@ export const publishPlatformUpdate = async (c) => {
             data: { title: title.trim(), summary: summary.trim(), version: version.trim(), authorId: admin.userId },
             include: { author: { select: { username: true } } }
         });
-        return c.json({ success: true, data: update, deploymentTriggered: true }, 201);
+        return c.json({ success: true, data: update, deploymentTriggered: true, workerDeploymentTriggered: true, pagesDeploymentTriggered: true }, 201);
     } catch (error) {
         return c.json({ success: false, error: 'Release update could not be published' }, 500);
     }
