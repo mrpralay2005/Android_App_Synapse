@@ -358,7 +358,7 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
 
     return (
         <div className="md:hidden bg-[#0a0a0a] text-white" style={{ height: 'calc(100vh - 18px)', width: '100vw', overflow: 'hidden', position: 'fixed', inset: '9px 0 0 0', maxWidth: '100vw', maxHeight: 'calc(100vh - 18px)', overscrollBehavior: 'none', boxSizing: 'border-box', margin: 0, padding: 0, left: 0, right: 0 }}>
-            <div className="h-full relative pb-32 bg-[#0a0a0a]" style={{ overflow: 'hidden', width: '100%', maxWidth: '100vw', margin: 0, padding: 0 }}>
+            <div className="h-full relative pb-36 bg-[#0a0a0a]" style={{ overflow: 'hidden', width: '100%', maxWidth: '100vw', margin: 0, padding: 0 }}>
                 <header className="z-40 bg-[#0a0a0a]/90 px-4 pt-2 pb-1.5">
                     {view === 'profile' ? (
                         <div className="flex items-center justify-between">
@@ -415,15 +415,15 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                     )}
                 </header>
 
-                <div className="px-4 pb-3 overflow-y-auto hide-scrollbar" style={{ height: 'calc(100% - 128px)', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
+                <div className="px-4 pb-3 overflow-y-auto hide-scrollbar" style={{ height: 'calc(100% - 140px)', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
                     {renderMainContent()}
                 </div>
 
                 <nav
-                    className="absolute bottom-7 left-3 right-3 z-50 overflow-hidden rounded-[24px] border border-white/[0.07] bg-[#101111]/95 shadow-[0_-8px_24px_rgba(0,0,0,0.32)]"
+                    className="absolute bottom-12 left-3 right-3 z-50 overflow-hidden rounded-[22px] border border-white/[0.07] bg-[#101111]/95 shadow-[0_-8px_24px_rgba(0,0,0,0.32)]"
                     style={{ paddingBottom: 'max(0px, env(safe-area-inset-bottom))' }}
                 >
-                    <div className="grid grid-cols-5 gap-1 px-2 py-2" style={{ width: '100%', maxWidth: '100vw' }}>
+                    <div className="grid grid-cols-5 gap-1 px-2 py-1.5" style={{ width: '100%', maxWidth: '100vw' }}>
                         {loading && view === 'feed' ? [0, 1, 2, 3, 4].map((item) => (
                             <div key={item} className="flex flex-col items-center justify-center gap-1 py-1 animate-pulse" aria-hidden="true">
                                 <div className="h-10 w-10 rounded-2xl bg-white/[0.07]" />
@@ -447,9 +447,9 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                                 <button
                                     key={item.id}
                                     onClick={onClick}
-                                    className={`flex flex-col items-center justify-center gap-1 py-1 text-[10px] font-medium ${active ? 'text-white' : 'text-gray-500'}`}
+                                    className={`flex flex-col items-center justify-center gap-0.5 py-1 text-[9px] font-medium ${active ? 'text-white' : 'text-gray-500'}`}
                                 >
-                                    <div className={`flex h-10 w-10 items-center justify-center rounded-2xl border transition-all duration-200 ${active ? 'border-emerald-400/25 bg-emerald-400/15 text-emerald-300 shadow-[0_5px_16px_rgba(16,185,129,0.12)]' : 'border-white/[0.06] bg-white/[0.035] text-gray-400 active:scale-95'}`}>
+                                    <div className={`flex h-9 w-9 items-center justify-center rounded-xl border transition-all duration-200 ${active ? 'border-emerald-400/25 bg-emerald-400/15 text-emerald-300 shadow-[0_5px_16px_rgba(16,185,129,0.12)]' : 'border-white/[0.06] bg-white/[0.035] text-gray-400 active:scale-95'}`}>
                                         {item.icon}
                                     </div>
                                     <span>{item.label}</span>

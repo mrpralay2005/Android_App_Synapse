@@ -277,7 +277,7 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
     if (isMobile && !mobileDetailOpen) {
         return (
             <div className="flex h-full w-full flex-col bg-[#0a0a0a] px-3 pb-3 pt-2">
-                <div className="mb-2 flex h-10 items-center justify-between">
+                <div className="mb-1 flex h-10 items-center justify-between">
                     <button onClick={onBack} className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white transition-colors active:bg-white/10" aria-label="Back to feed">
                         <ChevronLeft size={18} />
                     </button>
@@ -291,7 +291,7 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
                             <button
                                 key={item.id}
                                 onClick={() => openMobileSection(item.id)}
-                                className="flex h-[52px] w-full items-center gap-3 rounded-xl px-3 text-left text-white transition-colors active:bg-white/[0.07]"
+                                className="flex h-[48px] w-full items-center gap-3 rounded-xl px-3 text-left text-white transition-colors active:bg-white/[0.07]"
                             >
                                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.045] text-gray-400">
                                     {item.icon}
@@ -304,7 +304,7 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
 
                     <button
                         onClick={onLogout}
-                        className="mt-auto flex h-[46px] w-full items-center gap-3 rounded-xl border border-red-500/20 bg-red-500/[0.08] px-4 text-left text-sm font-bold text-red-400"
+                        className="mt-auto flex h-[44px] w-full items-center gap-3 rounded-xl border border-red-500/20 bg-red-500/[0.08] px-4 text-left text-sm font-bold text-red-400"
                     >
                         <ChevronLeft size={18} className="rotate-180" />
                         <span>Sever Connection</span>
