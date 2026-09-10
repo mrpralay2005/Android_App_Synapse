@@ -136,7 +136,7 @@ const StoriesSlider = ({ stories, onStoryClick, onUserProfileClick }) => {
     );
 };
 
-const FeedView = ({ posts, stories = [], suggestedUsers = [], onCreateClick, loading, onCinemaMode, myStories = [], onStoryClick, onUserProfileClick, onMyStoryClick, currentUser }) => {
+const FeedView = ({ posts, stories = [], suggestedUsers = [], onCreateClick, loading, onCinemaMode, myStories = [], onStoryClick, onUserProfileClick, onMyStoryClick, currentUser, feedSort = 'popular', onFeedSortChange }) => {
     const maxVisible = 5;
 
     const combinedList = React.useMemo(() => {
@@ -270,10 +270,15 @@ const FeedView = ({ posts, stories = [], suggestedUsers = [], onCreateClick, loa
             </div>
 
             <div className="flex items-center justify-between mb-4">
-                <h3 className="text-white font-bold text-xl">Feeds</h3>
-                <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
-                    <button className="px-6 py-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-white transition-colors">LATEST</button>
-                    <button className="px-6 py-1.5 text-[10px] font-bold uppercase tracking-widest bg-emerald-500 text-black rounded-lg">POPULAR</button>
+                <h3 className="text-white font-black text-xl tracking-[-0.04em]">Feeds</h3>
+                <div className="flex rounded-xl border border-white/[0.08] bg-white/[0.045] p-1 shadow-inner shadow-black/20">
+                    {[
+                        { id: 'latest', label: 'Latest' },
+                        { id: 'popular', label: 'Popular' }
+                    ].map(option => {
+                        const selected = feedSort === option.id;
+                        return <button key={option.id} onClick={() => onFeedSortChange?.(option.id)} className={`rounded-lg px-4 py-1.5 text-[10px] uppercase tracking-[0.16em] transition-all ${selected ? 'bg-emerald-400 font-black text-black shadow-[0_4px_12px_rgba(52,211,153,0.18)]' : 'font-semibold text-gray-400 hover:text-white'}`}>{option.label}</button>;
+                    })}
                 </div>
             </div>
 

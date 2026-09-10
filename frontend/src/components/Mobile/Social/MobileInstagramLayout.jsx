@@ -28,6 +28,7 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
     const [myStories, setMyStories] = useState([]);
     const [cinemaPost, setCinemaPost] = useState(null);
     const [notificationsOpen, setNotificationsOpen] = useState(false);
+    const [feedSort, setFeedSort] = useState('popular');
     const unreadNotifications = useNotificationCount();
 
     useEffect(() => {
@@ -101,7 +102,7 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                 }
 
                 if (view === 'feed' || view === 'reels') {
-                    const res = await fetch(`${apiUrl}/api/social/feed`, fetchOptions);
+                    const res = await fetch(`${apiUrl}/api/social/feed?sort=${feedSort}`, fetchOptions);
                     const data = await res.json();
                     if (active) {
                         const newPosts = Array.isArray(data) ? data : [];
@@ -128,7 +129,7 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
 
         fetchData();
         return () => { active = false; };
-    }, [view, currentUser, refreshTrigger, userProfile?.username]);
+    }, [view, currentUser, refreshTrigger, userProfile?.username, feedSort]);
 
     const handleUpdateUser = (newData) => {
         const profileImage = newData.profileImage || newData.image || currentUserState.profileImage || currentUserState.image;
@@ -295,6 +296,8 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                     myStories={myStories}
                     onMyStoryClick={handleMyStoryClick}
                     currentUser={currentUserState}
+                    feedSort={feedSort}
+                    onFeedSortChange={setFeedSort}
                     onStoryClick={(item) => {
                         const userStories = allStories.filter(s => s.userId === item.userId);
                         setViewingStory(userStories);

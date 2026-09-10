@@ -6,10 +6,15 @@ export const getFeed = async (c) => {
     try {
         const user = c.get('user');
         const prisma = getPrisma(c.env.DATABASE_URL);
+        const sort = c.req.query('sort') === 'latest' ? 'latest' : 'popular';
 
         const posts = await prisma.post.findMany({
             take: 30,
-            orderBy: { createdAt: 'desc' },
+            // Popular prioritizes genuine social engagement; newest content is the
+            // tie-breaker. Latest is strictly chronological.
+            orderBy: sort === 'popular'
+                ? [{ likes: { _count: 'desc' } }, { createdAt: 'desc' }]
+                : { createdAt: 'desc' },
             include: {
                 user: {
                     select: {
