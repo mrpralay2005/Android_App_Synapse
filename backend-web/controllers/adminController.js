@@ -76,6 +76,23 @@ export const getPlatformUpdates = async (c) => {
     }
 };
 
+// Public by design: release notes contain no account data and must be visible
+// to every signed-in SynapseX user in System Support.
+export const getLatestPlatformUpdate = async (c) => {
+    try {
+        const prisma = getPrisma(c.env.DATABASE_URL);
+        const update = await prisma.platformUpdate.findFirst({
+            where: { isPublished: true },
+            orderBy: { publishedAt: 'desc' },
+            select: { id: true, title: true, summary: true, version: true, publishedAt: true }
+        });
+        return c.json({ success: true, data: update });
+    } catch (error) {
+        console.error('Latest platform update error:', error);
+        return c.json({ success: false, error: 'Unable to check for updates' }, 500);
+    }
+};
+
 export const publishPlatformUpdate = async (c) => {
     const denied = requireAdmin(c);
     if (denied) return denied;

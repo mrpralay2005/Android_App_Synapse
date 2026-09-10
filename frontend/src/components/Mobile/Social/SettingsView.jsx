@@ -9,6 +9,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import Cookies from 'js-cookie';
 import AdminCommandCenter from './AdminCommandCenter';
+import { ReleaseUpdatePanel } from './ReleaseUpdateCenter';
 
 const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
     const [activeSection, setActiveSection] = useState(null);
@@ -1154,6 +1155,9 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
                             <motion.div initial="hidden" animate="visible" variants={{ visible: { transition: { staggerChildren: 0.1 } } }} className="space-y-12">
                                 <section>
                                     <motion.h3 variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="text-2xl font-bold text-white mb-8 tracking-tight">System Support</motion.h3>
+                                    <div className="mb-6">
+                                        <ReleaseUpdatePanel />
+                                    </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         {[
                                             { title: 'Neural Docs', desc: 'Complete manual for Synapse functions.' },

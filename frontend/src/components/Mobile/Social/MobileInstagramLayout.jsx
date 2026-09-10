@@ -9,6 +9,7 @@ import ReelsView from './ReelsView';
 import CreatePostModal from './CreatePostModal';
 import CreateStoryModal from './CreateStoryModal';
 import StoryViewer from './StoryViewer';
+import { ReleaseUpdateNotice } from './ReleaseUpdateCenter';
 import { saveToCache, loadFromCache } from '../../../utils/synapseCache';
 
 const MobileInstagramLayout = ({ currentUser, onLogout }) => {
@@ -511,6 +512,7 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                     </motion.div>
                 )}
             </AnimatePresence>
+            <ReleaseUpdateNotice />
         </div>
     );
 };
