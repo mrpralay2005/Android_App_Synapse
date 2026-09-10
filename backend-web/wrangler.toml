@@ -18,5 +18,10 @@ AI_BACKEND_URL = "https://your-ai-backend.onrender.com"
 JWT_SECRET = "synapse_x_quantum_secure_2027"
 AI_BACKEND_URL = "https://your-ai-backend.onrender.com"
 
+# Isolated release-preview Worker. Its DATABASE_URL and JWT_SECRET must be
+# configured as Cloudflare secrets and must point to a Neon staging branch.
+[env.staging.vars]
+AI_BACKEND_URL = "https://your-ai-backend.onrender.com"
+
 [observability]
 enabled = true

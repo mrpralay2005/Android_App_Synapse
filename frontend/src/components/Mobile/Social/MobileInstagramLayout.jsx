@@ -82,7 +82,7 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                     }
                 }
 
-                const apiUrl = 'https://synapse-backend.mrpralay2005.workers.dev';
+                const apiUrl = import.meta.env.VITE_API_URL || 'https://synapse-backend.mrpralay2005.workers.dev';
                 const token = Cookies.get('synapse_token');
                 const fetchOptions = {
                     method: 'GET',
@@ -150,7 +150,7 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
 
     const handleCreatePost = async (postData) => {
         try {
-            const apiUrl = 'https://synapse-backend.mrpralay2005.workers.dev';
+            const apiUrl = import.meta.env.VITE_API_URL || 'https://synapse-backend.mrpralay2005.workers.dev';
             const token = Cookies.get('synapse_token');
             let finalMediaUrl = postData.mediaUrl;
 
@@ -209,7 +209,7 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
 
     const handleStoryUpload = async (storyData) => {
         try {
-            const apiUrl = 'https://synapse-backend.mrpralay2005.workers.dev';
+            const apiUrl = import.meta.env.VITE_API_URL || 'https://synapse-backend.mrpralay2005.workers.dev';
             const token = Cookies.get('synapse_token');
             let finalMediaUrl = storyData.mediaUrl;
 
@@ -256,7 +256,7 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
 
     const handleDeleteStory = async (storyId) => {
         try {
-            const apiUrl = 'https://synapse-backend.mrpralay2005.workers.dev';
+            const apiUrl = import.meta.env.VITE_API_URL || 'https://synapse-backend.mrpralay2005.workers.dev';
             const token = Cookies.get('synapse_token');
             const res = await fetch(`${apiUrl}/api/social/stories/${storyId}`, {
                 method: 'DELETE',

@@ -46,7 +46,7 @@ const OTPBox = ({ email, onVerified, onBack }) => {
         setStatus({ type: 'loading', message: 'Decrypting Neural Code...' });
 
         try {
-            const apiUrl = "https://synapse-backend.mrpralay2005.workers.dev";
+            const apiUrl = import.meta.env.VITE_API_URL || "https://synapse-backend.mrpralay2005.workers.dev";
             const response = await fetch(`${apiUrl}/api/auth/verify-otp`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -69,7 +69,7 @@ const OTPBox = ({ email, onVerified, onBack }) => {
         setStatus({ type: 'loading', message: 'Resending Neural Access Code...' });
 
         try {
-            const apiUrl = "https://synapse-backend.mrpralay2005.workers.dev";
+            const apiUrl = import.meta.env.VITE_API_URL || "https://synapse-backend.mrpralay2005.workers.dev";
             const response = await fetch(`${apiUrl}/api/auth/resend-otp`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

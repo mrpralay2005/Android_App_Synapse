@@ -7,7 +7,8 @@
     "scripts": {
         "dev": "wrangler dev --env dev",
         "dev-local": "JWT_SECRET=\"synapse_x_quantum_secure_2026\" wrangler dev",
-        "deploy": "wrangler deploy"
+        "deploy": "wrangler deploy",
+        "deploy:staging": "wrangler deploy --env staging"
     },
     "dependencies": {
         "@aws-sdk/client-s3": "^3.978.0",

@@ -152,7 +152,7 @@ const PostCard = ({ post, onInteraction, onCinemaMode, index = 0 }) => {
         }
     };
 
-    const apiUrl = "https://synapse-backend.mrpralay2005.workers.dev";
+    const apiUrl = import.meta.env.VITE_API_URL || "https://synapse-backend.mrpralay2005.workers.dev";
     const token = Cookies.get('synapse_token');
 
     const handleLike = async () => {
