@@ -15,32 +15,54 @@ enum Role {
 }
 
 model User {
-  id            Int           @id @default(autoincrement())
-  email         String        @unique
-  username      String        @unique
-  password      String
-  name          String?
-  bio           String?       @default("Quantum Explorer in the SynapseX Realm")
-  profileImage  String?       // No default value as requested
-  role          Role          @default(USER)
-  riskScore     Float?        @default(0.0)
-  lastLogin     DateTime?
-  posts         Post[]
-  likes         Like[]
-  comments      Comment[]
-  stories       Story[]
-  savedPosts    SavedPost[]
-  followers     Follow[]      @relation("Following")
-  following     Follow[]      @relation("Follower")
-  sessions      Session[]
-  storyViews    StoryView[]
-  storyMessages StoryMessage[]
-  isVerified    Boolean       @default(false)
-  isPrivate     Boolean       @default(false)
-  otp           String?
-  otpExpires    DateTime?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  id                              Int              @id @default(autoincrement())
+  email                           String           @unique
+  username                        String           @unique
+  password                        String
+  name                            String?
+  bio                             String?          @default("Quantum Explorer in the SynapseX Realm")
+  profileImage                    String? // No default value as requested
+  role                            Role             @default(USER)
+  riskScore                       Float?           @default(0.0)
+  lastLogin                       DateTime?
+  posts                           Post[]
+  likes                           Like[]
+  comments                        Comment[]
+  stories                         Story[]
+  savedPosts                      SavedPost[]
+  followers                       Follow[]         @relation("Following")
+  following                       Follow[]         @relation("Follower")
+  sessions                        Session[]
+  storyViews                      StoryView[]
+  storyMessages                   StoryMessage[]
+  platformUpdates                 PlatformUpdate[]
+  isVerified                      Boolean          @default(false)
+  isPrivate                       Boolean          @default(false)
+  creatorModeEnabled              Boolean          @default(false)
+  creatorVerificationRequestedAt  DateTime?
+  creatorVerificationStatus       String           @default("NONE")
+  creatorVerifiedAt               DateTime?
+  creatorVerificationReviewedById Int?
+  creatorHighResUploads           Boolean          @default(false)
+  creatorAnonymousShield          Boolean          @default(false)
+  creatorDeepAnalytics            Boolean          @default(false)
+  links                           Json?
+  otp                             String?
+  otpExpires                      DateTime?
+  createdAt                       DateTime         @default(now())
+  updatedAt                       DateTime         @updatedAt
+}
+
+model PlatformUpdate {
+  id          Int      @id @default(autoincrement())
+  title       String
+  summary     String
+  version     String
+  isPublished Boolean  @default(true)
+  authorId    Int
+  author      User     @relation(fields: [authorId], references: [id])
+  publishedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
 }
 
 enum MediaType {
@@ -49,19 +71,19 @@ enum MediaType {
 }
 
 model Post {
-  id            Int         @id @default(autoincrement())
-  caption       String?
-  mediaUrl      String      // Generic URL for both image and video
-  thumbnailUrl  String?     // For video previews
-  type          MediaType   @default(IMAGE)
-  postPassword  String?     // Password protection for specific posts
-  userId        Int
-  user          User        @relation(fields: [userId], references: [id])
-  likes         Like[]
-  comments      Comment[]
-  savedBy       SavedPost[]
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  id           Int         @id @default(autoincrement())
+  caption      String?
+  mediaUrl     String // Generic URL for both image and video
+  thumbnailUrl String? // For video previews
+  type         MediaType   @default(IMAGE)
+  postPassword String? // Password protection for specific posts
+  userId       Int
+  user         User        @relation(fields: [userId], references: [id])
+  likes        Like[]
+  comments     Comment[]
+  savedBy      SavedPost[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 }
 
 model Follow {
@@ -97,24 +119,24 @@ model Comment {
 }
 
 model Story {
-  id        Int       @id @default(autoincrement())
+  id        Int            @id @default(autoincrement())
   mediaUrl  String
-  type      MediaType @default(IMAGE)
+  type      MediaType      @default(IMAGE)
   userId    Int
-  user      User      @relation(fields: [userId], references: [id])
+  user      User           @relation(fields: [userId], references: [id])
   expiresAt DateTime
-  createdAt DateTime  @default(now())
+  createdAt DateTime       @default(now())
   views     StoryView[]
   messages  StoryMessage[]
 }
 
 model StoryView {
-  id        Int      @id @default(autoincrement())
-  storyId   Int
-  userId    Int
-  story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  viewedAt  DateTime @default(now())
+  id       Int      @id @default(autoincrement())
+  storyId  Int
+  userId   Int
+  story    Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  viewedAt DateTime @default(now())
 
   @@unique([storyId, userId])
 }
@@ -141,12 +163,12 @@ model SavedPost {
 }
 
 model Session {
-  id           String   @id @default(uuid())
-  userId       Int
-  user         User     @relation(fields: [userId], references: [id])
-  userAgent    String?
-  ipAddress    String?
-  lastActive   DateTime @default(now())
-  createdAt    DateTime @default(now())
-  expiresAt    DateTime
+  id         String   @id @default(uuid())
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id])
+  userAgent  String?
+  ipAddress  String?
+  lastActive DateTime @default(now())
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
 }

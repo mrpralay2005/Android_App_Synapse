@@ -24,7 +24,9 @@ export const register = async (c) => {
                 username,
                 email,
                 password: hashedPassword,
-                role: email.includes('admin') ? 'ADMIN' : 'USER',
+                // Administrator access is assigned through controlled database
+                // administration, never inferred from a user-controlled email.
+                role: 'USER',
                 otp,
                 otpExpires,
                 isVerified: false
@@ -216,6 +218,14 @@ export const login = async (c) => {
                 bio: user.bio,
                 email: user.email,
                 isPrivate: user.isPrivate,
+                creatorModeEnabled: user.creatorModeEnabled,
+                creatorVerificationRequestedAt: user.creatorVerificationRequestedAt,
+                creatorVerificationStatus: user.creatorVerificationStatus,
+                creatorVerifiedAt: user.creatorVerifiedAt,
+                creatorHighResUploads: user.creatorHighResUploads,
+                creatorAnonymousShield: user.creatorAnonymousShield,
+                creatorDeepAnalytics: user.creatorDeepAnalytics,
+                links: user.links,
                 riskScore
             }
         });
@@ -349,7 +359,15 @@ export const getMe = async (c) => {
                 bio: user.bio,
                 email: user.email,
                 riskScore: user.riskScore,
-                isPrivate: user.isPrivate
+                isPrivate: user.isPrivate,
+                creatorModeEnabled: user.creatorModeEnabled,
+                creatorVerificationRequestedAt: user.creatorVerificationRequestedAt,
+                creatorVerificationStatus: user.creatorVerificationStatus,
+                creatorVerifiedAt: user.creatorVerifiedAt,
+                creatorHighResUploads: user.creatorHighResUploads,
+                creatorAnonymousShield: user.creatorAnonymousShield,
+                creatorDeepAnalytics: user.creatorDeepAnalytics,
+                links: user.links
             }
         });
     } catch (error) {

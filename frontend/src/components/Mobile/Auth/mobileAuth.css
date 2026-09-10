@@ -33,6 +33,56 @@
     padding: 1.5rem 1.25rem !important;
 }
 
+/* Neural Connect has only two fields. Tighten its vertical rhythm so the card
+   fits naturally in a browser window instead of looking like a desktop panel. */
+.mobile-auth-login > .flex-1 {
+    justify-content: flex-start !important;
+}
+
+.mobile-auth-login .mb-10 {
+    margin-bottom: 1.25rem !important;
+}
+
+.mobile-auth-login .mb-8 {
+    margin-bottom: 0.875rem !important;
+}
+
+.mobile-auth-login .space-y-6 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0.875rem !important;
+}
+
+.mobile-auth-login .login-btn {
+    padding-top: 0.6875rem;
+    padding-bottom: 0.6875rem;
+}
+
+.mobile-auth-login .mt-10 {
+    margin-top: 1.25rem !important;
+}
+
+.mobile-auth-login .mb-4 {
+    margin-bottom: 0.625rem !important;
+}
+
+.mobile-auth-login .social-btn {
+    padding: 0.5rem;
+}
+
+/* Registration needs more room for its five fields, but its surrounding
+   sections can still be a little denser on mobile web. */
+.mobile-auth-register .mb-6 {
+    margin-bottom: 1rem !important;
+}
+
+.mobile-auth-register .mt-6 {
+    margin-top: 1rem !important;
+}
+
+.mobile-auth-register .signup-btn {
+    padding-top: 0.6875rem;
+    padding-bottom: 0.6875rem;
+}
+
 @media (max-height: 760px) {
     .mobile-auth-screen {
         padding-top: max(0.5rem, env(safe-area-inset-top));
@@ -53,4 +103,72 @@
     .mobile-auth-card .mt-10 { margin-top: 1.25rem !important; }
     .mobile-auth-card .mt-8 { margin-top: 1rem !important; }
     .mobile-auth-card .space-y-8 > :not([hidden]) ~ :not([hidden]) { margin-top: 1rem !important; }
+}
+
+/* Settings detail pages are authored with richer desktop cards. These scoped
+   mobile rules preserve their hierarchy while preventing long names, metadata
+   and action controls from colliding in the narrow web viewport. */
+@media (max-width: 767px) {
+    .settings-mobile-detail {
+        padding: 1rem !important;
+    }
+
+    .settings-mobile-detail section > h3 {
+        display: none;
+    }
+
+    .settings-mobile-detail .p-8,
+    .settings-mobile-detail .p-10 {
+        padding: 1.25rem !important;
+    }
+
+    .settings-mobile-detail .gap-8 {
+        gap: 1rem !important;
+    }
+
+    .settings-mobile-detail .gap-6 {
+        gap: 0.875rem !important;
+    }
+
+    .settings-mobile-detail .space-y-12 > :not([hidden]) ~ :not([hidden]) {
+        margin-top: 1.5rem !important;
+    }
+
+    .settings-mobile-detail .mb-8 {
+        margin-bottom: 1rem !important;
+    }
+
+    .settings-mobile-detail .mb-10 {
+        margin-bottom: 1.25rem !important;
+    }
+
+    .settings-mobile-detail .text-2xl {
+        font-size: 1.25rem !important;
+        line-height: 1.35 !important;
+    }
+
+    .settings-mobile-detail .text-xl {
+        font-size: 1.125rem !important;
+        line-height: 1.35 !important;
+    }
+
+    .settings-mobile-detail .settings-alert {
+        gap: 1rem !important;
+    }
+
+    .settings-mobile-detail .settings-alert-meta {
+        align-items: flex-start !important;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .settings-mobile-detail .settings-alert-actions {
+        flex-wrap: wrap;
+        gap: 0.5rem !important;
+    }
+
+    .settings-mobile-detail .settings-alert-actions button {
+        flex: 1 1 7rem;
+        padding: 0.625rem 0.75rem;
+    }
 }

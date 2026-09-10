@@ -8,10 +8,9 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Cookies from 'js-cookie';
-import AdminCommandCenter from './AdminCommandCenter';
 
-const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
-    const [activeSection, setActiveSection] = useState(null);
+const SettingsView = ({ user, onUpdateUser, onLogout }) => {
+    const [activeSection, setActiveSection] = useState('profile');
     const [isTransitioning, setIsTransitioning] = useState(false);
     const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
     const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
@@ -29,14 +28,7 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
         email: user.email || '',
         bio: user.bio || '',
         isPrivate: user.isPrivate || false,
-        links: Array.isArray(user.links) ? user.links : [],
-        creatorModeEnabled: user.creatorModeEnabled ?? false,
-        creatorVerificationRequestedAt: user.creatorVerificationRequestedAt || null,
-        creatorVerificationStatus: user.creatorVerificationStatus || 'NONE',
-        creatorVerifiedAt: user.creatorVerifiedAt || null,
-        creatorHighResUploads: user.creatorHighResUploads ?? false,
-        creatorAnonymousShield: user.creatorAnonymousShield ?? false,
-        creatorDeepAnalytics: user.creatorDeepAnalytics ?? false,
+        links: user.links || [],
         showActivityStatus: user.showActivityStatus ?? true,
         readReceipts: user.readReceipts ?? true,
         ghostViewer: user.ghostViewer ?? false,
@@ -55,7 +47,7 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
     const [loading, setLoading] = useState(false);
     const [statusMsg, setStatusMsg] = useState({ type: '', text: '' });
 
-    const apiUrl = import.meta.env.VITE_API_URL || "https://synapse-backend.mrpralay2005.workers.dev";
+    const apiUrl = "https://synapse-backend.mrpralay2005.workers.dev";
     const token = Cookies.get('synapse_token');
 
     // Vital Sync: Fetch latest user data on mount if email or isPrivate is missing
@@ -74,14 +66,7 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
                         email: data.user.email || '',
                         bio: data.user.bio || '',
                         isPrivate: data.user.isPrivate || false,
-                        links: Array.isArray(data.user.links) ? data.user.links : [],
-                        creatorModeEnabled: data.user.creatorModeEnabled ?? false,
-                        creatorVerificationRequestedAt: data.user.creatorVerificationRequestedAt || null,
-                        creatorVerificationStatus: data.user.creatorVerificationStatus || 'NONE',
-                        creatorVerifiedAt: data.user.creatorVerifiedAt || null,
-                        creatorHighResUploads: data.user.creatorHighResUploads ?? false,
-                        creatorAnonymousShield: data.user.creatorAnonymousShield ?? false,
-                        creatorDeepAnalytics: data.user.creatorDeepAnalytics ?? false,
+                        links: data.user.links || []
                     });
                     onUpdateUser(data.user);
                 }
@@ -101,12 +86,8 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
         { id: 'notifications', label: 'Notification Pulse', icon: <Bell size={20} />, description: 'Configure alerts and neural pings' },
         { id: 'interface', label: 'Neural Interface', icon: <Palette size={20} />, description: 'Customize glow levels and glass intensity' },
         { id: 'data', label: 'Archive & Synapses', icon: <Download size={20} />, description: 'Download your data or clear activity' },
-        { id: 'account', label: 'Account Center', icon: <User size={20} />, description: 'Review your identity and account controls' },
+        { id: 'help', label: 'System Support', icon: <Globe size={20} />, description: 'Documentation and nexus assistance' },
     ];
-    // Admins manage the platform through Command Center, so the end-user support
-    // shortcut would be redundant and makes the compact settings overview overflow.
-    if (user.role !== 'ADMIN') menuItems.splice(menuItems.length - 1, 0, { id: 'help', label: 'System Support', icon: <Globe size={20} />, description: 'Documentation and nexus assistance' });
-    if (user.role === 'ADMIN') menuItems.unshift({ id: 'admin', label: 'Admin Command Center', icon: <ShieldCheck size={20} />, description: 'Review platform operations and creator requests' });
 
     const showStatus = (type, text) => {
         setStatusMsg({ type, text });
@@ -134,33 +115,6 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
             }
         } catch (err) {
             showStatus('error', 'Sync Failed: Connection Severed');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const saveCreatorSetting = async (changes, successMessage) => {
-        setLoading(true);
-        try {
-            const res = await fetch(`${apiUrl}/api/user/update`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(changes)
-            });
-            const data = await res.json();
-            if (!data.success) throw new Error(data.error || 'Creator settings could not be saved');
-            setFormData(current => ({
-                ...current,
-                ...data.data,
-                links: Array.isArray(data.data.links) ? data.data.links : current.links
-            }));
-            onUpdateUser(data.data);
-            showStatus('success', successMessage);
-        } catch (err) {
-            showStatus('error', err.message || 'Creator settings could not be saved');
         } finally {
             setLoading(false);
         }
@@ -275,35 +229,34 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
 
     if (isMobile && !mobileDetailOpen) {
         return (
-            <div className="flex h-full w-full flex-col bg-[#0a0a0a] px-3 pb-3 pt-2">
-                <div className="mb-2 flex h-10 items-center justify-between">
-                    <button onClick={onBack} className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white transition-colors active:bg-white/10" aria-label="Back to feed">
+            <div className="flex h-full w-full flex-col bg-[#0f0f0f] p-3">
+                <div className="mb-4 flex items-center justify-between px-2 pt-1">
+                    <button className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white" aria-label="Back">
                         <ChevronLeft size={18} />
                     </button>
-                    <div className="text-xl font-bold tracking-[-0.05em] text-white">Settings</div>
+                    <div className="text-[2.1rem] font-black tracking-[-0.08em] text-white">Settings</div>
                     <div className="h-10 w-10" />
                 </div>
 
-                <div className="flex flex-1 flex-col overflow-y-auto rounded-[1.35rem] border border-white/[0.08] bg-[#101113] p-1.5 hide-scrollbar">
-                    <div className="space-y-1">
+                <div className="flex-1 overflow-y-auto rounded-[2rem] border border-white/10 bg-[#111316] p-3 hide-scrollbar">
+                    <div className="space-y-2">
                         {menuItems.map((item) => (
                             <button
                                 key={item.id}
                                 onClick={() => openMobileSection(item.id)}
-                                className="flex h-[56px] w-full items-center gap-3 rounded-xl px-3 text-left text-white transition-colors active:bg-white/[0.07]"
+                                className={`flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left transition-all ${activeSection === item.id ? 'bg-emerald-500/10 text-white' : 'bg-transparent text-white hover:bg-white/5'}`}
                             >
-                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.045] text-gray-400">
+                                <div className={`flex h-8 w-8 items-center justify-center rounded-full ${activeSection === item.id ? 'bg-emerald-500/15 text-emerald-500' : 'bg-white/5 text-gray-400'}`}>
                                     {item.icon}
                                 </div>
-                                <span className="flex-1 text-[0.95rem] font-semibold tracking-[-0.025em]">{item.label}</span>
-                                <ChevronRight size={16} className="text-gray-600" />
+                                <span className="text-[1.05rem] font-semibold tracking-[-0.04em]">{item.label}</span>
                             </button>
                         ))}
                     </div>
 
                     <button
                         onClick={onLogout}
-                        className="mt-auto flex h-[48px] w-full items-center gap-3 rounded-xl border border-red-500/20 bg-red-500/[0.08] px-4 text-left text-sm font-bold text-red-400"
+                        className="mt-4 flex w-full items-center gap-3 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-4 text-left text-[1rem] font-bold uppercase tracking-[0.18em] text-red-500"
                     >
                         <ChevronLeft size={18} className="rotate-180" />
                         <span>Sever Connection</span>
@@ -316,7 +269,7 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
     if (isMobile && mobileDetailOpen) {
         return (
             <div className="flex h-full w-full flex-col bg-[#0f0f0f]">
-                <div className="settings-mobile-header relative flex h-14 items-center justify-between border-b border-white/10 px-4">
+                <div className="flex items-center justify-between border-b border-white/10 px-4 pb-3 pt-3">
                     <button
                         onClick={closeMobileSection}
                         className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white"
@@ -324,7 +277,7 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
                     >
                         <ChevronLeft size={18} />
                     </button>
-                    <div className="absolute inset-x-14 truncate text-center text-xl font-bold tracking-[-0.05em] text-white">{menuItems.find(item => item.id === activeSection)?.label || 'Settings'}</div>
+                    <div className="text-[2.1rem] font-black tracking-[-0.08em] text-white">{menuItems.find(item => item.id === activeSection)?.label || 'Settings'}</div>
                     <div className="h-10 w-10" />
                 </div>
 
@@ -354,46 +307,9 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
                 animate={isMobile ? { opacity: 1, x: 0 } : { opacity: 1, scale: 1, filter: 'blur(0px)' }}
                 exit={isMobile ? { opacity: 0, x: -30 } : { opacity: 0, scale: 1.02, filter: 'blur(10px)' }}
                 transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-                className={isMobile ? 'settings-mobile-detail h-full w-full overflow-y-auto hide-scrollbar p-4' : 'h-full overflow-y-auto hide-scrollbar p-4 sm:p-6 md:p-8 lg:p-10'}
+                className={isMobile ? 'h-full w-full overflow-y-auto hide-scrollbar p-4' : 'h-full overflow-y-auto hide-scrollbar p-4 sm:p-6 md:p-8 lg:p-10'}
                 layout
             >
-                        {activeSection === 'account' && (
-                            <div className="space-y-5">
-                                <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.03] p-5">
-                                    <div className="flex items-center gap-4">
-                                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-400">
-                                            <User size={25} />
-                                        </div>
-                                        <div className="min-w-0">
-                                            <h3 className="truncate text-xl font-bold tracking-tight text-white">{user.name || user.username}</h3>
-                                            <p className="mt-0.5 truncate text-sm text-gray-500">@{user.username}</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="overflow-hidden rounded-[1.5rem] border border-white/10 bg-white/[0.025]">
-                                    <div className="flex items-center justify-between border-b border-white/[0.06] px-4 py-4">
-                                        <span className="text-sm text-gray-400">Neural address</span>
-                                        <span className="max-w-[58%] truncate text-sm font-medium text-white">{formData.email || user.email}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between px-4 py-4">
-                                        <span className="text-sm text-gray-400">Account visibility</span>
-                                        <span className="text-sm font-medium text-white">{formData.isPrivate ? 'Private' : 'Public'}</span>
-                                    </div>
-                                </div>
-
-                                <button
-                                    onClick={() => setActiveSection('profile')}
-                                    className="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-4 text-left text-sm font-semibold text-white transition-colors active:bg-white/[0.08]"
-                                >
-                                    Edit professional profile
-                                    <ChevronRight size={18} className="text-gray-500" />
-                                </button>
-                            </div>
-                        )}
-
-                        {activeSection === 'admin' && user.role === 'ADMIN' && <AdminCommandCenter />}
-
                         {activeSection === 'profile' && (
                             <motion.div
                                 initial="hidden"
@@ -404,28 +320,11 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
                                 <section>
                                     <div className="flex items-center justify-between mb-8">
                                         <motion.h3 variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="text-2xl font-bold text-white tracking-tight">Professional Deck</motion.h3>
-                                        <button
-                                            type="button"
-                                            onClick={() => saveCreatorSetting({ creatorModeEnabled: !formData.creatorModeEnabled }, formData.creatorModeEnabled ? 'Creator mode paused' : 'Creator mode enabled')}
-                                            disabled={loading}
-                                            className={`px-4 py-1.5 border rounded-full flex items-center gap-2 transition-colors disabled:opacity-50 ${formData.creatorModeEnabled ? 'bg-indigo-500/10 border-indigo-500/20' : 'bg-white/[0.03] border-white/10'}`}
-                                        >
-                                            <div className={`w-1.5 h-1.5 rounded-full ${formData.creatorModeEnabled ? 'bg-indigo-400 animate-pulse' : 'bg-gray-500'}`} />
-                                            <span className={`text-[10px] font-bold uppercase tracking-widest ${formData.creatorModeEnabled ? 'text-indigo-400' : 'text-gray-500'}`}>{formData.creatorModeEnabled ? 'Creator Mode On' : 'Creator Mode Off'}</span>
-                                        </button>
+                                        <div className="px-4 py-1.5 bg-indigo-500/10 border border-indigo-500/20 rounded-full flex items-center gap-2">
+                                            <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full animate-pulse" />
+                                            <span className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">Creator Mode Active</span>
+                                        </div>
                                     </div>
-
-                                    {statusMsg.text && (
-                                        <div className={`mb-5 rounded-xl border px-3 py-2 text-xs font-medium ${statusMsg.type === 'error' ? 'border-red-500/25 bg-red-500/10 text-red-300' : 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300'}`}>
-                                            {statusMsg.text}
-                                        </div>
-                                    )}
-
-                                    {!formData.creatorModeEnabled && (
-                                        <div className="mb-5 rounded-xl border border-white/[0.08] bg-white/[0.03] px-3 py-2 text-xs leading-relaxed text-gray-400">
-                                            Turn on Creator Mode to manage verification, creator tools, and professional links. Your previous choices are kept safely.
-                                        </div>
-                                    )}
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                         {/* Verification Status Card */}
@@ -435,13 +334,8 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
                                             </div>
                                             <h4 className="text-white font-bold text-lg mb-2">Signal Verification</h4>
                                             <p className="text-gray-500 text-xs font-medium mb-6">Confirm your neural identity to receive the verified creator surge.</p>
-                                            <button
-                                                type="button"
-                                                disabled={loading || !formData.creatorModeEnabled || ['PENDING', 'APPROVED'].includes(formData.creatorVerificationStatus)}
-                                                onClick={() => saveCreatorSetting({ requestCreatorVerification: true }, 'Verification request sent for review')}
-                                                className="px-6 py-2.5 bg-indigo-500 text-black text-[10px] font-bold uppercase tracking-widest rounded-xl hover:bg-indigo-400 transition-all shadow-lg shadow-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-60"
-                                            >
-                                                {formData.creatorVerificationStatus === 'APPROVED' ? 'Verified Creator' : formData.creatorVerificationStatus === 'PENDING' ? 'Verification Request Pending' : 'Request Verification'}
+                                            <button className="px-6 py-2.5 bg-indigo-500 text-black text-[10px] font-bold uppercase tracking-widest rounded-xl hover:bg-indigo-400 transition-all shadow-lg shadow-indigo-500/20">
+                                                {user.isProfessional ? 'Verified Status Active' : 'Request Verification'}
                                             </button>
                                         </motion.div>
 
@@ -451,10 +345,10 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
                                                 <CreditCard size={48} className="text-blue-500" />
                                             </div>
                                             <h4 className="text-white font-bold text-lg mb-2">Monetization Pulse</h4>
-                                            <p className="text-gray-500 text-xs font-medium mb-6">Creator earnings will appear here once monetization is available.</p>
+                                            <p className="text-gray-500 text-xs font-medium mb-6">Track your earnings and digital synapse revenue streams.</p>
                                             <div className="flex items-center gap-4">
                                                 <span className="text-white font-mono font-bold text-xl">$0.00</span>
-                                                <span className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">Not eligible yet</span>
+                                                <span className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">Awaiting Payout</span>
                                             </div>
                                         </motion.div>
                                     </div>
@@ -468,25 +362,18 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
 
                                     <div className="space-y-4">
                                         {[
-                                            { key: 'creatorHighResUploads', label: 'High-Res Transmissions', desc: 'Prefer high-resolution media uploads when supported' },
-                                            { key: 'creatorAnonymousShield', label: 'Anonymous Shield', desc: 'Hide your reel viewer count on your profile' },
-                                            { key: 'creatorDeepAnalytics', label: 'Deep Analytics Surge', desc: 'Enable detailed creator analytics when available' }
+                                            { label: 'High-Res Transmissions', desc: 'Enable 4K neural video uploads (Requires Pro)', active: true },
+                                            { label: 'Anonymous Shield', desc: 'Hide viewer count on your recently broadcasted reels', active: false },
+                                            { label: 'Deep Analytics Surge', desc: 'Interactive resonance maps for every post and story', active: true }
                                         ].map((tool, idx) => (
                                             <div key={idx} className="p-6 bg-white/[0.02] border border-white/5 rounded-2xl flex items-center justify-between group hover:bg-white/5 transition-all">
                                                 <div>
                                                     <h5 className="text-white font-bold text-sm mb-1">{tool.label}</h5>
                                                     <p className="text-gray-500 text-[10px] font-medium uppercase tracking-widest opacity-60">{tool.desc}</p>
                                                 </div>
-                                                <button
-                                                    type="button"
-                                                    aria-label={`Toggle ${tool.label}`}
-                                                    aria-pressed={formData[tool.key]}
-                                                    disabled={loading || !formData.creatorModeEnabled}
-                                                    onClick={() => saveCreatorSetting({ [tool.key]: !formData[tool.key] }, `${tool.label} ${formData[tool.key] ? 'disabled' : 'enabled'}`)}
-                                                    className={`w-12 h-6 rounded-full relative cursor-pointer transition-colors disabled:opacity-50 ${formData[tool.key] ? 'bg-emerald-500' : 'bg-white/10'}`}
-                                                >
-                                                    <span className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${formData[tool.key] ? 'right-1' : 'left-1'}`} />
-                                                </button>
+                                                <div className={`w-12 h-6 rounded-full relative cursor-pointer transition-colors ${tool.active ? 'bg-emerald-500' : 'bg-white/10'}`}>
+                                                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${tool.active ? 'right-1' : 'left-1'}`} />
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
@@ -505,7 +392,7 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
 
                                     <div className="space-y-4">
                                         <AnimatePresence>
-                                            {(Array.isArray(formData.links) ? formData.links : []).map((link, idx) => (
+                                            {formData.links.map((link, idx) => (
                                                 <motion.div
                                                     key={idx}
                                                     initial={{ opacity: 0, x: -20 }}
@@ -516,7 +403,6 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
                                                     <input
                                                         type="text"
                                                         value={link}
-                                                        disabled={!formData.creatorModeEnabled}
                                                         onChange={e => {
                                                             const newLinks = [...formData.links];
                                                             newLinks[idx] = e.target.value;
@@ -526,7 +412,6 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
                                                         placeholder="https://portfolio.nova.com"
                                                     />
                                                     <button
-                                                        disabled={!formData.creatorModeEnabled}
                                                         onClick={() => {
                                                             const newLinks = formData.links.filter((_, i) => i !== idx);
                                                             setFormData({ ...formData, links: newLinks });
@@ -543,7 +428,6 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
                                             whileHover={{ scale: 1.02 }}
                                             whileActive={{ scale: 0.98 }}
                                             onClick={() => setFormData({ ...formData, links: [...formData.links, ''] })}
-                                            disabled={!formData.creatorModeEnabled}
                                             className="w-full py-4 border border-dashed border-white/10 rounded-2xl text-gray-500 text-[10px] font-bold uppercase tracking-widest hover:border-indigo-500/50 hover:text-indigo-500 hover:bg-indigo-500/5 transition-all flex items-center justify-center gap-2"
                                         >
                                             <X size={14} className="rotate-45" /> Add Professional Synapse
@@ -555,7 +439,7 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
                                             whileHover={{ scale: 1.05 }}
                                             whileActive={{ scale: 0.95 }}
                                             onClick={handleUpdateProfile}
-                                            disabled={loading || !formData.creatorModeEnabled}
+                                            disabled={loading}
                                             className="px-12 py-4 bg-white text-black font-bold text-xs uppercase tracking-[0.3em] rounded-2xl hover:bg-gray-200 transition-all shadow-xl disabled:opacity-50"
                                         >
                                             {loading ? 'Propagating Changes...' : 'Save Creator Settings'}
@@ -1058,18 +942,18 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
                                         {/* AI Security Alert: Failed Logins */}
                                         <motion.div variants={{ hidden: { opacity: 0, x: -20 }, visible: { opacity: 1, x: 0 } }} className="p-8 bg-red-500/5 border border-red-500/20 rounded-[2.5rem] relative overflow-hidden group hover:bg-red-500/10 transition-all">
                                             <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 rounded-full -mr-16 -mt-16 blur-3xl opacity-50 group-hover:opacity-100 transition-opacity" />
-                                            <div className="settings-alert flex items-start gap-8">
+                                            <div className="flex items-start gap-8">
                                                 <div className="w-16 h-16 bg-red-500/20 rounded-2xl flex items-center justify-center text-red-500 shrink-0">
                                                     <ShieldAlert size={32} className="animate-pulse" />
                                                 </div>
                                                 <div className="flex-1">
-                                                    <div className="settings-alert-meta flex justify-between items-center mb-2">
+                                                    <div className="flex justify-between items-center mb-2">
                                                         <span className="text-[10px] font-bold text-red-500 uppercase tracking-[0.3em]">AI Security Threat</span>
                                                         <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">2 MINS AGO</span>
                                                     </div>
                                                     <h4 className="text-white font-bold text-xl mb-2 tracking-tight">Brute Force Detected</h4>
                                                     <p className="text-gray-500 text-sm leading-relaxed mb-4">AI neural scan detected 4 failed login attempts synchronized from IP: 192.168.0.XX (Sector 7G). Immediate security protocol recommended.</p>
-                                                    <div className="settings-alert-actions flex gap-4">
+                                                    <div className="flex gap-4">
                                                         <button className="px-6 py-2 bg-red-500 text-black text-[10px] font-bold uppercase tracking-widest rounded-xl hover:bg-red-400 transition-all">Lock Synapse</button>
                                                         <button className="px-6 py-2 bg-white/5 border border-white/10 text-white text-[10px] font-bold uppercase tracking-widest rounded-xl hover:bg-white/10 transition-all">Dismiss Trace</button>
                                                     </div>
@@ -1080,12 +964,12 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
                                         {/* AI Security Alert: Suspicious Device */}
                                         <motion.div variants={{ hidden: { opacity: 0, x: -20 }, visible: { opacity: 1, x: 0 } }} className="p-8 bg-amber-500/5 border border-amber-500/20 rounded-[2.5rem] relative overflow-hidden group hover:bg-amber-500/10 transition-all">
                                             <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full -mr-16 -mt-16 blur-3xl opacity-50 group-hover:opacity-100 transition-opacity" />
-                                            <div className="settings-alert flex items-start gap-8">
+                                            <div className="flex items-start gap-8">
                                                 <div className="w-16 h-16 bg-amber-500/20 rounded-2xl flex items-center justify-center text-amber-500 shrink-0">
                                                     <Monitor size={32} />
                                                 </div>
                                                 <div className="flex-1">
-                                                    <div className="settings-alert-meta flex justify-between items-center mb-2">
+                                                    <div className="flex justify-between items-center mb-2">
                                                         <span className="text-[10px] font-bold text-amber-500 uppercase tracking-[0.3em]">AI Resonance Alert</span>
                                                         <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">1 HOUR AGO</span>
                                                     </div>
@@ -1098,12 +982,12 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
                                         {/* Developer Pulse: Patch Notes */}
                                         <motion.div variants={{ hidden: { opacity: 0, x: -20 }, visible: { opacity: 1, x: 0 } }} className="p-8 bg-emerald-500/5 border border-emerald-500/20 rounded-[2.5rem] relative overflow-hidden group hover:bg-emerald-500/10 transition-all">
                                             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full -mr-16 -mt-16 blur-3xl opacity-50 group-hover:opacity-100 transition-opacity" />
-                                            <div className="settings-alert flex items-start gap-8">
+                                            <div className="flex items-start gap-8">
                                                 <div className="w-16 h-16 bg-emerald-500/20 rounded-2xl flex items-center justify-center text-emerald-500 shrink-0">
                                                     <Cpu size={32} />
                                                 </div>
                                                 <div className="flex-1">
-                                                    <div className="settings-alert-meta flex justify-between items-center mb-2">
+                                                    <div className="flex justify-between items-center mb-2">
                                                         <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-[0.3em]">Developer Pulse</span>
                                                         <span className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">SYSTEM RECENT</span>
                                                     </div>

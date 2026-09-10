@@ -70,7 +70,7 @@ const SignUpBox = ({ onSwitch, onBack, onSuccess }) => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8 }}
-                className="mobile-auth-card mobile-auth-register glass-card z-10 w-full max-w-5xl rounded-[2rem] overflow-hidden flex flex-col md:flex-row shadow-2xl"
+                className="mobile-auth-card glass-card z-10 w-full max-w-5xl rounded-[2rem] overflow-hidden flex flex-col md:flex-row shadow-2xl"
             >
                 {/* Left Section: Visual */}
                 <div className="hidden md:block flex-1 relative bg-emerald-950/20">

@@ -43,7 +43,7 @@ function App() {
         console.log('👀 View changed to:', view);
     }, [view]);
 
-    const LIVE_API = import.meta.env.VITE_API_URL || "https://synapse-backend.mrpralay2005.workers.dev";
+    const LIVE_API = "https://synapse-backend.mrpralay2005.workers.dev";
 
     useEffect(() => {
         const handleResize = () => {
@@ -123,26 +123,8 @@ function App() {
 
     useEffect(() => {
         const performNeuralSync = async () => {
-            const isLocalApi = import.meta.env.DEV && (import.meta.env.VITE_API_URL || '').includes('localhost');
-            const localSessionKey = 'synapse_local_session_api';
-
-            // Local sessions must never reuse a token issued by the deployed Worker.
-            // Mark a token only after a successful local login, so the first local run
-            // always starts from the login page.
-            if (isLocalApi && localStorage.getItem(localSessionKey) !== import.meta.env.VITE_API_URL) {
-                Cookies.remove('synapse_token');
-                Cookies.remove('session_id');
-                localStorage.removeItem('synapse_user_data');
-                localStorage.removeItem('synapse_last_view');
-                setUser(null);
-                setView('landing');
-                setIsLoading(false);
-                return;
-            }
-
             const token = Cookies.get('synapse_token');
             const savedUser = localStorage.getItem('synapse_user_data');
-            const sessionIsStillCurrent = () => Cookies.get('synapse_token') === token;
 
             // Debug simplified
             console.log('🍪 Session Check:', { hasToken: !!token, hasUser: !!savedUser });
@@ -169,8 +151,10 @@ function App() {
                     console.log('🎯 Setting user data and view to profile');
                     setUser(userData);
                     setView('profile');
-                    // Cached profile data is only a visual placeholder. Continue to
-                    // verify its session before allowing protected actions.
+                    userLoggedIn = true;
+                    // Skip API verification temporarily if data exists
+                    setTimeout(() => setIsLoading(false), 1200);
+                    return;
                 } catch (e) {
                     console.error('Failed to parse saved user data:', e);
                     localStorage.removeItem('synapse_user_data');
@@ -201,9 +185,7 @@ function App() {
                     console.warn('🚫 Token invalid - Error:', errorData);
                     console.log('🚪 Calling handleLogout due to invalid token');
                     // SECURITY: Always logout on invalid tokens
-                    // Do not let an old startup request erase a token issued by a
-                    // successful login while that request was still in flight.
-                    if (sessionIsStillCurrent()) handleLogout();
+                    handleLogout();
                     userLoggedIn = false;
                 } else {
                     console.warn('Server error but keeping user logged in temporarily');
@@ -213,7 +195,7 @@ function App() {
                         console.log('Server error (5xx) - keeping user logged in');
                     } else {
                         // Other client errors - logout for security
-                        if (sessionIsStillCurrent()) handleLogout();
+                        handleLogout();
                         userLoggedIn = false;
                     }
                 }
@@ -222,7 +204,7 @@ function App() {
                 // SECURITY: Network failure means we cannot verify the session
                 // Logout user for security since we can't verify the token
                 console.log('Network failure - logging out for security');
-                if (sessionIsStillCurrent()) handleLogout();
+                handleLogout();
                 userLoggedIn = false;
             } finally {
                 setTimeout(() => setIsLoading(false), 1200);
@@ -242,15 +224,11 @@ function App() {
         });
         setUser(userData);
         if (token) {
-            // Secure cookies are required in production, but HTTP localhost cannot store them.
-            Cookies.set('synapse_token', token, { expires: 7, secure: window.location.protocol === 'https:', sameSite: 'Lax' });
-            if (import.meta.env.DEV && (import.meta.env.VITE_API_URL || '').includes('localhost')) {
-                localStorage.setItem('synapse_local_session_api', import.meta.env.VITE_API_URL);
-            }
+            Cookies.set('synapse_token', token, { expires: 7, secure: true, sameSite: 'Lax' });
             console.log('🍪 Token cookie synchronized');
         }
         if (loginData.sessionId) {
-            Cookies.set('session_id', loginData.sessionId, { expires: 7, secure: window.location.protocol === 'https:', sameSite: 'Lax' });
+            Cookies.set('session_id', loginData.sessionId, { expires: 7, secure: true, sameSite: 'Lax' });
             console.log('🍪 Session ID cookie set');
         }
         // Set user data in localStorage (The "Nametag")
@@ -270,7 +248,6 @@ function App() {
 
         localStorage.removeItem('synapse_last_view');
         localStorage.removeItem('synapse_social_tab');
-        localStorage.removeItem('synapse_local_session_api');
 
         console.log('Sweep complete, returning to landing');
         setView('landing');

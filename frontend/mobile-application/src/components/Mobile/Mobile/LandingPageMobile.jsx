@@ -28,8 +28,6 @@ const MobileLandingPage = ({ onLogin, onRegister, onExit }) => {
             <style>{`
                 .mobile-landing {
                     min-height: 0;
-                    /* Dynamic viewport excludes the browser chrome when it is visible. */
-                    height: 100dvh;
                 }
 
                 .mobile-landing-content {
@@ -67,26 +65,6 @@ const MobileLandingPage = ({ onLogin, onRegister, onExit }) => {
                     .mobile-landing-feature-icon { margin-bottom: 0.5rem; height: 2rem; width: 2rem; }
                 }
 
-                /* Mobile web has less usable height than an installed app because
-                   Chrome/Safari controls remain on screen. */
-                @media (max-height: 740px) {
-                    .mobile-landing-content { padding: max(0.375rem, env(safe-area-inset-top)) max(0.875rem, env(safe-area-inset-right)) max(0.375rem, env(safe-area-inset-bottom)) max(0.875rem, env(safe-area-inset-left)); }
-                    .mobile-landing-brand { margin-top: 0.125rem; gap: 0.5rem; }
-                    .mobile-landing-brand > div { height: 2.25rem; width: 2.25rem; }
-                    .mobile-landing-brand h1 { font-size: 1.75rem; }
-                    .mobile-landing-title-block { margin-top: 0.75rem; }
-                    .mobile-landing-title { font-size: clamp(2rem, 10.5vw, 2.45rem); line-height: 0.88; }
-                    .mobile-landing-copy-block { margin-top: 0.625rem; }
-                    .mobile-landing-copy { font-size: 0.8125rem; line-height: 1.25rem; }
-                    .mobile-landing-actions { margin-top: 0.875rem; gap: 0.5rem; }
-                    .mobile-landing-actions button { border-radius: 1rem; padding-top: 0.6875rem; padding-bottom: 0.6875rem; font-size: 0.875rem; }
-                    .mobile-landing-features { margin-top: clamp(2rem, 8vh, 3rem); margin-bottom: 0; gap: 0.75rem; }
-                    .mobile-landing-feature { min-height: 6.65rem; padding: 0.75rem; border-radius: 1rem; }
-                    .mobile-landing-feature-icon { margin-bottom: 0.375rem; height: 1.875rem; width: 1.875rem; border-radius: 0.625rem; }
-                    .mobile-landing-feature-title { font-size: 0.75rem; }
-                    .mobile-landing-feature-copy { margin-top: 0.3rem; font-size: 0.6rem; line-height: 0.85rem; }
-                }
-
                 @media (max-height: 580px) {
                     .mobile-landing-brand { margin-top: 0; }
                     .mobile-landing-title { font-size: 2rem; }
@@ -94,8 +72,8 @@ const MobileLandingPage = ({ onLogin, onRegister, onExit }) => {
                     .mobile-landing-actions { gap: 0.375rem; }
                     .mobile-landing-actions button { padding-top: 0.625rem; padding-bottom: 0.625rem; }
                     .mobile-landing-feature-copy { display: none; }
-                    .mobile-landing-features { margin-top: 0.625rem; margin-bottom: 0; gap: 0.5rem; }
-                    .mobile-landing-feature { min-height: 0; padding: 0.5rem; }
+                    .mobile-landing-features { margin-top: 0.625rem; }
+                    .mobile-landing-feature { padding: 0.5rem; }
                     .mobile-landing-feature-icon { margin-bottom: 0.25rem; height: 1.75rem; width: 1.75rem; }
                     .mobile-landing-feature-title { font-size: 0.6875rem; }
                 }
@@ -110,7 +88,7 @@ const MobileLandingPage = ({ onLogin, onRegister, onExit }) => {
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.35 }}
                     onClick={onExit}
-                    className="ml-auto flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white shadow-lg backdrop-blur-md transition-transform hover:scale-105"
+                    className="ml-auto flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white shadow-lg backdrop-blur-md transition-transform hover:scale-105"
                     aria-label="Exit"
                     title="Exit Neural Gateway"
                 >
@@ -123,7 +101,7 @@ const MobileLandingPage = ({ onLogin, onRegister, onExit }) => {
                     transition={{ duration: 0.5 }}
                     className="mobile-landing-brand mt-2 flex items-center gap-3"
                 >
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-emerald-500/50 bg-emerald-500/10">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full border border-emerald-500/50 bg-emerald-500/10">
                         <Target className="h-5 w-5 text-emerald-400" />
                     </div>
                     <h1 className="text-[2rem] font-black tracking-[-0.07em] text-white">SynapseX</h1>

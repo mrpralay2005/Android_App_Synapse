@@ -10,8 +10,8 @@ const isVideo = (url) => {
 };
 
 const PostSkeleton = () => (
-    <div className="post-skeleton mobile-card relative bg-white/[0.02] border border-white/5 rounded-[2rem] overflow-hidden mb-10 animate-pulse">
-        <div className="post-skeleton-header flex items-center justify-between p-6 px-8">
+    <div className="relative bg-white/[0.02] border border-white/5 rounded-[2.5rem] overflow-hidden mb-12 animate-pulse">
+        <div className="flex items-center justify-between p-6 px-8">
             <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-full bg-white/5" />
                 <div className="space-y-2">
@@ -21,7 +21,7 @@ const PostSkeleton = () => (
             </div>
             <div className="p-3 bg-white/5 rounded-2xl w-10 h-10" />
         </div>
-        <div className="post-skeleton-media post-media-container relative aspect-square md:aspect-[16/10] bg-black/40 overflow-hidden">
+        <div className="relative aspect-square md:aspect-[16/10] bg-black/40 overflow-hidden">
             <motion.div
                 initial={{ x: '-100%' }}
                 animate={{ x: '100%' }}
@@ -29,7 +29,7 @@ const PostSkeleton = () => (
                 className="absolute inset-0 bg-gradient-to-r from-transparent via-white/[0.05] to-transparent"
             />
         </div>
-        <div className="post-skeleton-footer p-8 px-10">
+        <div className="p-8 px-10">
             <div className="flex items-center gap-8 mb-8">
                 {[1, 2, 3].map(i => (
                     <div key={i} className="flex flex-col items-center gap-2">
@@ -187,8 +187,8 @@ const FeedView = ({ posts, stories = [], suggestedUsers = [], onCreateClick, loa
     }, [stories, suggestedUsers, myStories, currentUser]);
 
     return (
-        <div className="flex-1 max-w-2xl mx-auto pt-2 pb-5 px-0">
-            <div className="mb-2">
+        <div className="flex-1 max-w-2xl mx-auto pt-3 pb-8 px-0">
+            <div className="mb-4">
                 <div className="flex gap-3 overflow-x-auto hide-scrollbar py-1 items-center pl-0 pr-1 w-full">
                     {loading ? (
                         <>
@@ -269,15 +269,15 @@ const FeedView = ({ posts, stories = [], suggestedUsers = [], onCreateClick, loa
                 </div>
             </div>
 
-            <div className="flex items-center justify-between mb-4">
-                <h3 className="text-white font-bold text-xl">Feeds</h3>
+            <div className="flex items-center justify-between mb-8">
+                <h3 className="text-white font-bold text-2xl">Feeds</h3>
                 <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
                     <button className="px-6 py-1.5 text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-white transition-colors">LATEST</button>
                     <button className="px-6 py-1.5 text-[10px] font-bold uppercase tracking-widest bg-emerald-500 text-black rounded-lg">POPULAR</button>
                 </div>
             </div>
 
-            <div>
+            <div className="min-h-[500px]">
                 {loading ? (
                     <>
                         <PostSkeleton />

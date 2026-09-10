@@ -332,12 +332,27 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
     if (view === 'setting') {
         return (
             <div className="md:hidden fixed inset-0 z-[120] bg-[#0a0a0a] text-white" style={{ height: '100vh', width: '100vw', overflow: 'hidden', maxWidth: '100vw' }}>
-                <SettingsView
-                    user={currentUserState}
-                    onUpdateUser={handleUpdateUser}
-                    onLogout={onLogout}
-                    onBack={() => handleNavigation('feed')}
-                />
+                <div className="flex items-center justify-between border-b border-white/10 px-4 pb-3 pt-3">
+                    <button
+                        onClick={() => handleNavigation('feed')}
+                        className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white"
+                        aria-label="Back to feed"
+                    >
+                        <ArrowLeft size={18} />
+                    </button>
+
+                    <div className="text-xl font-black tracking-[-0.08em] text-white">Settings</div>
+
+                    <div className="h-10 w-10" />
+                </div>
+
+                <div className="h-[calc(100%-58px)] overflow-y-auto px-2 pb-2 pt-2 hide-scrollbar">
+                    <SettingsView
+                        user={currentUserState}
+                        onUpdateUser={handleUpdateUser}
+                        onLogout={onLogout}
+                    />
+                </div>
             </div>
         );
     }
@@ -345,73 +360,35 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
     return (
         <div className="md:hidden bg-[#0a0a0a] text-white" style={{ height: 'calc(100vh - 18px)', width: '100vw', overflow: 'hidden', position: 'fixed', inset: '9px 0 0 0', maxWidth: '100vw', maxHeight: 'calc(100vh - 18px)', overscrollBehavior: 'none', boxSizing: 'border-box', margin: 0, padding: 0, left: 0, right: 0 }}>
             <div className="h-full relative pb-24 bg-[#0a0a0a]" style={{ overflow: 'hidden', width: '100%', maxWidth: '100vw', margin: 0, padding: 0 }}>
-                <header className="z-40 bg-[#0a0a0a]/90 px-4 pt-2 pb-1.5">
-                    {view === 'profile' ? (
-                        <div className="flex items-center justify-between">
-                            <button
-                                onClick={() => handleNavigation('feed')}
-                                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-xl text-white"
-                                aria-label="Back to feed"
-                            >
-                                <ArrowLeft size={18} />
-                            </button>
+                <header className="z-40 bg-[#0a0a0a]/90 px-4 pt-3 pb-2">
+                    <div className="flex items-center justify-between">
+                        <button
+                            onClick={view === 'profile' ? () => handleNavigation('feed') : () => setIsPostModalOpen(true)}
+                            className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-2xl text-white"
+                        >
+                            {view === 'profile' ? <ArrowLeft size={18} /> : '+'}
+                        </button>
 
-                            <div className="flex-1 text-center text-[1.85rem] font-black leading-none tracking-[-0.08em] text-white">
-                                {userProfile?.username || 'Profile'}
-                            </div>
-
-                            <button
-                                onClick={() => handleNavigation('setting')}
-                                className="flex h-9 w-9 items-center justify-center text-white"
-                                aria-label="Open settings"
-                            >
-                                <Settings size={20} />
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="flex items-center justify-between gap-4">
-                            <div
-                                className="select-none text-[1.7rem] leading-none text-white"
-                                style={{ fontFamily: "'Brush Script MT', 'Segoe Script', cursive", fontWeight: 700, letterSpacing: '-0.08em' }}
-                            >
-                                SynapseX
-                            </div>
-
-                            <div className="flex items-center gap-4 text-white">
-                                <button
-                                    onClick={() => setIsPostModalOpen(true)}
-                                    className="transition-transform active:scale-90"
-                                    aria-label="Create post"
-                                >
-                                    <PlusSquare size={21} strokeWidth={2.1} />
-                                </button>
-                                <button className="transition-transform active:scale-90" aria-label="Activity">
-                                    <Heart size={21} strokeWidth={2.1} />
-                                </button>
-                                <button
-                                    onClick={() => handleNavigation('setting')}
-                                    className="transition-transform active:scale-90"
-                                    aria-label="Open settings"
-                                >
-                                    <Settings size={21} strokeWidth={2.1} />
-                                </button>
+                        <div className="flex-1 text-center">
+                            <div className="text-[2.2rem] font-black tracking-[-0.08em] text-white -mt-1">
+                                {view === 'profile' ? (userProfile?.username || 'Profile') : 'SynapseX'}
                             </div>
                         </div>
-                    )}
+
+                        <div className="flex items-center gap-3">
+                            <Heart size={22} className="text-white" />
+                            <Settings size={22} className="text-white" onClick={() => handleNavigation('setting')} />
+                        </div>
+                    </div>
                 </header>
 
-                <div className="px-4 pb-3 overflow-y-auto hide-scrollbar" style={{ height: 'calc(100% - 100px)', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
+                <div className="px-4 pb-4 overflow-y-auto hide-scrollbar" style={{ height: 'calc(100% - 110px)', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
                     {renderMainContent()}
                 </div>
 
-                <nav className="absolute bottom-0 left-0 right-0 z-50 bg-[#0a0a0a]">
-                    <div className="grid grid-cols-5 gap-1 px-3 py-2.5" style={{ width: '100%', maxWidth: '100vw' }}>
-                        {loading && view === 'feed' ? [0, 1, 2, 3, 4].map((item) => (
-                            <div key={item} className="flex flex-col items-center justify-center gap-1 py-1 animate-pulse" aria-hidden="true">
-                                <div className="h-10 w-10 rounded-2xl bg-white/[0.07]" />
-                                <div className="h-2 w-7 rounded-full bg-white/[0.07]" />
-                            </div>
-                        )) : navItems.map((item) => {
+                <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#0a0a0a]/95 backdrop-blur-xl">
+                    <div className="grid grid-cols-5 gap-1 px-3 py-2" style={{ width: '100%', maxWidth: '100vw' }}>
+                        {navItems.map((item) => {
                             const active = item.id === view || (item.id === 'profile' && view === 'profile');
                             const onClick = () => {
                                 if (item.id === 'create') {
@@ -429,9 +406,9 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                                 <button
                                     key={item.id}
                                     onClick={onClick}
-                                    className={`flex flex-col items-center justify-center gap-1 py-1 text-[10px] font-medium ${active ? 'text-white' : 'text-gray-500'}`}
+                                    className={`flex flex-col items-center justify-center gap-1 py-2 text-[10px] font-medium ${active ? 'text-white' : 'text-gray-500'}`}
                                 >
-                                    <div className={`flex h-10 w-10 items-center justify-center rounded-2xl border transition-all duration-200 ${active ? 'border-emerald-400/25 bg-emerald-400/15 text-emerald-300 shadow-[0_5px_16px_rgba(16,185,129,0.12)]' : 'border-white/[0.06] bg-white/[0.035] text-gray-400 active:scale-95'}`}>
+                                    <div className={`transition-colors ${active ? 'text-white' : 'text-gray-500'}`}>
                                         {item.icon}
                                     </div>
                                     <span>{item.label}</span>

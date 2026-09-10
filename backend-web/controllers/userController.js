@@ -74,7 +74,11 @@ export const getSavedItems = async (c) => {
 
 export const updateProfile = async (c) => {
     try {
-        const { name, bio, profileImage, username, isPrivate } = await c.req.json();
+        const {
+            name, bio, profileImage, username, isPrivate, links,
+            creatorModeEnabled, creatorHighResUploads, creatorAnonymousShield,
+            creatorDeepAnalytics, requestCreatorVerification
+        } = await c.req.json();
         const user = c.get('user');
         const prisma = getPrisma(c.env.DATABASE_URL);
 
@@ -85,7 +89,18 @@ export const updateProfile = async (c) => {
                 ...(bio && { bio }),
                 ...(profileImage && { profileImage }),
                 ...(username && { username }),
-                ...(typeof isPrivate === 'boolean' && { isPrivate })
+                ...(typeof isPrivate === 'boolean' && { isPrivate }),
+                ...(Array.isArray(links) && { links: links.filter(link => typeof link === 'string').map(link => link.trim()).filter(Boolean) }),
+                ...(typeof creatorModeEnabled === 'boolean' && { creatorModeEnabled }),
+                ...(typeof creatorHighResUploads === 'boolean' && { creatorHighResUploads }),
+                ...(typeof creatorAnonymousShield === 'boolean' && { creatorAnonymousShield }),
+                ...(typeof creatorDeepAnalytics === 'boolean' && { creatorDeepAnalytics }),
+                ...(requestCreatorVerification === true && {
+                    creatorVerificationRequestedAt: new Date(),
+                    creatorVerificationStatus: 'PENDING',
+                    creatorVerifiedAt: null,
+                    creatorVerificationReviewedById: null
+                })
             },
             select: {
                 id: true,
@@ -94,11 +109,24 @@ export const updateProfile = async (c) => {
                 bio: true,
                 profileImage: true,
                 riskScore: true,
-                isPrivate: true
+                isPrivate: true,
+                creatorModeEnabled: true,
+                creatorVerificationRequestedAt: true,
+                creatorVerificationStatus: true,
+                creatorVerifiedAt: true,
+                creatorHighResUploads: true,
+                creatorAnonymousShield: true,
+                creatorDeepAnalytics: true,
+                links: true
             }
         });
 
-        return c.json({ success: true, data: updatedUser });
+        return c.json({
+            success: true,
+            // Older accounts predate professional links and therefore have null here.
+            // The client always receives a usable collection.
+            data: { ...updatedUser, links: Array.isArray(updatedUser.links) ? updatedUser.links : [] }
+        });
     } catch (error) {
         console.error("Profile Update Error:", error);
         return c.json({ success: false, error: "Neural recalibration failed" }, 500);

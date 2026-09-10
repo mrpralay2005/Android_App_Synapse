@@ -52,7 +52,7 @@ const LoginBox = ({ onSwitch, onBack, onLoginSuccess, onForgot }) => {
         setStatus({ type: 'loading', message: 'Analyzing Neural Patterns...' });
 
         try {
-            const apiUrl = import.meta.env.VITE_API_URL || "https://synapse-backend.mrpralay2005.workers.dev";
+            const apiUrl = "https://synapse-backend.mrpralay2005.workers.dev";
             const response = await fetch(`${apiUrl}/api/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -105,7 +105,7 @@ const LoginBox = ({ onSwitch, onBack, onLoginSuccess, onForgot }) => {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.8 }}
-                className="mobile-auth-card mobile-auth-login glass-card z-10 w-full max-w-5xl rounded-[2rem] overflow-hidden flex flex-col md:flex-row shadow-2xl"
+                className="mobile-auth-card glass-card z-10 w-full max-w-5xl rounded-[2rem] overflow-hidden flex flex-col md:flex-row shadow-2xl"
             >
                 {/* Left Section: Form */}
                 <div className="flex-1 p-8 md:p-14 flex flex-col justify-center relative">

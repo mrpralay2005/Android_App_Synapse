@@ -245,7 +245,7 @@ const PostCard = ({ post, onInteraction, onCinemaMode, index = 0 }) => {
                 WebkitBackfaceVisibility: 'hidden',
                 transformStyle: 'preserve-3d',
             }}
-            className="group relative bg-[#0f0f0f] border border-white/5 rounded-[2rem] overflow-hidden mb-6 last:mb-0 hover:border-emerald-500/20 transition-[border-color,box-shadow] duration-500 mobile-card"
+            className="group relative bg-[#0f0f0f] border border-white/5 rounded-[2.5rem] overflow-hidden mb-12 last:mb-0 hover:border-emerald-500/20 transition-[border-color,box-shadow] duration-500 mobile-card"
         >
             {!isMobileView && (
                 <div className="flex items-center justify-between p-6 px-8">

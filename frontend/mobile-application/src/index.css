@@ -10,6 +10,7 @@
         height: 100%;
         background: #0a0a0a;
         overflow: hidden;
+        scrollbar-gutter: stable;
         user-select: none;
         -webkit-tap-highlight-color: transparent;
         touch-action: manipulation;
@@ -111,21 +112,7 @@
         }
 
         .mobile-card .post-media-container {
-            /* Keep one complete feed card in the browser viewport above the
-               fixed navigation, rather than presenting a tall cropped canvas. */
-            aspect-ratio: 0.86 / 1 !important;
-        }
-
-        /* Mobile placeholders must exactly match the card they are replacing.
-           The live card keeps its metadata as tap-revealed overlays on mobile,
-           so do not reserve desktop header/footer space in the skeleton. */
-        .post-skeleton .post-skeleton-header,
-        .post-skeleton .post-skeleton-footer {
-            display: none;
-        }
-
-        .post-skeleton .post-skeleton-media {
-            aspect-ratio: 0.86 / 1 !important;
+            aspect-ratio: 9 / 10;
         }
     }
 
