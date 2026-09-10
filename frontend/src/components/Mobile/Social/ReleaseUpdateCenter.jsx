@@ -6,6 +6,8 @@ const apiUrl = import.meta.env.VITE_API_URL || 'https://synapse-backend.mrpralay
 const appliedReleaseKey = 'synapse_applied_release';
 const dismissedReleaseKey = 'synapse_dismissed_release';
 const runningBuildMarker = __SYNAPSE_BUILD_ID__;
+const isPrivatePreview = import.meta.env.VITE_PREVIEW_MODE === 'true'
+    || (typeof window !== 'undefined' && window.location.hostname.startsWith('staging.'));
 
 const pause = (ms) => new Promise(resolve => window.setTimeout(resolve, ms));
 const getBuildMarker = async () => {
@@ -17,11 +19,15 @@ const getBuildMarker = async () => {
     } catch { return null; }
 };
 
-const useLatestRelease = () => {
+const useLatestRelease = (enabled = true) => {
     const [release, setRelease] = useState(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        if (!enabled) {
+            setLoading(false);
+            return undefined;
+        }
         let active = true;
         const load = async () => {
             try {
@@ -38,7 +44,7 @@ const useLatestRelease = () => {
         const onFocus = () => load();
         window.addEventListener('focus', onFocus);
         return () => { active = false; window.removeEventListener('focus', onFocus); };
-    }, []);
+    }, [enabled]);
 
     return { release, loading };
 };
@@ -67,7 +73,7 @@ const startWebUpdate = async (version, setProgress) => {
 };
 
 export const ReleaseUpdateNotice = () => {
-    const { release, loading } = useLatestRelease();
+    const { release, loading } = useLatestRelease(!isPrivatePreview);
     const [visible, setVisible] = useState(false);
     const [progress, setProgress] = useState(null);
 
@@ -78,6 +84,8 @@ export const ReleaseUpdateNotice = () => {
             setVisible(seen !== release.version && applied !== release.version);
         }
     }, [loading, release]);
+
+    if (isPrivatePreview) return null;
 
     const dismiss = () => {
         localStorage.setItem(dismissedReleaseKey, release.version);
@@ -91,9 +99,11 @@ export const ReleaseUpdateNotice = () => {
 };
 
 export const ReleaseUpdatePanel = () => {
-    const { release, loading } = useLatestRelease();
+    const { release, loading } = useLatestRelease(!isPrivatePreview);
     const [progress, setProgress] = useState(null);
     const isCurrent = release?.version && localStorage.getItem(appliedReleaseKey) === release.version;
+
+    if (isPrivatePreview) return null;
 
     if (loading) return <div className="animate-pulse rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5"><div className="h-3 w-28 rounded bg-white/10" /><div className="mt-3 h-3 w-3/4 rounded bg-white/[0.07]" /></div>;
     if (!release) return <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-5 text-center"><CheckCircle2 className="mx-auto text-emerald-400" size={24} /><p className="mt-3 text-sm font-semibold text-white">SynapseX is current</p><p className="mt-1 text-xs text-gray-500">There are no published updates yet.</p></div>;
