@@ -285,7 +285,7 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
                     <div className="h-10 w-10" />
                 </div>
 
-                <div className="flex flex-1 flex-col overflow-y-auto rounded-[1.35rem] border border-white/[0.08] bg-[#101113] p-1.5 hide-scrollbar">
+                <div className="flex max-h-[calc(100%-3rem)] flex-none flex-col overflow-y-auto rounded-[1.35rem] border border-white/[0.08] bg-[#101113] p-1.5 hide-scrollbar">
                     <div className="space-y-1">
                         {menuItems.map((item) => (
                             <button
