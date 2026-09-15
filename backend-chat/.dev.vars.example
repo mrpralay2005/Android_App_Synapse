@@ -1,0 +1,7 @@
+# Local-only secrets. Copy to .dev.vars and supply your own values.
+# DATABASE_URL must point to the dedicated chat Neon branch.
+DATABASE_URL="postgresql://USER:PASSWORD@HOST/DATABASE?sslmode=require"
+
+# This must match backend-web/.dev.vars JWT_SECRET, so local login JWTs work
+# against both Workers. It is never an independent chat-only secret.
+JWT_SECRET="replace-with-the-same-local-backend-jwt-secret"

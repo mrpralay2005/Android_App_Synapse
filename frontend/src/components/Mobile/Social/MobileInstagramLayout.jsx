@@ -11,6 +11,7 @@ import CreateStoryModal from './CreateStoryModal';
 import StoryViewer from './StoryViewer';
 import { ReleaseUpdateNotice } from './ReleaseUpdateCenter';
 import NotificationCenter, { useNotificationCount } from './NotificationCenter';
+import DirectInbox from '../../Social/DirectInbox';
 import { saveToCache, loadFromCache } from '../../../utils/synapseCache';
 
 const MobileInstagramLayout = ({ currentUser, onLogout }) => {
@@ -29,6 +30,7 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
     const [cinemaPost, setCinemaPost] = useState(null);
     const [notificationsOpen, setNotificationsOpen] = useState(false);
     const [feedSort, setFeedSort] = useState('popular');
+    const [chatUnread, setChatUnread] = useState(0);
     const unreadNotifications = useNotificationCount();
 
     useEffect(() => {
@@ -285,6 +287,7 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
     const navItems = [
         { id: 'feed', label: 'Home', icon: <Home size={22} /> },
         { id: 'search', label: 'Search', icon: <Search size={22} /> },
+        { id: 'direct', label: 'Direct', icon: <MessageCircle size={22} /> },
         { id: 'create', label: 'Create', icon: <PlusSquare size={22} /> },
         { id: 'reels', label: 'Reels', icon: <Video size={22} /> },
         { id: 'profile', label: 'Profile', icon: <User size={22} /> }
@@ -334,6 +337,18 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
 
         if (view === 'reels') {
             return <ReelsView posts={posts} loading={loading} />;
+        }
+
+        if (view === 'direct') {
+            return (
+                <div className="h-full">
+                    <DirectInbox
+                        currentUser={currentUserState}
+                        onUnreadChange={(n) => setChatUnread(n)}
+                        onExit={() => handleNavigation('feed')}
+                    />
+                </div>
+            );
         }
 
         return (
@@ -399,6 +414,10 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                                 >
                                     <PlusSquare size={21} strokeWidth={2.1} />
                                 </button>
+                                <button onClick={() => handleNavigation('direct')} className="relative transition-transform active:scale-90" aria-label={`Direct messages${chatUnread ? `, ${chatUnread} unread` : ''}`}>
+                                    <MessageCircle size={21} strokeWidth={2.1} />
+                                    {chatUnread > 0 && <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full border border-[#0a0a0a] bg-emerald-400 px-1 text-[9px] font-black text-black">{chatUnread > 9 ? '9+' : chatUnread}</span>}
+                                </button>
                                 <button onClick={() => setNotificationsOpen(true)} className="relative transition-transform active:scale-90" aria-label={`Activity${unreadNotifications ? `, ${unreadNotifications} unread` : ''}`}>
                                     <Heart size={21} strokeWidth={2.1} />
                                     {unreadNotifications > 0 && <><span className="absolute -right-2 -top-2 h-4 w-4 animate-ping rounded-full bg-emerald-400/55" aria-hidden="true" /><span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full border border-[#0a0a0a] bg-emerald-400 px-1 text-[9px] font-black text-black">{unreadNotifications > 9 ? '9+' : unreadNotifications}</span></>}
@@ -423,7 +442,7 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                     className="absolute bottom-12 left-3 right-3 z-50 overflow-hidden rounded-[22px] border border-white/[0.07] bg-[#101111]/95 shadow-[0_-8px_24px_rgba(0,0,0,0.32)]"
                     style={{ paddingBottom: 'max(0px, env(safe-area-inset-bottom))' }}
                 >
-                    <div className="grid grid-cols-5 gap-1 px-2 py-1.5" style={{ width: '100%', maxWidth: '100vw' }}>
+                    <div className="grid grid-cols-6 gap-1 px-2 py-1.5" style={{ width: '100%', maxWidth: '100vw' }}>
                         {loading && view === 'feed' ? [0, 1, 2, 3, 4].map((item) => (
                             <div key={item} className="flex flex-col items-center justify-center gap-1 py-1 animate-pulse" aria-hidden="true">
                                 <div className="h-10 w-10 rounded-2xl bg-white/[0.07]" />

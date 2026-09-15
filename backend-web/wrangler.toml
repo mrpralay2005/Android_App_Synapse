@@ -15,7 +15,6 @@ AI_BACKEND_URL = "https://your-ai-backend.onrender.com"
 
 # Local development environment
 [env.dev.vars]
-JWT_SECRET = "synapse_x_quantum_secure_2027"
 AI_BACKEND_URL = "https://your-ai-backend.onrender.com"
 
 # Isolated release-preview Worker. Its DATABASE_URL and JWT_SECRET must be

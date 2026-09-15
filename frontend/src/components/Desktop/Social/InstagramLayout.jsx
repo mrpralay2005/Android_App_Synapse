@@ -8,6 +8,7 @@ import ReelsView from './ReelsView';
 import CreateStoryModal from './CreateStoryModal';
 import StoryViewer from './StoryViewer';
 import SettingsView from './SettingsView';
+import DirectInbox from '../../Social/DirectInbox';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import Cookies from 'js-cookie';
@@ -542,7 +543,22 @@ const InstagramLayout = ({ currentUser, onLogout }) => {
                         </motion.div>
                     )}
 
-                    {!['feed', 'profile', 'igtv', 'setting'].includes(view) && (
+                    {view === 'direct' && (
+                        <motion.div
+                            key="direct"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.3 }}
+                            className="fixed inset-0 z-[900] ml-80 mr-80 bg-[#050505]"
+                        >
+                            <DirectInbox
+                                currentUser={currentUserState}
+                            />
+                        </motion.div>
+                    )}
+
+                    {!['feed', 'profile', 'igtv', 'setting', 'direct'].includes(view) && (
                         <motion.div
                             key="other"
                             className="flex items-center justify-center min-h-screen text-gray-500 font-bold uppercase tracking-widest italic"
