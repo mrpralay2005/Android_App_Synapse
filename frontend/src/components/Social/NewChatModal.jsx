@@ -44,7 +44,6 @@ const NewChatModal = ({ users, initialQuery, onQueryChange, onPickUser, onClose,
                             <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${lockEnabled ? 'left-[18px]' : 'left-0.5'}`} />
                         </span>
                     </button>
-// (cleaned up: interleaved blocks removed)
                     {lockEnabled && (
                         <div className="mt-2 flex items-center gap-2 rounded-2xl border border-amber-400/30 bg-black/40 px-3.5 py-2.5">
                             <ShieldCheck size={15} className="shrink-0 text-amber-300" />

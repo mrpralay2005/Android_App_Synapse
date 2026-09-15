@@ -166,9 +166,10 @@ const DirectInbox = ({ currentUser, initialUserId = null, onUnreadChange, onExit
         setNewChatOpen(true);
         try {
             const res = await searchChatUsers('', 10);
-            if (res?.success) setPeople(res.data || []);
+            if (!res?.success) throw new Error(res?.error || 'Chat service is unavailable');
+            setPeople(res.data || []);
         } catch (err) {
-            setStartError('Could not load people. Is the chat backend online?');
+            setStartError(err.message || 'Could not load people. Is the chat backend online?');
         }
     };
 
