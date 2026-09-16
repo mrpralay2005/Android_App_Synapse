@@ -9,5 +9,8 @@ compatibility_flags = [ "nodejs_compat" ]
 [secrets]
 required = [ "DATABASE_URL", "JWT_SECRET" ]
 
+[env.staging]
+name = "synapse-chat-staging"
+
 [observability]
 enabled = true
