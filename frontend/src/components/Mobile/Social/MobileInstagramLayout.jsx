@@ -8,9 +8,21 @@ import SettingsView from './SettingsView';
 import ReelsView from './ReelsView';
 import CreatePostModal from './CreatePostModal';
 import CreateStoryModal from './CreateStoryModal';
+
+// Auto-retry fetch on 500 (Cloudflare Worker cold starts).
+// Transparent to callers — same API as fetch().
+const fetchWithRetry = async (url, options = {}, retries = 2) => {
+    for (let i = 0; i <= retries; i++) {
+        const res = await fetch(url, options);
+        if (res.status < 500 || i === retries) return res;
+        await new Promise(r => setTimeout(r, 800 * (i + 1)));
+    }
+};
 import StoryViewer from './StoryViewer';
 import { ReleaseUpdateNotice } from './ReleaseUpdateCenter';
 import NotificationCenter, { useNotificationCount } from './NotificationCenter';
+import DirectInbox from '../../Social/DirectInbox';
+import PriyaAssistant from '../../Priya/PriyaAssistant';
 import { saveToCache, loadFromCache } from '../../../utils/synapseCache';
 
 const MobileInstagramLayout = ({ currentUser, onLogout }) => {
@@ -29,6 +41,7 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
     const [cinemaPost, setCinemaPost] = useState(null);
     const [notificationsOpen, setNotificationsOpen] = useState(false);
     const [feedSort, setFeedSort] = useState('popular');
+    const [chatUnread, setChatUnread] = useState(0);
     const unreadNotifications = useNotificationCount();
 
     useEffect(() => {
@@ -89,7 +102,7 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                     headers: { ...(token && { Authorization: `Bearer ${token}` }) }
                 };
 
-                const storyRes = await fetch(`${apiUrl}/api/social/stories`, fetchOptions);
+                const storyRes = await fetchWithRetry(`${apiUrl}/api/social/stories`, fetchOptions);
                 const storyData = await storyRes.json();
                 if (active && storyData.success) {
                     setAllStories(storyData.data);
@@ -109,7 +122,7 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                 }
 
                 if (view === 'feed' || view === 'reels') {
-                    const res = await fetch(`${apiUrl}/api/social/feed?sort=${feedSort}`, fetchOptions);
+                    const res = await fetchWithRetry(`${apiUrl}/api/social/feed?sort=${feedSort}`, fetchOptions);
                     const data = await res.json();
                     if (active) {
                         const newPosts = Array.isArray(data) ? data : [];
@@ -285,6 +298,7 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
     const navItems = [
         { id: 'feed', label: 'Home', icon: <Home size={22} /> },
         { id: 'search', label: 'Search', icon: <Search size={22} /> },
+        { id: 'direct', label: 'Direct', icon: <MessageCircle size={22} /> },
         { id: 'create', label: 'Create', icon: <PlusSquare size={22} /> },
         { id: 'reels', label: 'Reels', icon: <Video size={22} /> },
         { id: 'profile', label: 'Profile', icon: <User size={22} /> }
@@ -334,6 +348,18 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
 
         if (view === 'reels') {
             return <ReelsView posts={posts} loading={loading} />;
+        }
+
+        if (view === 'direct') {
+            return (
+                <div className="h-full">
+                    <DirectInbox
+                        currentUser={currentUserState}
+                        onUnreadChange={(n) => setChatUnread(n)}
+                        onExit={() => handleNavigation('feed')}
+                    />
+                </div>
+            );
         }
 
         return (
@@ -399,6 +425,10 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                                 >
                                     <PlusSquare size={21} strokeWidth={2.1} />
                                 </button>
+                                <button onClick={() => handleNavigation('direct')} className="relative transition-transform active:scale-90" aria-label={`Direct messages${chatUnread ? `, ${chatUnread} unread` : ''}`}>
+                                    <MessageCircle size={21} strokeWidth={2.1} />
+                                    {chatUnread > 0 && <span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full border border-[#0a0a0a] bg-emerald-400 px-1 text-[9px] font-black text-black">{chatUnread > 9 ? '9+' : chatUnread}</span>}
+                                </button>
                                 <button onClick={() => setNotificationsOpen(true)} className="relative transition-transform active:scale-90" aria-label={`Activity${unreadNotifications ? `, ${unreadNotifications} unread` : ''}`}>
                                     <Heart size={21} strokeWidth={2.1} />
                                     {unreadNotifications > 0 && <><span className="absolute -right-2 -top-2 h-4 w-4 animate-ping rounded-full bg-emerald-400/55" aria-hidden="true" /><span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full border border-[#0a0a0a] bg-emerald-400 px-1 text-[9px] font-black text-black">{unreadNotifications > 9 ? '9+' : unreadNotifications}</span></>}
@@ -415,16 +445,19 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                     )}
                 </header>
 
-                <div className="px-4 pb-3 overflow-y-auto hide-scrollbar" style={{ height: 'calc(100% - 140px)', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
+                <div className="px-4 pb-3 overflow-y-auto hide-scrollbar" style={{ height: 'calc(100% - 120px)', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
                     {renderMainContent()}
                 </div>
 
                 <nav
-                    className="absolute bottom-12 left-3 right-3 z-50 overflow-hidden rounded-[22px] border border-white/[0.07] bg-[#101111]/95 shadow-[0_-8px_24px_rgba(0,0,0,0.32)]"
-                    style={{ paddingBottom: 'max(0px, env(safe-area-inset-bottom))' }}
+                    className="absolute left-3 right-3 z-50 overflow-hidden rounded-[22px] border border-white/[0.07] bg-[#101111]/95 shadow-[0_-8px_24px_rgba(0,0,0,0.32)]"
+                    style={{
+                        bottom: 'max(12px, env(safe-area-inset-bottom))',
+                        paddingBottom: '0px'
+                    }}
                 >
-                    <div className="grid grid-cols-5 gap-1 px-2 py-1.5" style={{ width: '100%', maxWidth: '100vw' }}>
-                        {loading && view === 'feed' ? [0, 1, 2, 3, 4].map((item) => (
+                    <div className="grid grid-cols-6 gap-1 px-2 py-1.5" style={{ width: '100%', maxWidth: '100vw' }}>
+                        {loading && view === 'feed' ? [0, 1, 2, 3, 4, 5].map((item) => (
                             <div key={item} className="flex flex-col items-center justify-center gap-1 py-1 animate-pulse" aria-hidden="true">
                                 <div className="h-10 w-10 rounded-2xl bg-white/[0.07]" />
                                 <div className="h-2 w-7 rounded-full bg-white/[0.07]" />
@@ -531,6 +564,8 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
             </AnimatePresence>
             <ReleaseUpdateNotice />
             <NotificationCenter open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
+            {/* Priya AI assistant — only in Direct/chat view, above nav bar */}
+            {view === 'direct' && <PriyaAssistant />}
         </div>
     );
 };

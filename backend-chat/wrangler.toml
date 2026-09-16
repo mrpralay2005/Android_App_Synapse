@@ -1,0 +1,19 @@
+name = "synapse-chat"
+main = "server.js"
+compatibility_date = "2025-01-01"
+compatibility_flags = [ "nodejs_compat" ]
+
+# DATABASE_URL must be the dedicated chat Neon branch. JWT_SECRET must be the
+# same value used by the production synapse-backend Worker: chat verifies the
+# login JWT issued there.  Values live in Cloudflare Worker secrets, never here.
+[secrets]
+required = [ "DATABASE_URL", "JWT_SECRET" ]
+
+[env.staging]
+name = "synapse-chat-staging"
+
+[env.staging.secrets]
+required = [ "DATABASE_URL", "JWT_SECRET" ]
+
+[observability]
+enabled = true

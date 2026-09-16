@@ -315,6 +315,95 @@ export const TOPICS = [
         keywords: ['delete my account', 'delete account', 'deactivate', 'remove my account', 'close my account', 'remove account', 'delete profile'],
         answer: "I want to be straight with you: deleting an account isn't a self-service button in SynapseX today. \nWhat you *can* do right now:\n• Make your account private so only approved followers see your content.\n• Remove the content you don't want — individual posts and Stories can be deleted.\n• Log out on any device, which ends that session immediately.\nFor a full account removal, contact support and an admin will handle it from the Command Center.",
         followUps: ['private-account', 'contact', 'security']
+    },
+    // ── NEW TOPICS ───────────────────────────────────────────────────────────
+    {
+        id: 'direct-messages',
+        chip: 'Direct messages',
+        question: 'How do direct messages work?',
+        keywords: ['direct message', 'dm', 'direct chat', 'chat', 'message someone', 'send a message', 'inbox', 'messages', 'private message', 'direct'],
+        answer: "SynapseX has a built-in direct messaging system. 💬\n• Tap the chat icon in the top bar (or the **Direct** tab on mobile) to open your inbox.\n• Tap the **+** button to start a new conversation — search for any user by name or username.\n• Messages are delivered in real time and your inbox updates every few seconds automatically.\n• You can see when someone is **typing** — a live indicator appears in their chat.\n• Unread message counts show as badges on the chat icon so you never miss anything.",
+        followUps: ['chat-password', 'chat-notifications', 'follow']
+    },
+    {
+        id: 'chat-password',
+        chip: 'Lock a chat with a password',
+        question: 'How do I password-protect a chat?',
+        keywords: ['chat password', 'lock chat', 'locked chat', 'password chat', 'protect chat', 'chat lock', 'private chat', 'secure chat', 'encrypt chat'],
+        answer: "You can lock any conversation so only people with the password can read it. 🔒\n• When starting a **new chat**, toggle **Password-protect this chat** and set a password (min 4 characters).\n• Inside an **existing chat**, tap the lock icon in the top-right corner to open the Lock Manager.\n  — Set a new password, change an existing one, or remove the lock entirely.\n• Once locked, both participants need to enter the password to view messages.\n• The unlock is remembered for your current browser session — closing the tab re-locks it automatically.",
+        followUps: ['direct-messages', 'security']
+    },
+    {
+        id: 'chat-notifications',
+        chip: 'Chat unread badges',
+        question: 'How do chat unread badges work?',
+        keywords: ['chat badge', 'unread messages', 'message count', 'chat notification', 'unread count', 'badge chat'],
+        answer: "The chat icon shows a green number badge whenever you have unread messages. 🔢\n• The number counts all unread messages across every conversation.\n• Opening a conversation marks it as read automatically.\n• The badge resets to zero once all conversations are read.\nOn mobile, the badge also appears on the bottom navigation Direct tab.",
+        followUps: ['direct-messages', 'notifications']
+    },
+    {
+        id: 'search',
+        chip: 'Search for people',
+        question: 'How do I search for people?',
+        keywords: ['search', 'find user', 'find people', 'search people', 'look up user', 'find account', 'discover people', 'search bar'],
+        answer: "Tap the **Search** icon in the navigation. 🔍\n• Type a name or username to find any account on SynapseX.\n• Suggested users also appear on your feed sidebar (desktop) or the search screen (mobile).\n• From a search result you can view the profile and follow the person directly.",
+        followUps: ['follow', 'profile']
+    },
+    {
+        id: 'who-made-synapsex',
+        chip: 'Who made SynapseX?',
+        question: 'Who created SynapseX?',
+        keywords: ['who made', 'who created', 'who built', 'developer', 'founder', 'creator of synapsex', 'who is behind', 'team behind', 'made by'],
+        answer: "SynapseX was built by **Pralay** — a solo developer who designed and coded the entire platform from scratch. 🚀\nIt covers a full-stack React + Cloudflare Workers web app, an Android app, an AI risk-scoring service, and the real-time direct messaging system.\nPralay built it as both a showcase project and a working social platform.",
+        followUps: ['what-is-synapsex', 'contact']
+    },
+    {
+        id: 'priya-who-are-you',
+        chip: 'Who are you, Priya?',
+        question: 'Who are you?',
+        keywords: ['who are you', 'what are you', 'are you a bot', 'are you ai', 'are you human', 'who is priya', 'what is priya', 'introduce yourself', 'about you', 'about priya'],
+        answer: "I'm Priya — your personal SynapseX guide! 💚\nI'm a built-in AI assistant, trained exclusively on SynapseX. I can explain every feature, walk you through sign-up and login, help with problems, and answer questions about how the app works.\nI don't browse the internet or answer general knowledge questions — I stay focused on SynapseX so my answers are always accurate.",
+        followUps: ['what-can-you-do', 'what-is-synapsex']
+    },
+    {
+        id: 'username-rules',
+        chip: 'Username rules',
+        question: 'What are the username rules?',
+        keywords: ['username', 'username rules', 'choose username', 'username format', 'username taken', 'change username', 'username characters'],
+        answer: "Your username is your public identity on SynapseX. 👤\n• It must be unique — no two accounts can share one.\n• It's shown with an **@** in front wherever you appear.\n• Pick it carefully: while you *can* change it later from Edit Profile, everyone who follows you or @-mentions you will see the update immediately.\n• Avoid special characters that could confuse search — letters, numbers, underscores and dots work best.",
+        followUps: ['create-account', 'edit-profile']
+    },
+    {
+        id: 'password-rules',
+        chip: 'Password requirements',
+        question: 'What are the password requirements?',
+        keywords: ['password rules', 'password requirements', 'strong password', 'password length', 'how long password', 'password format'],
+        answer: "SynapseX asks for a reasonably strong password to protect your account. 🔐\n• Minimum 8 characters.\n• A mix of letters and numbers is recommended.\n• Avoid using the same password you use on other websites.\n• Passwords are stored as one-way bcrypt hashes — nobody can ever read your actual password, including admins.",
+        followUps: ['security', 'forgot-password']
+    },
+    {
+        id: 'session-expiry',
+        chip: 'Why was I logged out?',
+        question: 'Why was I automatically logged out?',
+        keywords: ['logged out', 'auto logout', 'session expired', 'kicked out', 'signed out automatically', 'session ended', 'why logged out'],
+        answer: "SynapseX sessions are short-lived for security. ⏱️\n• Your login token expires after roughly **2 hours** of inactivity.\n• If the app detects the token is invalid or expired, it logs you out automatically and returns you to the home page.\n• This protects you on shared devices — a stale session can't be reused by someone else.\nSimply log back in — your account and all your content are safe.",
+        followUps: ['login', 'security']
+    },
+    {
+        id: 'verified-badge',
+        chip: 'How to get verified',
+        question: 'How do I get a verified badge?',
+        keywords: ['verified', 'verification', 'blue tick', 'get verified', 'apply verification', 'verification request', 'verified badge'],
+        answer: "Verification on SynapseX confirms you're a genuine creator. ✅\n1. Enable **Creator Mode** in Settings.\n2. Submit a verification request — you'll find the button in the Creator Mode section.\n3. An admin reviews your request from the Command Center.\n4. If approved, a verified badge appears on your profile and posts.\nNote: the badge is admin-granted, not automatic — and it requires Creator Mode to be active.",
+        followUps: ['creator-mode', 'admin']
+    },
+    {
+        id: 'video-post',
+        chip: 'Posting videos',
+        question: 'How do I post a video?',
+        keywords: ['post video', 'upload video', 'video post', 'share video', 'add video', 'video content', 'video upload'],
+        answer: "Posting a video works the same as posting an image. 🎥\n• Tap **+** in the navigation.\n• Choose a video from your device — the uploader accepts common formats.\n• Add a caption and optionally set a post password.\n• Tap Publish and the video appears in the feed and on your profile.\nTip: for short, scrollable clips, the **Reels** tab is the dedicated video area.",
+        followUps: ['create-post', 'reels', 'post-password']
     }
 ];
 // ---------------------------------------------------------------------------

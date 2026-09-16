@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Target, Shield, Zap, Globe, X } from 'lucide-react';
+import PriyaAssistant from '../Priya/PriyaAssistant';
 
 const MobileLandingPage = ({ onLogin, onRegister, onExit, previewMode = false }) => {
     const features = [
@@ -201,6 +202,12 @@ const MobileLandingPage = ({ onLogin, onRegister, onExit, previewMode = false })
 
             <div className="pointer-events-none absolute -right-8 top-20 h-48 w-48 rounded-full bg-emerald-500/10 blur-3xl" />
             <div className="pointer-events-none absolute bottom-10 left-0 h-40 w-40 rounded-full bg-emerald-500/10 blur-3xl" />
+
+            {/* Priya landing guide — full screen, sign up/login only */}
+            <PriyaAssistant landingMode onNavigate={(view) => {
+                if (view === 'signup') onRegister();
+                else if (view === 'login') onLogin();
+            }} />
         </div>
     );
 };

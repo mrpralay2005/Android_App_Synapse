@@ -1,112 +1,157 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import PriyaAvatar from './PriyaAvatar';
 import PriyaChat from './PriyaChat';
+import PriyaLandingChat from './PriyaLandingChat';
 import { PRIYA } from './priyaKnowledge';
 
-const NUDGE_KEY = 'priya_nudge_seen';
+const NUDGE_KEY         = 'priya_nudge_seen';
+const LANDING_NUDGE_KEY = 'priya_landing_nudge_seen';
 
 /**
- * Priya's entry point: the floating launcher that opens her chat panel.
- * Rendered once at the app root so she is available on every screen.
+ * PriyaAssistant — single entry point for both contexts.
  *
- * z-index note: the launcher sits at z-[900] and the panel at z-[950]. That puts
- * them above the mobile social layout (z-[120]) but below the app's modals
- * (z-[1000]), so a modal opened from inside a post still appears on top.
+ * landingMode = false (default) → full knowledge base, sessions, history
+ * landingMode = true            → landing-only knowledge, sign-up/login guide
+ *
+ * In both cases clicking the floating button opens a full-screen slide-up chat.
  */
-const PriyaAssistant = ({ onNavigate }) => {
-    const [open, setOpen] = useState(false);
+const PriyaAssistant = ({ onNavigate, landingMode = false }) => {
+    const nudgeKey = landingMode ? LANDING_NUDGE_KEY : NUDGE_KEY;
+
+    const [open, setOpen]           = useState(false);
     const [showNudge, setShowNudge] = useState(false);
+    // Changes every time the chat opens — forces PriyaLandingChat to remount fresh.
+    const [sessionKey, setSessionKey] = useState(0);
 
-    // Introduce her once, a few seconds after the visitor lands.
     useEffect(() => {
-        let alreadySeen = false;
-        try {
-            alreadySeen = localStorage.getItem(NUDGE_KEY) === '1';
-        } catch {
-            alreadySeen = true; // storage blocked — never nag
-        }
-        if (alreadySeen) return undefined;
+        let seen = false;
+        try { seen = localStorage.getItem(nudgeKey) === '1'; } catch { seen = true; }
+        if (seen) return;
+        const t = setTimeout(() => setShowNudge(true), landingMode ? 3500 : 4500);
+        return () => clearTimeout(t);
+    }, [nudgeKey, landingMode]);
 
-        const timer = setTimeout(() => setShowNudge(true), 4500);
-        return () => clearTimeout(timer);
-    }, []);
-
-    const rememberNudge = () => {
+    const dismissNudge = () => {
         setShowNudge(false);
-        try {
-            localStorage.setItem(NUDGE_KEY, '1');
-        } catch {
-            /* storage unavailable — nothing to remember */
-        }
+        try { localStorage.setItem(nudgeKey, '1'); } catch { /* ok */ }
     };
 
-    const openChat = () => {
-        rememberNudge();
-        setOpen(true);
-    };
+    const openChat  = () => { dismissNudge(); setSessionKey(k => k + 1); setOpen(true); };
+    const closeChat = () => setOpen(false);
+
+    const nudgeText = landingMode
+        ? "Hi! I'm Priya 💚 Need help signing up or logging in?"
+        : `Hi, I'm ${PRIYA.name} 💚 Need help with SynapseX?`;
+
+    const statusText = landingMode
+        ? 'Sign-up & login guide'
+        : PRIYA.status;
 
     return (
         <>
-            {/* ---------------- Launcher ---------------- */}
-            <div className="pointer-events-none fixed bottom-20 right-4 z-[900] flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
-                <AnimatePresence>
-                    {showNudge && !open && (
+            {/* ── Floating launcher ── */}
+            <AnimatePresence>
+                {!open && (
+                    <motion.div
+                        key="priya-launcher"
+                        initial={{ opacity: 0, scale: 0.6 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.18 } }}
+                        className="pointer-events-none fixed bottom-[96px] right-3 z-[900] flex flex-col items-end gap-2"
+                    >
+                        {/* Nudge bubble */}
+                        <AnimatePresence>
+                            {showNudge && (
+                                <motion.button
+                                    key="nudge"
+                                    initial={{ opacity: 0, y: 8, scale: 0.94 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: 8, scale: 0.94 }}
+                                    onClick={openChat}
+                                    className="pointer-events-auto max-w-[200px] rounded-2xl rounded-br-sm border border-emerald-500/25 bg-[#0b1512]/95 px-3 py-2 text-left text-[11px] leading-relaxed text-gray-200 shadow-[0_8px_32px_rgba(0,0,0,0.55)] backdrop-blur-md"
+                                >
+                                    {nudgeText}
+                                </motion.button>
+                            )}
+                        </AnimatePresence>
+
+                        {/* Avatar button */}
                         <motion.button
-                            key="priya-nudge"
-                            initial={{ opacity: 0, y: 10, scale: 0.94 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: 10, scale: 0.94 }}
                             onClick={openChat}
-                            className="pointer-events-auto max-w-[232px] rounded-2xl rounded-br-sm border border-emerald-500/25 bg-[#0b1512]/95 px-3.5 py-2.5 text-left text-[11px] leading-relaxed text-gray-200 shadow-[0_10px_40px_rgba(0,0,0,0.6)] backdrop-blur-md"
+                            whileTap={{ scale: 0.9 }}
+                            aria-label="Chat with Priya"
+                            className="pointer-events-auto relative flex h-12 w-12 items-center justify-center rounded-full border border-emerald-500/35 bg-[#080f0d]/90 shadow-[0_6px_24px_rgba(16,185,129,0.32)] backdrop-blur-md"
                         >
-                            Hi, I'm {PRIYA.name} 💚 Need help finding your way around SynapseX?
+                            <motion.span
+                                className="pointer-events-none absolute inset-0 rounded-full border border-emerald-400/45"
+                                animate={{ scale: [1, 1.25, 1], opacity: [0.65, 0, 0.65] }}
+                                transition={{ duration: 2.8, repeat: Infinity, ease: 'easeOut' }}
+                            />
+                            <PriyaAvatar size={36} showRing={false} animated={false} />
                         </motion.button>
-                    )}
-                </AnimatePresence>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
-                <motion.button
-                    onClick={() => (open ? setOpen(false) : openChat())}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    aria-label={open ? 'Close Priya' : `Chat with ${PRIYA.name}`}
-                    title={`${PRIYA.name} — ${PRIYA.tagline}`}
-                    className="pointer-events-auto relative flex items-center gap-2.5 rounded-full border border-emerald-500/30 bg-[#0b1512]/90 p-1.5 pr-2 shadow-[0_10px_36px_rgba(16,185,129,0.28)] backdrop-blur-md"
-                >
-                    {/* Attention halo, only while she is closed */}
-                    {!open && (
-                        <motion.span
-                            className="pointer-events-none absolute inset-0 rounded-full border border-emerald-400/40"
-                            animate={{ scale: [1, 1.18, 1], opacity: [0.7, 0, 0.7] }}
-                            transition={{ duration: 2.6, repeat: Infinity, ease: 'easeOut' }}
-                        />
-                    )}
-
-                    <PriyaAvatar size={44} />
-
-                    {open ? (
-                        <X size={16} className="mr-1.5 text-emerald-200" />
-                    ) : (
-                        <span className="hidden pr-1 text-xs font-bold text-emerald-200 sm:block">
-                            Ask {PRIYA.name}
-                        </span>
-                    )}
-                </motion.button>
-            </div>
-
-            {/* ---------------- Chat panel ---------------- */}
+            {/* ── Full-screen chat ── */}
             <AnimatePresence>
                 {open && (
                     <motion.div
-                        key="priya-panel"
-                        initial={{ opacity: 0, y: 26, scale: 0.96 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 26, scale: 0.96 }}
-                        transition={{ type: 'spring', stiffness: 320, damping: 30 }}
-                        className="fixed bottom-2 left-2 right-2 z-[950] flex h-[min(78vh,620px)] flex-col overflow-hidden rounded-3xl border border-emerald-500/20 bg-[#080c0b]/95 shadow-[0_24px_80px_rgba(0,0,0,0.75)] backdrop-blur-xl sm:bottom-24 sm:left-auto sm:right-6 sm:h-[560px] sm:w-[384px]"
+                        key="priya-fullscreen"
+                        initial={{ y: '100%', borderRadius: '9999px', opacity: 0.6 }}
+                        animate={{
+                            y: 0, borderRadius: '0px', opacity: 1,
+                            transition: {
+                                y: { type: 'spring', stiffness: 340, damping: 36 },
+                                borderRadius: { duration: 0.28, ease: 'easeOut' },
+                                opacity: { duration: 0.18 }
+                            }
+                        }}
+                        exit={{
+                            y: '100%', borderRadius: '9999px', opacity: 0,
+                            transition: {
+                                y: { type: 'spring', stiffness: 360, damping: 38 },
+                                borderRadius: { duration: 0.22, ease: 'easeIn' },
+                                opacity: { duration: 0.22 }
+                            }
+                        }}
+                        className="fixed inset-0 z-[960] flex flex-col overflow-hidden bg-[#060c0b]"
+                        style={{ transformOrigin: 'bottom right' }}
                     >
-                        <PriyaChat onClose={() => setOpen(false)} onNavigate={onNavigate} />
+                        {/* Status bar spacer */}
+                        <div style={{ height: 'env(safe-area-inset-top, 0px)' }} />
+
+                        {/* Header */}
+                        <div className="flex items-center gap-3 border-b border-white/[0.07] bg-[#080f0d] px-4 py-3">
+                            <PriyaAvatar size={44} animated showRing />
+                            <div className="min-w-0 flex-1">
+                                <p className="flex items-center gap-1.5 text-[15px] font-black tracking-tight text-white">
+                                    {PRIYA.name}
+                                    <Sparkles size={13} className="text-emerald-400" />
+                                </p>
+                                <p className="truncate text-[11px] text-emerald-400/75">{statusText}</p>
+                            </div>
+                            {/* Down chevron close button */}
+                            <button onClick={closeChat} aria-label="Close Priya"
+                                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-gray-400 transition-colors hover:bg-white/10 hover:text-white">
+                                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                                    <path d="M4.5 7 L9 12 L13.5 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                            </button>
+                        </div>
+
+                        {/* Chat body — different component per mode */}
+                        <div className="min-h-0 flex-1 overflow-hidden">
+                            {landingMode
+                                ? <PriyaLandingChat key={sessionKey} onClose={closeChat} onNavigate={onNavigate} />
+                                : <PriyaChat onClose={closeChat} onNavigate={onNavigate} hideHeader />
+                            }
+                        </div>
+
+                        {/* Bottom safe area */}
+                        <div style={{ height: 'env(safe-area-inset-bottom, 0px)' }} />
                     </motion.div>
                 )}
             </AnimatePresence>

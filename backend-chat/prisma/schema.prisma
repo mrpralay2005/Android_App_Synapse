@@ -1,0 +1,69 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider     = "postgresql"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
+}
+
+// ---------------------------------------------------------------------------
+// Direct chat (Instagram-style DMs), physically isolated from the main app.
+// These three models are the ONLY tables this backend owns. The main
+// synapse-backend schema is never touched by migrations run from here.
+//
+// A Conversation can optionally be password locked:
+//   - passwordHash  : bcrypt hash of the shared conversation password (null = open)
+//   - passwordSalt  : random hex salt, mixed into unlock-token signatures
+//   - passwordSetBy / passwordSetAt : audit trail of who locked it
+//
+// Unlock tokens are short-lived JWTs proving "I know this chat's password".
+// They are presented on /conversations/:id/messages instead of the password.
+// ---------------------------------------------------------------------------
+
+model ChatConversation {
+  id            Int      @id @default(autoincrement())
+  createdById   Int
+  isGroup       Boolean  @default(false)
+  title         String?
+  passwordHash  String?
+  passwordSalt  String?
+  passwordSetBy Int?
+  passwordSetAt DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  participants ChatParticipant[]
+  messages     ChatMessage[]
+
+  @@index([createdById])
+  @@index([updatedAt])
+}
+
+model ChatParticipant {
+  id             Int      @id @default(autoincrement())
+  conversationId Int
+  conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         Int
+  lastReadAt     DateTime @default(now())
+  typingAt       DateTime?
+  joinedAt       DateTime @default(now())
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+  @@index([conversationId])
+}
+
+model ChatMessage {
+  id             Int      @id @default(autoincrement())
+  conversationId Int
+  conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       Int
+  content        String
+  createdAt      DateTime @default(now())
+
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+}
