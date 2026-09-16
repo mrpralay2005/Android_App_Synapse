@@ -3,7 +3,5 @@ node_modules/
 dist/
 .env
 .env.*
-!.env.staging
-!.env.production
 .dev.vars
 *.log
