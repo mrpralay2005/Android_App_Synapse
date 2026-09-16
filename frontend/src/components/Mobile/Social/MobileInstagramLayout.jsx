@@ -443,7 +443,7 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                     style={{ paddingBottom: 'max(0px, env(safe-area-inset-bottom))' }}
                 >
                     <div className="grid grid-cols-6 gap-1 px-2 py-1.5" style={{ width: '100%', maxWidth: '100vw' }}>
-                        {loading && view === 'feed' ? [0, 1, 2, 3, 4].map((item) => (
+                        {loading && view === 'feed' ? [0, 1, 2, 3, 4, 5].map((item) => (
                             <div key={item} className="flex flex-col items-center justify-center gap-1 py-1 animate-pulse" aria-hidden="true">
                                 <div className="h-10 w-10 rounded-2xl bg-white/[0.07]" />
                                 <div className="h-2 w-7 rounded-full bg-white/[0.07]" />
