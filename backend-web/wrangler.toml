@@ -11,6 +11,7 @@ binding = "AI"
 
 [vars]
 AI_BACKEND_URL = "https://your-ai-backend.onrender.com"
+GITHUB_REPOSITORY = "mrpralay2005/Android_App_Synapse"
 
 # Staging environment
 [env.staging]
@@ -22,6 +23,7 @@ binding = "AI"
 [env.staging.vars]
 AI_BACKEND_URL = "https://your-ai-backend.onrender.com"
 PREVIEW_MODE = "true"
+GITHUB_REPOSITORY = "mrpralay2005/Android_App_Synapse"
 
 [observability]
 enabled = true
