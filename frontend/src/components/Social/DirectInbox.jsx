@@ -295,9 +295,11 @@ const DirectInbox = ({ currentUser, initialUserId = null, onUnreadChange, onExit
                 password: password || undefined
             });
             if (!res?.success) throw new Error('Could not start conversation');
+            // Close modal and open thread immediately — don't wait for inbox refresh.
             setNewChatOpen(false);
-            await refreshInbox();
             openConversation(res.data.id);
+            // Refresh inbox in background.
+            refreshInbox();
         } catch (err) {
             setStartError(err.message || 'Could not start conversation');
         } finally {
@@ -329,33 +331,52 @@ const DirectInbox = ({ currentUser, initialUserId = null, onUnreadChange, onExit
     }, [loadThread, refreshInbox]);
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Send message
+    // Send message — optimistic UI for instant feel
     // ─────────────────────────────────────────────────────────────────────────
     const handleSend = useCallback(async (e) => {
         e?.preventDefault();
         const text = composer.trim();
         if (!text || !activeIdRef.current || sending) return;
         const convId = activeIdRef.current;
-        setSending(true);
-        // Optimistically clear composer immediately for snappy feel.
+
+        // Clear composer and typing indicator immediately — feels instant.
         setComposer('');
+        setSending(true);
+        if (typingTimeout.current) clearTimeout(typingTimeout.current);
+        try { sendTyping(convId, false); } catch { /* best-effort */ }
+
+        // Optimistically append the message to state right away.
+        // Use a temp id so React can key it — server will replace on next poll.
+        const optimisticMsg = {
+            id: `optimistic-${Date.now()}`,
+            senderId: meId,
+            content: text,
+            createdAt: new Date().toISOString(),
+            _optimistic: true,
+        };
+        setMessages(prev => [...prev, optimisticMsg]);
+        isScrolledUp.current = false;
+        requestAnimationFrame(() => scrollToBottom(true));
+
         try {
             await sendMessage(convId, text);
-            try { sendTyping(convId, false); } catch { /* best-effort */ }
+            // Replace optimistic message with real one from server.
             await loadThread(convId, { showSpinner: false });
         } catch (err) {
+            // Remove the optimistic message on failure.
+            setMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
             if (err?.locked || err?.status === 423) {
                 setNeedsPassword(true);
                 needsPasswordRef.current = true;
             } else {
                 setThreadError(err.message || 'Failed to send');
-                // Restore composer text so user doesn't lose their message.
+                // Restore composer so user doesn't lose their message.
                 setComposer(text);
             }
         } finally {
             setSending(false);
         }
-    }, [composer, sending, loadThread]);
+    }, [composer, sending, loadThread, meId, scrollToBottom]);
 
     // Typing indicator — debounced, fire on first keypress then stop after 3 s idle.
     const handleComposerChange = useCallback((value) => {

@@ -1,13 +1,12 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaNeon } from '@prisma/adapter-neon';
-import { Pool } from '@neondatabase/serverless';
+import { Pool, neonConfig } from '@neondatabase/serverless';
 
-/**
- * Cloudflare Workers Isolation Fix (same rule as the main backend):
- * create a NEW Prisma instance per request so a finished request's
- * connection is never reused ("Cannot perform I/O on behalf of a
- * different request").
- */
+// Reuse WebSocket connections within the same Worker instance for speed.
+// Each Worker isolate still gets its own pool — this just avoids
+// re-handshaking on every request within the same warm instance.
+neonConfig.fetchConnectionCache = true;
+
 const getChatPrisma = (databaseUrl) => {
     if (!databaseUrl) {
         throw new Error('CHAT DATABASE_URL is missing.');

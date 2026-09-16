@@ -1,6 +1,9 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaNeon } from '@prisma/adapter-neon';
-import { Pool } from '@neondatabase/serverless';
+import { Pool, neonConfig } from '@neondatabase/serverless';
+
+// Reuse WebSocket connections within the same Worker instance for speed.
+neonConfig.fetchConnectionCache = true;
 
 /**
  * Cloudflare Workers Isolation Fix:
