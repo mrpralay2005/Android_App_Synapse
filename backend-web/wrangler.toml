@@ -3,9 +3,11 @@ main = "server.js"
 compatibility_date = "2025-01-01"
 compatibility_flags = [ "nodejs_compat" ]
 
-# [ai] binding intentionally omitted at top level — local dev uses the mock
-# in aiRoutes.js (generateDevReply). The AI binding is configured only in the
-# Cloudflare dashboard for deployed Workers (production + staging).
+# Cloudflare Workers AI — Priya's brain.
+# This binding is declared here so wrangler deploy never wipes it from Cloudflare.
+# Local dev: wrangler automatically uses a remote AI proxy for this binding.
+[ai]
+binding = "AI"
 
 [vars]
 AI_BACKEND_URL = "https://your-ai-backend.onrender.com"
