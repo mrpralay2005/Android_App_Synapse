@@ -57,10 +57,11 @@ const callPriyaAI = async (message, history = []) => {
                 'Content-Type': 'application/json',
                 Authorization: `Bearer ${token}`
             },
+            credentials: 'include',
             body: JSON.stringify({
                 message,
                 history: history
-                    .filter(m => m.role !== 'priya' || !m.suggestions) // strip UI-only fields
+                    .filter(m => m.role !== 'priya' || !m.suggestions)
                     .slice(-6)
                     .map(m => ({ role: m.role === 'priya' ? 'assistant' : 'user', content: m.text }))
             })
@@ -71,7 +72,7 @@ const callPriyaAI = async (message, history = []) => {
         if (data.fallback || !data.success) return null;
         return data.reply || null;
     } catch {
-        return null; // any network error → fall back silently
+        return null;
     }
 };
 
