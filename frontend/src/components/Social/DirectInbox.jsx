@@ -133,12 +133,10 @@ const DirectInbox = ({ currentUser, initialUserId = null, onUnreadChange, onExit
     // Thread loader — used by openConversation AND polling.
     // Never calls refreshInbox — separation of concerns.
     // ─────────────────────────────────────────────────────────────────────────
-    const loadThread = useCallback(async (conversationId, { showSpinner = false, ignoreGate = false } = {}) => {
+    const loadThread = useCallback(async (conversationId, { showSpinner = false } = {}) => {
         if (!conversationId) return;
         // Don't run a poll while user is staring at the password gate.
-        // But allow the initial open call through (ignoreGate=true) so we can
-        // validate whether the stored unlock token is still valid.
-        if (needsPasswordRef.current && !ignoreGate) return;
+        if (needsPasswordRef.current) return;
 
         if (showSpinner) {
             setThreadLoading(true);
@@ -189,22 +187,20 @@ const DirectInbox = ({ currentUser, initialUserId = null, onUnreadChange, onExit
         setComposer('');
         isScrolledUp.current = false;
 
-        // If the conversation is locked in the inbox data, always show the gate
-        // upfront. loadThread will run in the background — if a valid unlock token
-        // exists in sessionStorage, getMessages will succeed and loadThread will
-        // clear the gate automatically. If the token is stale/missing, loadThread
-        // catches the 423, clears the token, and the gate stays shown.
         const convInState = conversations.find(c => c.id === conversationId);
         if (convInState?.locked) {
+            // Always demand password when opening a locked chat from the inbox.
+            // We clear the stored token so loadThread cannot silently bypass the gate.
+            clearUnlockToken(conversationId);
             setNeedsPassword(true);
             needsPasswordRef.current = true;
+            // Don't call loadThread at all — nothing to load until unlocked.
         } else {
             setNeedsPassword(false);
             needsPasswordRef.current = false;
             setUnlockError('');
+            loadThread(conversationId, { showSpinner: true });
         }
-
-        loadThread(conversationId, { showSpinner: !convInState?.locked, ignoreGate: true });
     }, [loadThread, conversations]);
 
     // ─────────────────────────────────────────────────────────────────────────
