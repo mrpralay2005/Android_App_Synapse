@@ -49,27 +49,54 @@ const useLatestRelease = (enabled = true) => {
     return { release, loading };
 };
 
-const startWebUpdate = async (version, setProgress) => {
-    setProgress({ value: 8, label: 'Checking the published release…' });
-    // Pages builds are asynchronous. Wait for its marker to change before
-    // reloading; otherwise a fast reload simply loads the old public build.
-    for (let attempt = 1; attempt <= 24; attempt += 1) {
-        await pause(5000);
-        const deployedMarker = await getBuildMarker();
-        if (deployedMarker && deployedMarker !== runningBuildMarker) {
-            setProgress({ value: 100, label: 'Ready — restarting SynapseX…' });
-            localStorage.setItem(appliedReleaseKey, version);
-            await pause(650);
-            // A unique document URL bypasses a cached page shell while Vite's
-            // content-hashed assets load the new JavaScript and CSS.
-            const destination = new URL(window.location.href);
-            destination.searchParams.set('synapse-build', deployedMarker);
-            window.location.replace(destination.toString());
-            return;
+// Hard reload that clears all caches — service worker, CacheStorage, everything.
+const hardReload = async (version) => {
+    localStorage.setItem(appliedReleaseKey, version);
+    try {
+        // Unregister service workers
+        if ('serviceWorker' in navigator) {
+            const regs = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(regs.map(r => r.unregister()));
         }
-        setProgress({ value: Math.min(94, 8 + attempt * 3.5), label: 'Cloudflare is preparing your update…' });
+        // Clear Cache Storage (Workbox / Vite PWA caches)
+        if ('caches' in window) {
+            const keys = await caches.keys();
+            await Promise.all(keys.map(k => caches.delete(k)));
+        }
+    } catch { /* cache API unavailable — proceed anyway */ }
+    // Force bypass browser cache with a unique URL
+    window.location.replace(window.location.origin + '/?v=' + Date.now());
+};
+
+const startWebUpdate = async (version, setProgress) => {
+    setProgress({ value: 15, label: 'Clearing cache and checking for update…' });
+    await pause(600);
+
+    // Check if the build marker on the server is different from what's running.
+    // If yes — new build is live, reload immediately.
+    // If same — Cloudflare built this version a while ago and it's already deployed;
+    // the user just hasn't reloaded since. Force a hard reload anyway.
+    const deployedMarker = await getBuildMarker();
+
+    if (deployedMarker && deployedMarker !== runningBuildMarker) {
+        // New build detected — reload with new marker
+        setProgress({ value: 90, label: 'New version found — restarting…' });
+        await pause(500);
+        setProgress({ value: 100, label: 'Restarting SynapseX…' });
+        await pause(400);
+        await hardReload(version);
+        return;
     }
-    setProgress({ value: 100, label: 'Still preparing — keep SynapseX open and try again shortly.' });
+
+    // Same build marker — means either:
+    // (a) The build was published long ago and user is already on the latest build
+    // (b) The cache is serving the old index.html but new files are available
+    // Either way — hard reload clears everything and gets the freshest version.
+    setProgress({ value: 60, label: 'Clearing old cache…' });
+    await pause(700);
+    setProgress({ value: 100, label: 'Restarting SynapseX…' });
+    await pause(400);
+    await hardReload(version);
 };
 
 export const ReleaseUpdateNotice = () => {
