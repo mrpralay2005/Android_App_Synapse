@@ -594,8 +594,9 @@ const DirectInbox = ({ currentUser, initialUserId = null, onUnreadChange, onExit
                             className="hide-scrollbar min-h-0 flex-1 space-y-1.5 overflow-y-auto px-3 py-4 md:px-5"
                             style={{
                                 backgroundImage: 'url(/chat-wallpaper.svg)',
-                                backgroundSize: '300px 300px',
-                                backgroundRepeat: 'repeat',
+                                backgroundSize: 'cover',
+                                backgroundRepeat: 'no-repeat',
+                                backgroundPosition: 'center',
                             }}>
                             {threadLoading && (
                                 <p className="py-10 text-center text-[11px] uppercase tracking-widest text-gray-600">Loading...</p>
