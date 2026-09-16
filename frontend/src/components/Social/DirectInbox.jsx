@@ -133,10 +133,12 @@ const DirectInbox = ({ currentUser, initialUserId = null, onUnreadChange, onExit
     // Thread loader — used by openConversation AND polling.
     // Never calls refreshInbox — separation of concerns.
     // ─────────────────────────────────────────────────────────────────────────
-    const loadThread = useCallback(async (conversationId, { showSpinner = false } = {}) => {
+    const loadThread = useCallback(async (conversationId, { showSpinner = false, ignoreGate = false } = {}) => {
         if (!conversationId) return;
         // Don't run a poll while user is staring at the password gate.
-        if (needsPasswordRef.current) return;
+        // But allow the initial open call through (ignoreGate=true) so we can
+        // validate whether the stored unlock token is still valid.
+        if (needsPasswordRef.current && !ignoreGate) return;
 
         if (showSpinner) {
             setThreadLoading(true);
@@ -162,6 +164,8 @@ const DirectInbox = ({ currentUser, initialUserId = null, onUnreadChange, onExit
         } catch (err) {
             if (err?.locked || err?.status === 423) {
                 if (activeIdRef.current === conversationId) {
+                    // Clear any stale unlock token — it's expired or was revoked.
+                    clearUnlockToken(conversationId);
                     setNeedsPassword(true);
                     needsPasswordRef.current = true;
                     setMessages([]);
@@ -179,22 +183,19 @@ const DirectInbox = ({ currentUser, initialUserId = null, onUnreadChange, onExit
     // so there's no flicker.
     // ─────────────────────────────────────────────────────────────────────────
     const openConversation = useCallback((conversationId) => {
-        // Check if we already have a stored unlock token for this conversation.
-        // If the conversation is locked and there's no token, show gate immediately
-        // without waiting for the server round-trip.
-        const hasToken = Boolean(getUnlockToken(conversationId));
-
         setActiveId(conversationId);
         setMessages([]);
         setThreadError('');
         setComposer('');
         isScrolledUp.current = false;
 
-        // If no stored token, mark as needing password optimistically — loadThread
-        // will confirm/correct this from the server.
-        // This prevents the one-tick "open then lock" flicker.
+        // If the conversation is locked in the inbox data, always show the gate
+        // upfront. loadThread will run in the background — if a valid unlock token
+        // exists in sessionStorage, getMessages will succeed and loadThread will
+        // clear the gate automatically. If the token is stale/missing, loadThread
+        // catches the 423, clears the token, and the gate stays shown.
         const convInState = conversations.find(c => c.id === conversationId);
-        if (convInState?.locked && !hasToken) {
+        if (convInState?.locked) {
             setNeedsPassword(true);
             needsPasswordRef.current = true;
         } else {
@@ -203,7 +204,7 @@ const DirectInbox = ({ currentUser, initialUserId = null, onUnreadChange, onExit
             setUnlockError('');
         }
 
-        loadThread(conversationId, { showSpinner: true });
+        loadThread(conversationId, { showSpinner: !convInState?.locked, ignoreGate: true });
     }, [loadThread, conversations]);
 
     // ─────────────────────────────────────────────────────────────────────────
