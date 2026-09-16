@@ -545,7 +545,7 @@ const DirectInbox = ({ currentUser, initialUserId = null, onUnreadChange, onExit
             </div>
 
             {/* ── Thread pane ── */}
-            <div className={`min-h-0 flex-1 flex-col bg-black ${activeId ? 'flex' : 'hidden md:flex'}`}>
+            <div className={`min-h-0 flex-1 flex-col bg-[#080808] ${activeId ? 'flex' : 'hidden md:flex'}`}>
                 {!activeConversation ? (
                     <div className="hidden flex-1 flex-col items-center justify-center px-8 text-center md:flex">
                         <span className="flex h-16 w-16 items-center justify-center rounded-3xl border border-white/10 bg-white/[0.03] text-gray-500">
@@ -590,7 +590,11 @@ const DirectInbox = ({ currentUser, initialUserId = null, onUnreadChange, onExit
 
                         {/* Messages */}
                         <div ref={scrollRef} onScroll={handleScrollPane}
-                            className="hide-scrollbar min-h-0 flex-1 space-y-1.5 overflow-y-auto px-3 py-4 md:px-5">
+                            className="hide-scrollbar min-h-0 flex-1 space-y-1.5 overflow-y-auto px-3 py-4 md:px-5"
+                            style={{
+                                background: 'radial-gradient(ellipse at 20% 50%, rgba(16,185,129,0.04) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(16,185,129,0.03) 0%, transparent 50%), #080808',
+                                backgroundAttachment: 'local',
+                            }}>
                             {threadLoading && (
                                 <p className="py-10 text-center text-[11px] uppercase tracking-widest text-gray-600">Loading...</p>
                             )}
