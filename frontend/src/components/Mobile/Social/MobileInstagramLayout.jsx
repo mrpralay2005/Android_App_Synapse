@@ -8,6 +8,16 @@ import SettingsView from './SettingsView';
 import ReelsView from './ReelsView';
 import CreatePostModal from './CreatePostModal';
 import CreateStoryModal from './CreateStoryModal';
+
+// Auto-retry fetch on 500 (Cloudflare Worker cold starts).
+// Transparent to callers — same API as fetch().
+const fetchWithRetry = async (url, options = {}, retries = 2) => {
+    for (let i = 0; i <= retries; i++) {
+        const res = await fetch(url, options);
+        if (res.status < 500 || i === retries) return res;
+        await new Promise(r => setTimeout(r, 800 * (i + 1)));
+    }
+};
 import StoryViewer from './StoryViewer';
 import { ReleaseUpdateNotice } from './ReleaseUpdateCenter';
 import NotificationCenter, { useNotificationCount } from './NotificationCenter';
@@ -91,7 +101,7 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                     headers: { ...(token && { Authorization: `Bearer ${token}` }) }
                 };
 
-                const storyRes = await fetch(`${apiUrl}/api/social/stories`, fetchOptions);
+                const storyRes = await fetchWithRetry(`${apiUrl}/api/social/stories`, fetchOptions);
                 const storyData = await storyRes.json();
                 if (active && storyData.success) {
                     setAllStories(storyData.data);
@@ -111,7 +121,7 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                 }
 
                 if (view === 'feed' || view === 'reels') {
-                    const res = await fetch(`${apiUrl}/api/social/feed?sort=${feedSort}`, fetchOptions);
+                    const res = await fetchWithRetry(`${apiUrl}/api/social/feed?sort=${feedSort}`, fetchOptions);
                     const data = await res.json();
                     if (active) {
                         const newPosts = Array.isArray(data) ? data : [];

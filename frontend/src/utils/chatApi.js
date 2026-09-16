@@ -13,30 +13,41 @@ const buildHeaders = (extra = {}) => {
     };
 };
 
-const request = async (path, { method = 'GET', body, unlockToken } = {}) => {
-    const res = await fetch(`${CHAT_API}${path}`, {
-        method,
-        headers: buildHeaders(unlockToken ? { 'X-Chat-Unlock': unlockToken } : {}),
-        ...(body !== undefined ? { body: JSON.stringify(body) } : {})
-    });
+const request = async (path, { method = 'GET', body, unlockToken } = {}, retries = 2) => {
+    const attempt = async () => {
+        const res = await fetch(`${CHAT_API}${path}`, {
+            method,
+            headers: buildHeaders(unlockToken ? { 'X-Chat-Unlock': unlockToken } : {}),
+            ...(body !== undefined ? { body: JSON.stringify(body) } : {})
+        });
 
-    let data = null;
-    try {
-        data = await res.json();
-    } catch {
-        data = null;
+        let data = null;
+        try { data = await res.json(); } catch { data = null; }
+
+        if (!res.ok) {
+            const message = data?.error || `Chat request failed (${res.status})`;
+            const error = new Error(message);
+            error.status = res.status;
+            error.locked = data?.locked === true;
+            error.payload = data;
+            throw error;
+        }
+        return data;
+    };
+
+    for (let i = 0; i <= retries; i++) {
+        try {
+            return await attempt();
+        } catch (err) {
+            // Only retry on 500 (cold start) — not on 4xx (auth/logic errors)
+            const isServerError = !err.status || err.status >= 500;
+            if (isServerError && i < retries) {
+                await new Promise(r => setTimeout(r, 800 * (i + 1)));
+                continue;
+            }
+            throw err;
+        }
     }
-
-    if (!res.ok) {
-        const message = data?.error || `Chat request failed (${res.status})`;
-        const error = new Error(message);
-        error.status = res.status;
-        error.locked = data?.locked === true;
-        error.payload = data;
-        throw error;
-    }
-
-    return data;
 };
 
 // Unlock tokens live per browser profile only (never cached to the shared feed

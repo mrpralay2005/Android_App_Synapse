@@ -6,6 +6,15 @@ import Cookies from 'js-cookie';
 const apiUrl = import.meta.env.VITE_API_URL || 'https://synapse-backend.mrpralay2005.workers.dev';
 const readKey = 'synapse_read_notification_ids';
 
+// Auto-retry on 500 (Worker cold start)
+const fetchWithRetry = async (url, options = {}, retries = 2) => {
+    for (let i = 0; i <= retries; i++) {
+        const res = await fetch(url, options);
+        if (res.status < 500 || i === retries) return res;
+        await new Promise(r => setTimeout(r, 800 * (i + 1)));
+    }
+};
+
 const relativeTime = (date) => {
     const seconds = Math.max(0, Math.floor((Date.now() - new Date(date).getTime()) / 1000));
     if (seconds < 60) return 'now';
@@ -32,7 +41,7 @@ const NotificationCenter = ({ open, onClose }) => {
         const requestId = ++loadRequestId.current;
         try {
             const token = Cookies.get('synapse_token');
-            const response = await fetch(`${apiUrl}/api/social/notifications`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
+            const response = await fetchWithRetry(`${apiUrl}/api/social/notifications`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
             const data = await response.json();
             if (data.success && !clearingRef.current && requestId === loadRequestId.current) setItems(data.data);
         } finally { setLoading(false); }
