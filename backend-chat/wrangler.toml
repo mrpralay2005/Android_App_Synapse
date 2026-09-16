@@ -12,5 +12,8 @@ required = [ "DATABASE_URL", "JWT_SECRET" ]
 [env.staging]
 name = "synapse-chat-staging"
 
+[env.staging.secrets]
+required = [ "DATABASE_URL", "JWT_SECRET" ]
+
 [observability]
 enabled = true
