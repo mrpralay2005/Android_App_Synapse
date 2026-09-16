@@ -3,22 +3,24 @@ main = "server.js"
 compatibility_date = "2025-01-01"
 compatibility_flags = [ "nodejs_compat" ]
 
-# Hyperdrive setup for accelerated DB queries
-# (Optional) To accelerate, run: wrangler hyperdrive create synapse-db --connection-string="..."
-# Then add the [[hyperdrive]] block here with the provided ID.
+# Cloudflare Workers AI — Priya's brain.
+# Runs on Cloudflare's GPU infrastructure — zero load on user devices.
+# IMPORTANT: After deploying, go to Cloudflare dashboard and enable the AI binding:
+# Workers & Pages → synapse-backend → Settings → Bindings → Add → Workers AI → name = "AI"
+# Do the same for synapse-backend-staging.
+[ai]
+binding = "AI"
 
 [vars]
-# DATABASE_URL = "Use secrets for this instead (wrangler secret put DATABASE_URL)"
 AI_BACKEND_URL = "https://your-ai-backend.onrender.com"
 
-# Supabase Storage is handled via S3-Compatible API in code, no wrangler binding needed.
+# Staging environment — also needs AI binding enabled in Cloudflare dashboard
+[env.staging]
+name = "synapse-backend-staging"
 
-# Local development environment
-[env.dev.vars]
-AI_BACKEND_URL = "https://your-ai-backend.onrender.com"
+[env.staging.ai]
+binding = "AI"
 
-# Isolated release-preview Worker. Its DATABASE_URL and JWT_SECRET must be
-# configured as Cloudflare secrets and must point to a Neon staging branch.
 [env.staging.vars]
 AI_BACKEND_URL = "https://your-ai-backend.onrender.com"
 PREVIEW_MODE = "true"

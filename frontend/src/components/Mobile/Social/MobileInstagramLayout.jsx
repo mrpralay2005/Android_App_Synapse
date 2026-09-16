@@ -22,6 +22,7 @@ import StoryViewer from './StoryViewer';
 import { ReleaseUpdateNotice } from './ReleaseUpdateCenter';
 import NotificationCenter, { useNotificationCount } from './NotificationCenter';
 import DirectInbox from '../../Social/DirectInbox';
+import PriyaAssistant from '../../Priya/PriyaAssistant';
 import { saveToCache, loadFromCache } from '../../../utils/synapseCache';
 
 const MobileInstagramLayout = ({ currentUser, onLogout }) => {
@@ -444,13 +445,16 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                     )}
                 </header>
 
-                <div className="px-4 pb-3 overflow-y-auto hide-scrollbar" style={{ height: 'calc(100% - 140px)', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
+                <div className="px-4 pb-3 overflow-y-auto hide-scrollbar" style={{ height: 'calc(100% - 120px)', WebkitOverflowScrolling: 'touch', overscrollBehavior: 'contain' }}>
                     {renderMainContent()}
                 </div>
 
                 <nav
-                    className="absolute bottom-12 left-3 right-3 z-50 overflow-hidden rounded-[22px] border border-white/[0.07] bg-[#101111]/95 shadow-[0_-8px_24px_rgba(0,0,0,0.32)]"
-                    style={{ paddingBottom: 'max(0px, env(safe-area-inset-bottom))' }}
+                    className="absolute left-3 right-3 z-50 overflow-hidden rounded-[22px] border border-white/[0.07] bg-[#101111]/95 shadow-[0_-8px_24px_rgba(0,0,0,0.32)]"
+                    style={{
+                        bottom: 'max(12px, env(safe-area-inset-bottom))',
+                        paddingBottom: '0px'
+                    }}
                 >
                     <div className="grid grid-cols-6 gap-1 px-2 py-1.5" style={{ width: '100%', maxWidth: '100vw' }}>
                         {loading && view === 'feed' ? [0, 1, 2, 3, 4, 5].map((item) => (
@@ -560,6 +564,8 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
             </AnimatePresence>
             <ReleaseUpdateNotice />
             <NotificationCenter open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
+            {/* Priya AI assistant — only in Direct/chat view, above nav bar */}
+            {view === 'direct' && <PriyaAssistant />}
         </div>
     );
 };
