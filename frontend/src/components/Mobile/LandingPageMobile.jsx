@@ -206,7 +206,7 @@ const MobileLandingPage = ({ onLogin, onRegister, onExit, previewMode = false })
             {/* Priya landing guide — full screen, sign up/login only */}
             <PriyaAssistant landingMode onNavigate={(view) => {
                 if (view === 'signup') onRegister();
-                else onLogin();
+                else if (view === 'login') onLogin();
             }} />
         </div>
     );

@@ -16,9 +16,13 @@ const callLandingAI = async (message, history = []) => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 message,
+                // FIX: cap content length + normalize role same as PriyaChat
                 history: history
                     .slice(-4)
-                    .map(m => ({ role: m.role === 'priya' ? 'assistant' : 'user', content: m.text }))
+                    .map(m => ({
+                        role: m.role === 'priya' ? 'assistant' : 'user',
+                        content: String(m.text || '').slice(0, 200)
+                    }))
             })
         });
         if (!res.ok) return null;

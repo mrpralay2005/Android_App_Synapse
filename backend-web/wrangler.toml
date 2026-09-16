@@ -4,10 +4,9 @@ compatibility_date = "2025-01-01"
 compatibility_flags = [ "nodejs_compat" ]
 
 # Cloudflare Workers AI — Priya's brain.
-# Runs on Cloudflare's GPU infrastructure — zero load on user devices.
-# IMPORTANT: After deploying, go to Cloudflare dashboard and enable the AI binding:
-# Workers & Pages → synapse-backend → Settings → Bindings → Add → Workers AI → name = "AI"
-# Do the same for synapse-backend-staging.
+# NOTE: The [ai] binding requires a Cloudflare account with AI enabled.
+# Local dev (wrangler dev) will use the built-in dev mock in aiRoutes.js instead.
+# Production and staging use real Cloudflare GPU inference.
 [ai]
 binding = "AI"
 

@@ -320,8 +320,8 @@ const PriyaChat = ({ onClose, onNavigate, hideHeader = false }) => {
         // Free-typed message → try real AI
         setIsTyping(true);
 
-        // Get current messages for history context (before user message was appended)
-        const historySnapshot = messages.slice(-8);
+        // FIX: snapshot history BEFORE setMessages so we don't capture stale state
+        const historySnapshot = [...messages].slice(-8);
 
         const aiReply = await callPriyaAI(text, historySnapshot);
 
