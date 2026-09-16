@@ -1,7 +1,17 @@
 import { Hono } from 'hono';
 import authenticateToken from '../middleware/authMiddleware.js';
+import getPrisma from '../prisma/db.js';
 
 const ai = new Hono();
+
+// ─── Token usage logger (fire-and-forget, never blocks the response) ──────────
+const logUsage = (databaseUrl, userId, endpoint, tokens) => {
+    if (!databaseUrl || !tokens || tokens <= 0) return;
+    try {
+        const prisma = getPrisma(databaseUrl);
+        prisma.aiUsageLog.create({ data: { userId, endpoint, tokens } }).catch(() => {/* silent */});
+    } catch { /* never crash the AI call */ }
+};
 
 // ─── Dev mock ─────────────────────────────────────────────────────────────────
 const generateDevReply = (message) => {
@@ -124,6 +134,12 @@ ai.post('/priya', authenticateToken, async (c) => {
 
         const reply = response?.response?.trim();
         if (!reply) return c.json({ success: false, fallback: true }, 200);
+
+        // Log token usage — fire-and-forget, never blocks response
+        const userId = c.get('user')?.userId ?? 0;
+        const tokens = (response?.usage?.total_tokens) || Math.ceil((text.length + reply.length) / 4);
+        logUsage(c.env.DATABASE_URL, userId, 'priya', tokens);
+
         return c.json({ success: true, reply });
 
     } catch (err) {
@@ -159,6 +175,11 @@ ai.post('/priya-landing', async (c) => {
 
         const reply = response?.response?.trim();
         if (!reply) return c.json({ success: false, fallback: true }, 200);
+
+        // Log token usage for landing calls (userId = 0 = unauthenticated)
+        const tokens = (response?.usage?.total_tokens) || Math.ceil((text.length + reply.length) / 4);
+        logUsage(c.env.DATABASE_URL, 0, 'priya-landing', tokens);
+
         return c.json({ success: true, reply });
 
     } catch (err) {

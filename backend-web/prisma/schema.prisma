@@ -174,3 +174,16 @@ model Session {
   createdAt  DateTime @default(now())
   expiresAt  DateTime
 }
+
+// Priya AI usage tracking — one row per call, used by the admin Command Center.
+// userId = 0 for unauthenticated landing-page calls.
+model AiUsageLog {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @default(0)
+  endpoint   String   // 'priya' | 'priya-landing'
+  tokens     Int      @default(0)
+  calledAt   DateTime @default(now())
+
+  @@index([calledAt])
+  @@index([userId])
+}

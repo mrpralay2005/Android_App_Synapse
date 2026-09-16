@@ -205,3 +205,43 @@ export const publishPlatformUpdate = async (c) => {
         return c.json({ success: false, error: 'Release update could not be published' }, 500);
     }
 };
+
+// ---------------------------------------------------------------------------
+// GET /api/admin/ai-usage — Priya AI token consumption stats (admin only)
+// ---------------------------------------------------------------------------
+export const getAiUsage = async (c) => {
+    const denied = requireAdmin(c);
+    if (denied) return denied;
+    try {
+        const prisma = getPrisma(c.env.DATABASE_URL);
+
+        const now = new Date();
+        const startOfDay   = new Date(now); startOfDay.setHours(0, 0, 0, 0);
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+        const [today, month, total, callsToday, callsTotal] = await Promise.all([
+            prisma.aiUsageLog.aggregate({ _sum: { tokens: true }, where: { calledAt: { gte: startOfDay } } }),
+            prisma.aiUsageLog.aggregate({ _sum: { tokens: true }, where: { calledAt: { gte: startOfMonth } } }),
+            prisma.aiUsageLog.aggregate({ _sum: { tokens: true } }),
+            prisma.aiUsageLog.count({ where: { calledAt: { gte: startOfDay } } }),
+            prisma.aiUsageLog.count(),
+        ]);
+
+        return c.json({
+            success: true,
+            data: {
+                tokensToday:  today._sum.tokens  ?? 0,
+                tokensMonth:  month._sum.tokens  ?? 0,
+                tokensTotal:  total._sum.tokens  ?? 0,
+                callsToday,
+                callsTotal,
+                // Free tier: 10,000 neurons/day. 1 token ≈ 1 neuron.
+                dailyLimit:   10000,
+                usedPercent:  Math.min(100, Math.round(((today._sum.tokens ?? 0) / 10000) * 100))
+            }
+        });
+    } catch (error) {
+        console.error('AI usage error:', error);
+        return c.json({ success: false, error: 'Unable to load AI usage' }, 500);
+    }
+};

@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { getAllUsers, getAdminOverview, getCreatorRequests, reviewCreatorRequest, getPlatformUpdates, getReleaseReadiness, publishPlatformUpdate } from '../controllers/adminController.js';
+import { getAllUsers, getAdminOverview, getCreatorRequests, reviewCreatorRequest, getPlatformUpdates, getReleaseReadiness, publishPlatformUpdate, getAiUsage } from '../controllers/adminController.js';
 import authenticateToken from '../middleware/authMiddleware.js';
 
 const admin = new Hono();
@@ -11,5 +11,6 @@ admin.put('/creator-requests/:id', authenticateToken, reviewCreatorRequest);
 admin.get('/platform-updates', authenticateToken, getPlatformUpdates);
 admin.get('/release-readiness', authenticateToken, getReleaseReadiness);
 admin.post('/platform-updates', authenticateToken, publishPlatformUpdate);
+admin.get('/ai-usage', authenticateToken, getAiUsage);
 
 export default admin;
