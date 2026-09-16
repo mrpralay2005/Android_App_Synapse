@@ -14,7 +14,6 @@ import MobileSignUpBox from './components/Mobile/Auth/SignUpBox';
 import MobileOTPBox from './components/Mobile/Auth/OTPBox';
 import MobileForgotPasswordBox from './components/Mobile/Auth/ForgotPasswordBox';
 import './components/Mobile/Auth/mobileAuth.css';
-import PriyaAssistant from './components/Priya/PriyaAssistant';
 
 // Synapse Core Logo
 const SynapseLogo = ({ size = 60 }) => (
@@ -380,15 +379,6 @@ function App() {
                     </motion.div>
                 )}
             </AnimatePresence>
-
-            {/* Priya — the in-app AI guide. Mounted at the root so she is
-                available on the home page and inside the social feed. A signed-in
-                user is never pushed back to the auth screens by one of her actions. */}
-            <PriyaAssistant
-                onNavigate={(nextView) =>
-                    setView(user && ['login', 'signup', 'otp', 'forgot'].includes(nextView) ? 'profile' : nextView)
-                }
-            />
         </motion.div>
     );
 }
