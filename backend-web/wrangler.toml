@@ -3,17 +3,14 @@ main = "server.js"
 compatibility_date = "2025-01-01"
 compatibility_flags = [ "nodejs_compat" ]
 
-# Cloudflare Workers AI — Priya's brain.
-# NOTE: The [ai] binding requires a Cloudflare account with AI enabled.
-# Local dev (wrangler dev) will use the built-in dev mock in aiRoutes.js instead.
-# Production and staging use real Cloudflare GPU inference.
-[ai]
-binding = "AI"
+# [ai] binding intentionally omitted at top level — local dev uses the mock
+# in aiRoutes.js (generateDevReply). The AI binding is configured only in the
+# Cloudflare dashboard for deployed Workers (production + staging).
 
 [vars]
 AI_BACKEND_URL = "https://your-ai-backend.onrender.com"
 
-# Staging environment — also needs AI binding enabled in Cloudflare dashboard
+# Staging environment
 [env.staging]
 name = "synapse-backend-staging"
 
