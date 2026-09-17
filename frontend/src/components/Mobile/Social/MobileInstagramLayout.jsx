@@ -450,10 +450,7 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                 </div>
 
                 <nav
-                    className="absolute bottom-3 left-3 right-3 z-50 overflow-hidden rounded-[22px] border border-white/[0.07] bg-[#101111]/95 shadow-[0_-8px_24px_rgba(0,0,0,0.32)]"
-                    style={{
-                        paddingBottom: 'env(safe-area-inset-bottom, 0px)'
-                    }}
+                    className="absolute bottom-12 left-3 right-3 z-50 overflow-hidden rounded-[22px] border border-white/[0.07] bg-[#101111]/95 shadow-[0_-8px_24px_rgba(0,0,0,0.32)]"
                 >
                     <div className="grid grid-cols-6 gap-1 px-2 py-1.5" style={{ width: '100%', maxWidth: '100vw' }}>
                         {loading && view === 'feed' ? [0, 1, 2, 3, 4, 5].map((item) => (
