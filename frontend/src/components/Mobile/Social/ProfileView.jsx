@@ -118,7 +118,7 @@ const ProfileView = ({ user, currentUser, posts: parentPosts = [], onOpenCreateP
     ];
 
     return (
-        <div className="w-full min-h-full bg-[#0a0a0a] text-white">
+        <div className="synapse-profile w-full min-h-full bg-[#0a0a0a] text-white">
 
             {/* ── Header card ── */}
             <div className="px-4 pt-4 pb-3">

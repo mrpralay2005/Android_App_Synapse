@@ -82,10 +82,10 @@ const PriyaAssistant = ({ onNavigate, landingMode = false }) => {
                             onClick={openChat}
                             whileTap={{ scale: 0.9 }}
                             aria-label="Chat with Priya"
-                            className="pointer-events-auto relative flex h-12 w-12 items-center justify-center rounded-full border border-emerald-500/35 bg-[#080f0d]/90 shadow-[0_6px_24px_rgba(16,185,129,0.32)] backdrop-blur-md"
+                            className="synapse-priya-launcher pointer-events-auto relative flex h-12 w-12 items-center justify-center rounded-full border border-emerald-500/35 bg-[#080f0d]/90 shadow-[0_6px_24px_rgba(16,185,129,0.32)] backdrop-blur-md"
                         >
                             <motion.span
-                                className="pointer-events-none absolute inset-0 rounded-full border border-emerald-400/45"
+                                className="synapse-priya-launcher-pulse pointer-events-none absolute inset-0 rounded-full border border-emerald-400/45"
                                 animate={{ scale: [1, 1.25, 1], opacity: [0.65, 0, 0.65] }}
                                 transition={{ duration: 2.8, repeat: Infinity, ease: 'easeOut' }}
                             />

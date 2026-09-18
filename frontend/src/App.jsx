@@ -37,6 +37,18 @@ function App() {
         return window.innerWidth < 768;
     });
 
+    // Interface themes are deliberately client-side only.  They must never
+    // affect the session, API selection, or the data used to render posts.
+    useEffect(() => {
+        const savedTheme = localStorage.getItem('synapse_interface_theme');
+        const supportedThemes = ['prism', 'atelier', 'signal'];
+        if (supportedThemes.includes(savedTheme)) {
+            document.documentElement.dataset.synapseTheme = savedTheme;
+        } else {
+            document.documentElement.removeAttribute('data-synapse-theme');
+        }
+    }, []);
+
     // Persist view to localStorage
     useEffect(() => {
         localStorage.setItem('synapse_last_view', view);

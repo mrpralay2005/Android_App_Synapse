@@ -2,6 +2,383 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Optional interface identities
+ * -----------------------------
+ * These rules activate only when Settings writes data-synapse-theme.  The
+ * default/current interface has no marker at all, so it continues to use the
+ * original styles byte-for-byte.  Keep this limited to named visual surfaces:
+ * never use it for requests, loading state, authentication, or post data.
+ */
+html[data-synapse-theme] {
+    --synapse-theme-bg: #0b1025;
+    --synapse-theme-surface: #111a3b;
+    --synapse-theme-card: rgba(23, 32, 72, 0.88);
+    --synapse-theme-line: rgba(154, 185, 255, 0.18);
+    --synapse-theme-ink: #f6f8ff;
+    --synapse-theme-muted: #a8b1ca;
+    --synapse-theme-accent: #67e8f9;
+    --synapse-theme-accent-rgb: 103, 232, 249;
+    --synapse-theme-accent-deep: #2563eb;
+    --synapse-theme-font: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+html[data-synapse-theme='atelier'] {
+    --synapse-theme-bg: #180f19;
+    --synapse-theme-surface: #2a1729;
+    --synapse-theme-card: rgba(54, 29, 49, 0.9);
+    --synapse-theme-line: rgba(253, 164, 175, 0.22);
+    --synapse-theme-ink: #fff8f5;
+    --synapse-theme-muted: #d3b5bc;
+    --synapse-theme-accent: #fda4af;
+    --synapse-theme-accent-rgb: 253, 164, 175;
+    --synapse-theme-accent-deep: #a33a5d;
+    --synapse-theme-font: Georgia, 'Times New Roman', serif;
+}
+
+html[data-synapse-theme='signal'] {
+    --synapse-theme-bg: #080b09;
+    --synapse-theme-surface: #101712;
+    --synapse-theme-card: rgba(17, 25, 19, 0.96);
+    --synapse-theme-line: rgba(182, 243, 106, 0.2);
+    --synapse-theme-ink: #eaffdf;
+    --synapse-theme-muted: #94a991;
+    --synapse-theme-accent: #b6f36a;
+    --synapse-theme-accent-rgb: 182, 243, 106;
+    --synapse-theme-accent-deep: #5a9934;
+    --synapse-theme-font: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+}
+
+html[data-synapse-theme] body,
+html[data-synapse-theme] #root {
+    background: var(--synapse-theme-bg);
+    color: var(--synapse-theme-ink);
+    font-family: var(--synapse-theme-font);
+}
+
+html[data-synapse-theme='prism'] #root {
+    background-image: radial-gradient(circle at 82% -8%, rgba(103, 232, 249, 0.15), transparent 32%), radial-gradient(circle at -12% 78%, rgba(99, 102, 241, 0.16), transparent 38%);
+}
+
+html[data-synapse-theme='atelier'] #root {
+    background-image: radial-gradient(circle at 100% 0%, rgba(253, 164, 175, 0.13), transparent 31%), linear-gradient(135deg, rgba(101, 46, 78, 0.15), transparent 55%);
+}
+
+html[data-synapse-theme='signal'] #root {
+    background-image: linear-gradient(rgba(182, 243, 106, 0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(182, 243, 106, 0.025) 1px, transparent 1px);
+    background-size: 22px 22px;
+}
+
+html[data-synapse-theme] :is(.synapse-social-shell, .synapse-social-frame, .synapse-profile, .synapse-settings, .synapse-chat, .mobile-auth-screen) {
+    background-color: var(--synapse-theme-bg) !important;
+    color: var(--synapse-theme-ink);
+    font-family: var(--synapse-theme-font);
+}
+
+html[data-synapse-theme] :is(.synapse-social-shell, .synapse-social-frame, .synapse-profile, .synapse-settings, .synapse-chat) :is(.bg-\[\#0a0a0a\], .bg-\[\#0f0f0f\], .bg-\[\#101113\], .bg-\[\#111316\], .bg-\[\#070707\], .bg-black) {
+    background-color: var(--synapse-theme-bg) !important;
+}
+
+html[data-synapse-theme] :is(.synapse-post-card, .synapse-settings .bg-white\/\[0\.03\], .synapse-settings .bg-white\/\[0\.035\], .synapse-settings .bg-white\/\[0\.045\]) {
+    background-color: var(--synapse-theme-card) !important;
+    border-color: var(--synapse-theme-line) !important;
+}
+
+html[data-synapse-theme] .synapse-post-card {
+    box-shadow: 0 18px 45px rgba(0, 0, 0, 0.18);
+}
+
+html[data-synapse-theme] :is(.synapse-social-shell, .synapse-profile, .synapse-settings, .synapse-chat, .synapse-feed, .synapse-post-card) :is(.text-white, .text-gray-100, .text-gray-200, .text-gray-300) {
+    color: var(--synapse-theme-ink) !important;
+}
+
+html[data-synapse-theme] :is(.synapse-social-shell, .synapse-profile, .synapse-settings, .synapse-chat, .synapse-feed, .synapse-post-card) :is(.text-gray-400, .text-gray-500, .text-gray-600) {
+    color: var(--synapse-theme-muted) !important;
+}
+
+html[data-synapse-theme] :is(.synapse-social-shell, .synapse-profile, .synapse-settings, .synapse-chat, .synapse-feed, .synapse-post-card) :is(.border-white\/5, .border-white\/10, .border-white\/\[0\.08\], .border-white\/\[0\.06\]) {
+    border-color: var(--synapse-theme-line) !important;
+}
+
+html[data-synapse-theme] :is(.synapse-social-shell, .synapse-profile, .synapse-settings, .synapse-chat, .synapse-feed, .synapse-post-card) :is(.text-emerald-500, .text-emerald-300, .text-emerald-400) {
+    color: var(--synapse-theme-accent) !important;
+}
+
+html[data-synapse-theme] :is(.synapse-social-shell, .synapse-profile, .synapse-settings, .synapse-chat, .synapse-feed, .synapse-post-card) :is(.bg-emerald-500, .bg-emerald-500\/10, .bg-emerald-500\/15) {
+    background-color: rgba(var(--synapse-theme-accent-rgb), 0.18) !important;
+}
+
+html[data-synapse-theme] .theme-choice-selected {
+    border-color: var(--synapse-theme-accent) !important;
+    background-color: rgba(var(--synapse-theme-accent-rgb), 0.12) !important;
+    box-shadow: 0 12px 30px rgba(var(--synapse-theme-accent-rgb), 0.12);
+}
+
+html[data-synapse-theme='prism'] .synapse-social-shell header {
+    background: rgba(11, 16, 37, 0.82) !important;
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
+}
+
+html[data-synapse-theme='prism'] .synapse-brand {
+    color: #dffaff !important;
+    font-family: 'Trebuchet MS', ui-sans-serif, sans-serif !important;
+    font-weight: 900 !important;
+    letter-spacing: -0.08em !important;
+    text-shadow: 0 0 20px rgba(103, 232, 249, 0.4);
+}
+
+html[data-synapse-theme='atelier'] .synapse-brand {
+    color: #ffe4e6 !important;
+    font-family: Georgia, 'Times New Roman', serif !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.07em !important;
+    text-shadow: 0 5px 18px rgba(253, 164, 175, 0.24);
+}
+
+html[data-synapse-theme='signal'] .synapse-brand {
+    color: var(--synapse-theme-accent) !important;
+    font-family: 'SFMono-Regular', Consolas, monospace !important;
+    font-size: 1.2rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.03em !important;
+    text-transform: uppercase;
+}
+
+html[data-synapse-theme='prism'] .synapse-post-card,
+html[data-synapse-theme='prism'] .synapse-chat .rounded-2xl {
+    border-radius: 1.35rem;
+}
+
+html[data-synapse-theme='atelier'] .synapse-post-card {
+    border-radius: 1.15rem;
+    box-shadow: 0 15px 38px rgba(46, 14, 39, 0.32);
+}
+
+html[data-synapse-theme='atelier'] .synapse-chat .rounded-2xl {
+    border-radius: 1.35rem 1.35rem 0.4rem 1.35rem;
+}
+
+html[data-synapse-theme='signal'] :is(.synapse-post-card, .synapse-chat .rounded-2xl, .synapse-settings .rounded-2xl) {
+    border-radius: 0.35rem;
+}
+
+html[data-synapse-theme='signal'] .synapse-post-card {
+    box-shadow: 5px 5px 0 rgba(182, 243, 106, 0.09);
+}
+
+/* Priya keeps her illustrated identity, while the assistant mark, halo and
+   launcher take on the chosen interface signal. */
+html[data-synapse-theme] .synapse-priya-art {
+    filter: hue-rotate(16deg) saturate(0.88) drop-shadow(0 6px 18px rgba(var(--synapse-theme-accent-rgb), 0.4)) !important;
+}
+
+html[data-synapse-theme] img.synapse-priya-avatar { filter: hue-rotate(16deg) saturate(0.88); }
+
+html[data-synapse-theme] .synapse-priya-ring {
+    background: conic-gradient(from 0deg, var(--synapse-theme-accent), #6366f1, #c4b5fd, var(--synapse-theme-accent)) !important;
+}
+
+html[data-synapse-theme] .synapse-priya-launcher {
+    background: rgba(var(--synapse-theme-accent-rgb), 0.12) !important;
+    border-color: rgba(var(--synapse-theme-accent-rgb), 0.58) !important;
+    box-shadow: 0 6px 24px rgba(var(--synapse-theme-accent-rgb), 0.3) !important;
+}
+
+html[data-synapse-theme] .synapse-priya-launcher-pulse {
+    border-color: rgba(var(--synapse-theme-accent-rgb), 0.72) !important;
+}
+
+html[data-synapse-theme='atelier'] .synapse-priya-art { filter: hue-rotate(314deg) saturate(0.88) drop-shadow(0 6px 18px rgba(253, 164, 175, 0.42)) !important; }
+html[data-synapse-theme='atelier'] img.synapse-priya-avatar { filter: hue-rotate(314deg) saturate(0.88); }
+html[data-synapse-theme='atelier'] .synapse-priya-ring { background: conic-gradient(from 0deg, #fda4af, #a855f7, #fecdd3, #fda4af) !important; }
+
+html[data-synapse-theme='signal'] .synapse-priya-art { filter: grayscale(0.72) sepia(0.32) hue-rotate(42deg) saturate(1.4) drop-shadow(0 6px 18px rgba(182, 243, 106, 0.38)) !important; }
+html[data-synapse-theme='signal'] img.synapse-priya-avatar { filter: grayscale(0.72) sepia(0.32) hue-rotate(42deg) saturate(1.4); }
+html[data-synapse-theme='signal'] .synapse-priya-ring { background: conic-gradient(from 0deg, #b6f36a, #4ade80, #eaffdf, #b6f36a) !important; }
+
+/* Theme the entry gateway independently from the social surfaces.  These are
+   presentation-only selectors, scoped to the four mobile entry/loading areas. */
+html[data-synapse-theme] .mobile-landing,
+html[data-synapse-theme] .mobile-auth-screen {
+    background: var(--synapse-theme-bg) !important;
+    color: var(--synapse-theme-ink);
+    font-family: var(--synapse-theme-font);
+}
+
+html[data-synapse-theme] .mobile-landing-atmosphere {
+    background: radial-gradient(circle at 92% 4%, rgba(var(--synapse-theme-accent-rgb), 0.2), transparent 31%), radial-gradient(circle at 2% 92%, rgba(var(--synapse-theme-accent-rgb), 0.12), transparent 36%) !important;
+}
+
+html[data-synapse-theme] .mobile-landing :is(.text-white, .text-gray-300) {
+    color: var(--synapse-theme-ink) !important;
+}
+
+html[data-synapse-theme] .mobile-landing :is(.text-gray-400, .text-gray-500) {
+    color: var(--synapse-theme-muted) !important;
+}
+
+html[data-synapse-theme] .mobile-landing :is(.text-emerald-400, .text-emerald-500) {
+    color: var(--synapse-theme-accent) !important;
+}
+
+html[data-synapse-theme] .mobile-landing-feature {
+    background: var(--synapse-theme-card) !important;
+    border-color: var(--synapse-theme-line) !important;
+}
+
+html[data-synapse-theme] .mobile-landing-feature-icon {
+    border-color: rgba(var(--synapse-theme-accent-rgb), 0.45) !important;
+    background-color: rgba(var(--synapse-theme-accent-rgb), 0.13) !important;
+}
+
+html[data-synapse-theme] .mobile-landing-primary-action,
+html[data-synapse-theme] :is(.mobile-auth-login .login-btn, .mobile-auth-register .signup-btn) {
+    background: linear-gradient(118deg, var(--synapse-theme-accent), var(--synapse-theme-accent-deep)) !important;
+    color: #07100f !important;
+    box-shadow: 0 12px 28px rgba(var(--synapse-theme-accent-rgb), 0.24) !important;
+}
+
+html[data-synapse-theme] .mobile-landing-secondary-action {
+    background: var(--synapse-theme-card) !important;
+    border-color: var(--synapse-theme-line) !important;
+    color: var(--synapse-theme-ink) !important;
+}
+
+html[data-synapse-theme] .mobile-auth-card.glass-card {
+    background: var(--synapse-theme-card) !important;
+    border-color: var(--synapse-theme-line) !important;
+    box-shadow: 0 24px 56px rgba(0, 0, 0, 0.34) !important;
+}
+
+html[data-synapse-theme] .mobile-auth-screen :is(.text-white, .text-gray-300) {
+    color: var(--synapse-theme-ink) !important;
+}
+
+html[data-synapse-theme] .mobile-auth-screen :is(.text-gray-400, .text-gray-500) {
+    color: var(--synapse-theme-muted) !important;
+}
+
+html[data-synapse-theme] .mobile-auth-screen :is(.text-emerald-400, .text-emerald-500) {
+    color: var(--synapse-theme-accent) !important;
+}
+
+html[data-synapse-theme] .mobile-auth-screen .glass-input {
+    background: rgba(var(--synapse-theme-accent-rgb), 0.08) !important;
+    border-color: var(--synapse-theme-line) !important;
+    color: var(--synapse-theme-ink) !important;
+}
+
+html[data-synapse-theme] .mobile-auth-screen .glass-input::placeholder {
+    color: var(--synapse-theme-muted) !important;
+    opacity: 0.8;
+}
+
+html[data-synapse-theme] .mobile-auth-screen .social-btn,
+html[data-synapse-theme] .mobile-auth-back {
+    background: rgba(var(--synapse-theme-accent-rgb), 0.08) !important;
+    border-color: var(--synapse-theme-line) !important;
+    color: var(--synapse-theme-ink) !important;
+}
+
+html[data-synapse-theme='prism'] .mobile-auth-screen > .absolute img { filter: hue-rotate(108deg) saturate(0.82); }
+html[data-synapse-theme='atelier'] .mobile-auth-screen > .absolute img { filter: hue-rotate(292deg) saturate(0.78); }
+html[data-synapse-theme='signal'] .mobile-auth-screen > .absolute img { filter: grayscale(0.76) sepia(0.42) hue-rotate(44deg) saturate(1.2); }
+
+html[data-synapse-theme] .synapse-bottom-nav {
+    background: var(--synapse-theme-card) !important;
+    border-color: var(--synapse-theme-line) !important;
+    box-shadow: 0 -8px 26px rgba(0, 0, 0, 0.28) !important;
+}
+
+html[data-synapse-theme] .synapse-nav-skeleton > div {
+    background: rgba(var(--synapse-theme-accent-rgb), 0.13) !important;
+    box-shadow: inset 0 0 0 1px rgba(var(--synapse-theme-accent-rgb), 0.07);
+}
+
+html[data-synapse-theme='signal'] .synapse-nav-skeleton > div {
+    border-radius: 0.25rem;
+}
+
+/* Small interactive feed details use the active theme too.  These only style
+   existing controls; their selection, counts and post actions remain intact. */
+html[data-synapse-theme] .synapse-feed-sort {
+    background: var(--synapse-theme-card) !important;
+    border-color: var(--synapse-theme-line) !important;
+}
+
+html[data-synapse-theme] .synapse-feed-sort-option:not(.bg-emerald-400) {
+    color: var(--synapse-theme-muted) !important;
+}
+
+html[data-synapse-theme] .synapse-feed-sort-option.bg-emerald-400 {
+    background: linear-gradient(118deg, var(--synapse-theme-accent), var(--synapse-theme-accent-deep)) !important;
+    color: #07100f !important;
+    box-shadow: 0 4px 14px rgba(var(--synapse-theme-accent-rgb), 0.28) !important;
+}
+
+html[data-synapse-theme] .synapse-notification-badge {
+    background: var(--synapse-theme-accent) !important;
+    border-color: var(--synapse-theme-bg) !important;
+    color: #07100f !important;
+    box-shadow: 0 0 0 1px rgba(var(--synapse-theme-accent-rgb), 0.2);
+}
+
+html[data-synapse-theme] .synapse-notification-ping {
+    background: rgba(var(--synapse-theme-accent-rgb), 0.58) !important;
+}
+
+html[data-synapse-theme] .synapse-post-mobile-avatar {
+    background: var(--synapse-theme-card) !important;
+    border-color: rgba(var(--synapse-theme-accent-rgb), 0.58) !important;
+}
+
+html[data-synapse-theme] .synapse-post-mobile-presence {
+    background-image: none !important;
+    border-color: var(--synapse-theme-bg) !important;
+    opacity: 1 !important;
+    position: absolute;
+    z-index: 10;
+    box-shadow: none !important;
+}
+
+html[data-synapse-theme='prism'] .synapse-post-mobile-presence { background-color: #67e8f9 !important; }
+html[data-synapse-theme='atelier'] .synapse-post-mobile-presence { background-color: #fda4af !important; }
+html[data-synapse-theme='signal'] .synapse-post-mobile-presence { background-color: #b6f36a !important; }
+
+html[data-synapse-theme] .synapse-post-mobile-presence::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    display: block;
+    border-radius: 9999px;
+    background: #67e8f9;
+}
+
+html[data-synapse-theme='atelier'] .synapse-post-mobile-presence::before { background: #fda4af; }
+html[data-synapse-theme='signal'] .synapse-post-mobile-presence::before { background: #b6f36a; }
+
+html[data-synapse-theme] .synapse-post-mobile-menu-trigger,
+html[data-synapse-theme] .synapse-post-mobile-menu,
+html[data-synapse-theme] .synapse-post-mobile-action {
+    background: rgba(var(--synapse-theme-accent-rgb), 0.12) !important;
+    border-color: var(--synapse-theme-line) !important;
+    color: var(--synapse-theme-ink) !important;
+}
+
+html[data-synapse-theme] .synapse-post-mobile-top .text-emerald-500,
+html[data-synapse-theme] .synapse-post-mobile-action .text-emerald-500 {
+    color: var(--synapse-theme-accent) !important;
+}
+
+html[data-synapse-theme] .synapse-post-mobile-action :is(.text-white, .text-gray-200) {
+    color: var(--synapse-theme-ink) !important;
+}
+
+html[data-synapse-theme='signal'] :is(.synapse-feed-sort, .synapse-post-mobile-menu-trigger, .synapse-post-mobile-menu, .synapse-post-mobile-action) {
+    border-radius: 0.28rem;
+}
+
 @layer base {
     html, body, #root {
         margin: 0;

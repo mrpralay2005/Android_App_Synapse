@@ -411,8 +411,8 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
     }
 
     return (
-        <div className="md:hidden bg-[#0a0a0a] text-white" style={{ height: 'calc(100vh - 18px)', width: '100vw', overflow: 'hidden', position: 'fixed', inset: '9px 0 0 0', maxWidth: '100vw', maxHeight: 'calc(100vh - 18px)', overscrollBehavior: 'none', boxSizing: 'border-box', margin: 0, padding: 0, left: 0, right: 0 }}>
-            <div className="h-full relative pb-24 bg-[#0a0a0a]" style={{ overflow: 'hidden', width: '100%', maxWidth: '100vw', margin: 0, padding: 0 }}>
+        <div className="synapse-social-shell md:hidden bg-[#0a0a0a] text-white" style={{ height: 'calc(100vh - 18px)', width: '100vw', overflow: 'hidden', position: 'fixed', inset: '9px 0 0 0', maxWidth: '100vw', maxHeight: 'calc(100vh - 18px)', overscrollBehavior: 'none', boxSizing: 'border-box', margin: 0, padding: 0, left: 0, right: 0 }}>
+            <div className="synapse-social-frame h-full relative pb-24 bg-[#0a0a0a]" style={{ overflow: 'hidden', width: '100%', maxWidth: '100vw', margin: 0, padding: 0 }}>
                 <header className="z-40 bg-[#0a0a0a]/90 px-4 pt-2 pb-1.5">
                     {view === 'profile' ? (
                         <div className="flex items-center justify-between">
@@ -439,7 +439,7 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                     ) : (
                         <div className="flex items-center justify-between gap-4">
                             <div
-                                className="select-none text-[1.7rem] leading-none text-white"
+                                className="synapse-brand select-none text-[1.7rem] leading-none text-white"
                                 style={{ fontFamily: "'Brush Script MT', 'Segoe Script', cursive", fontWeight: 700, letterSpacing: '-0.08em' }}
                             >
                                 SynapseX
@@ -459,7 +459,7 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                                 </button>
                                 <button onClick={() => setNotificationsOpen(true)} className="relative transition-transform active:scale-90" aria-label={`Activity${unreadNotifications ? `, ${unreadNotifications} unread` : ''}`}>
                                     <Heart size={21} strokeWidth={2.1} />
-                                    {unreadNotifications > 0 && <><span className="absolute -right-2 -top-2 h-4 w-4 animate-ping rounded-full bg-emerald-400/55" aria-hidden="true" /><span className="absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full border border-[#0a0a0a] bg-emerald-400 px-1 text-[9px] font-black text-black">{unreadNotifications > 9 ? '9+' : unreadNotifications}</span></>}
+                                    {unreadNotifications > 0 && <><span className="synapse-notification-ping absolute -right-2 -top-2 h-4 w-4 animate-ping rounded-full bg-emerald-400/55" aria-hidden="true" /><span className="synapse-notification-badge absolute -right-2 -top-2 flex h-4 min-w-4 items-center justify-center rounded-full border border-[#0a0a0a] bg-emerald-400 px-1 text-[9px] font-black text-black">{unreadNotifications > 9 ? '9+' : unreadNotifications}</span></>}
                                 </button>
                                 <button
                                     onClick={() => handleNavigation('setting')}
@@ -478,11 +478,11 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                 </div>
 
                 <nav
-                    className="absolute bottom-12 left-3 right-3 z-50 overflow-hidden rounded-[22px] border border-white/[0.07] bg-[#101111]/95 shadow-[0_-8px_24px_rgba(0,0,0,0.32)]"
+                    className="synapse-bottom-nav absolute bottom-12 left-3 right-3 z-50 overflow-hidden rounded-[22px] border border-white/[0.07] bg-[#101111]/95 shadow-[0_-8px_24px_rgba(0,0,0,0.32)]"
                 >
                     <div className="grid grid-cols-6 gap-1 px-2 py-1.5" style={{ width: '100%', maxWidth: '100vw' }}>
                         {loading && view === 'feed' ? [0, 1, 2, 3, 4, 5].map((item) => (
-                            <div key={item} className="flex flex-col items-center justify-center gap-1 py-1 animate-pulse" aria-hidden="true">
+                            <div key={item} className="synapse-nav-skeleton flex flex-col items-center justify-center gap-1 py-1 animate-pulse" aria-hidden="true">
                                 <div className="h-10 w-10 rounded-2xl bg-white/[0.07]" />
                                 <div className="h-2 w-7 rounded-full bg-white/[0.07]" />
                             </div>

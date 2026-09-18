@@ -103,7 +103,7 @@ const MobileLandingPage = ({ onLogin, onRegister, onExit, previewMode = false })
 
                 div::-webkit-scrollbar { display: none; }
             `}</style>
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(16,185,129,0.14),_transparent_30%),radial-gradient(circle_at_bottom_left,_rgba(16,185,129,0.10),_transparent_30%)]" />
+            <div className="mobile-landing-atmosphere absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(16,185,129,0.14),_transparent_30%),radial-gradient(circle_at_bottom_left,_rgba(16,185,129,0.10),_transparent_30%)]" />
 
             <div className="mobile-landing-content relative z-10 mx-auto flex h-full max-w-md flex-col">
                 <motion.button
@@ -160,7 +160,7 @@ const MobileLandingPage = ({ onLogin, onRegister, onExit, previewMode = false })
                 >
                     <button
                         onClick={onLogin}
-                        className="w-full rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-4 py-4 text-base font-black text-black shadow-[0_0_24px_rgba(52,211,153,0.45)] transition-transform hover:scale-[1.01]"
+                        className="mobile-landing-primary-action w-full rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-4 py-4 text-base font-black text-black shadow-[0_0_24px_rgba(52,211,153,0.45)] transition-transform hover:scale-[1.01]"
                     >
                         Access Neural Hub
                     </button>
@@ -172,7 +172,7 @@ const MobileLandingPage = ({ onLogin, onRegister, onExit, previewMode = false })
                     ) : (
                         <button
                             onClick={onRegister}
-                            className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-base font-black text-white backdrop-blur-md transition-transform hover:scale-[1.01]"
+                            className="mobile-landing-secondary-action w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-base font-black text-white backdrop-blur-md transition-transform hover:scale-[1.01]"
                         >
                             Initialize Identity
                         </button>

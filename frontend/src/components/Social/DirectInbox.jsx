@@ -468,7 +468,7 @@ const DirectInbox = ({ currentUser, initialUserId = null, onUnreadChange, onExit
     // Render
     // ─────────────────────────────────────────────────────────────────────────
     return (
-        <div className="flex h-full min-h-0 w-full flex-col bg-black text-white md:flex-row">
+        <div className="synapse-chat flex h-full min-h-0 w-full flex-col bg-black text-white md:flex-row">
 
             {/* ── Inbox sidebar ── */}
             <div className={`flex w-full flex-col border-white/5 bg-[#070707] md:w-[340px] md:shrink-0 md:border-r ${activeId ? 'hidden md:flex' : 'flex'} min-h-0 flex-1 md:flex-none`}>
