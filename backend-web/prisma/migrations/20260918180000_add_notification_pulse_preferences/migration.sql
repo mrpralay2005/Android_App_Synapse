@@ -1,0 +1,4 @@
+ALTER TABLE "User"
+  ADD COLUMN IF NOT EXISTS "notificationPostAlerts" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS "notificationStoryAlerts" BOOLEAN NOT NULL DEFAULT true,
+  ADD COLUMN IF NOT EXISTS "notificationSecurityAlerts" BOOLEAN NOT NULL DEFAULT true;
