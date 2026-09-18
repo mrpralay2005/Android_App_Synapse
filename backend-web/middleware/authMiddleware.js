@@ -1,6 +1,5 @@
 import jwt from 'jsonwebtoken';
 import { getCookie } from 'hono/cookie';
-import getPrisma from '../prisma/db.js';
 
 const isApprovedPreviewUser = (c, user) => {
     if (c.env.PREVIEW_MODE !== 'true') return true;
@@ -34,15 +33,6 @@ const authenticateToken = async (c, next) => {
             return c.json({ success: false, error: 'This private preview accepts only approved test accounts.' }, 403);
         }
         c.set('user', user);
-        // Presence is server-derived. Profiles only expose it for people who
-        // have explicitly kept Neural Presence enabled.
-        try {
-            const prisma = getPrisma(c.env.DATABASE_URL);
-            await prisma.user.update({ where: { id: user.userId }, data: { lastActiveAt: new Date() } });
-        } catch (presenceError) {
-            // Presence must never prevent an otherwise valid authenticated request.
-            console.warn('Presence update skipped:', presenceError?.message);
-        }
         await next();
     } catch (err) {
         return c.json({ success: false, error: "Neural link expired or corrupted" }, 403);

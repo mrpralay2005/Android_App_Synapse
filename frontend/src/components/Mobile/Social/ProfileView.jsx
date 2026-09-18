@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Grid, Play, Bookmark, User as UserIcon, Settings, ShieldCheck, Shield, Plus, Monitor, Lock, Hash, Heart, MessageCircle, Zap, ArrowLeft } from 'lucide-react';
+import { Grid, Play, Bookmark, User as UserIcon, Settings, ShieldCheck, Plus, Monitor, Lock, Hash, Heart, MessageCircle, Zap, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Cookies from 'js-cookie';
 import EditNeuralProfileModal from './EditNeuralProfileModal';
@@ -14,61 +14,36 @@ const ProfileView = ({ user, currentUser, posts: parentPosts = [], onOpenCreateP
     const [tabData, setTabData] = useState([]);
     const [localLoading, setLocalLoading] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [isFollowing, setIsFollowing] = useState(Boolean(user.isFollowing));
-    const [followRequestPending, setFollowRequestPending] = useState(Boolean(user.followRequestPending));
-    const [followLoading, setFollowLoading] = useState(false);
 
     const isLoading = parentLoading || localLoading;
+
+    // String matching to ensure IDs connect regardless of type (Number vs String)
     const isOwnProfile = String(currentUser?.id) === String(user.id);
-    const canViewContent = isOwnProfile || !user.isPrivate || isFollowing;
-    const isRecentlyActive = Boolean(user.showActivityStatus && user.lastActiveAt && Date.now() - new Date(user.lastActiveAt).getTime() < 5 * 60 * 1000);
     const apiUrl = import.meta.env.VITE_API_URL || "https://synapse-backend.mrpralay2005.workers.dev";
     const token = Cookies.get('synapse_token');
 
-    useEffect(() => { setActiveTab('posts'); }, [user.id]);
-    useEffect(() => { setIsFollowing(Boolean(user.isFollowing)); setFollowRequestPending(Boolean(user.followRequestPending)); }, [user.id, user.isFollowing, user.followRequestPending]);
-
     useEffect(() => {
-        if (isOwnProfile || !token || !user.username) return;
-        fetch(`${apiUrl}/api/user/profile/${encodeURIComponent(user.username)}/visit`, {
-            method: 'POST', headers: { Authorization: `Bearer ${token}` }
-        }).catch(() => {});
-    }, [apiUrl, isOwnProfile, token, user.username]);
-
-    const handleFollow = async () => {
-        if (followLoading) return;
-        setFollowLoading(true);
-        try {
-            const res = await fetch(`${apiUrl}/api/user/profile/${encodeURIComponent(user.username)}/follow`, {
-                method: 'POST', headers: { Authorization: `Bearer ${token}` }
-            });
-            const data = await res.json();
-            if (!data.success) throw new Error(data.error || 'Could not update follow status');
-            setIsFollowing(data.following);
-            setFollowRequestPending(Boolean(data.requested));
-            // Reload protected content immediately after either follow action,
-            // so the browser never keeps a private profile's old grid visible.
-            if (user.isPrivate) window.location.reload();
-        } catch (error) {
-            console.error('Follow action failed:', error);
-        } finally {
-            setFollowLoading(false);
-        }
-    };
+        setActiveTab('posts');
+    }, [user.id]);
 
     useEffect(() => {
         let isCancelled = false;
-        setLocalLoading(false);
+        setLocalLoading(false); // Reset loading state on every tab change
+
         const loadContent = async () => {
             if (activeTab === 'saved' && isOwnProfile) {
-                setTabData([]);
+                setTabData([]); // Clear immediately to prevent ghosting
                 setLocalLoading(true);
                 try {
-                    const res = await fetch(`${apiUrl}/api/user/saved`, { headers: { Authorization: `Bearer ${token}` } });
+                    const res = await fetch(`${apiUrl}/api/user/saved`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
                     const data = await res.json();
-                    if (!isCancelled) setTabData(data.data || []);
+                    if (!isCancelled) {
+                        setTabData(data.data || []);
+                    }
                 } catch (err) {
-                    if (!isCancelled) console.error('Registry Sync Failure:', err);
+                    if (!isCancelled) console.error("Registry Sync Failure:", err);
                 } finally {
                     if (!isCancelled) setLocalLoading(false);
                 }
@@ -76,11 +51,16 @@ const ProfileView = ({ user, currentUser, posts: parentPosts = [], onOpenCreateP
                 setTabData([]);
                 setLocalLoading(true);
                 try {
-                    const res = await fetch(`${apiUrl}/api/user/resonance/${encodeURIComponent(user.username)}`, { headers: { Authorization: `Bearer ${token}` } });
+                    // Fetch mutual resonance (posts both users have interacted with/liked)
+                    const res = await fetch(`${apiUrl}/api/user/resonance/${encodeURIComponent(user.username)}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
                     const data = await res.json();
-                    if (!isCancelled) setTabData(data.data || []);
+                    if (!isCancelled) {
+                        setTabData(data.data || []);
+                    }
                 } catch (err) {
-                    if (!isCancelled) console.error('Resonance Sync Failed:', err);
+                    if (!isCancelled) console.error("Resonance Sync Failed:", err);
                 } finally {
                     if (!isCancelled) setLocalLoading(false);
                 }
@@ -93,200 +73,216 @@ const ProfileView = ({ user, currentUser, posts: parentPosts = [], onOpenCreateP
                     if (activeTab === 'reels') return postType === 'VIDEO';
                     return true;
                 });
-                if (!isCancelled) setTabData(filtered);
+                if (!isCancelled) {
+                    setTabData(filtered);
+                }
             }
         };
+
         loadContent();
         return () => { isCancelled = true; };
     }, [activeTab, parentPosts, token]);
 
     const tabs = [
-        { id: 'posts', label: 'Synapses', icon: <Grid size={13} /> },
-        { id: 'reels', label: 'Neural Reels', icon: <Play size={13} /> },
-        ...(isOwnProfile
-            ? [{ id: 'saved', label: 'Registry', icon: <Bookmark size={13} /> }]
-            : [{ id: 'resonance', label: 'Resonance', icon: <Zap size={13} /> }]
-        ),
-        { id: 'tagged', label: 'Tagged', icon: <UserIcon size={13} /> },
+        { id: 'posts', label: 'Synapses', icon: <Grid size={16} /> },
+        { id: 'reels', label: 'Neural Reels', icon: <Play size={16} /> },
+        ...(isOwnProfile ? [
+            { id: 'saved', label: 'Registry', icon: <Bookmark size={16} /> }
+        ] : [
+            { id: 'resonance', label: 'Mutual Resonance', icon: <Zap size={16} /> }
+        ]),
+        { id: 'tagged', label: 'Tagged', icon: <UserIcon size={16} /> },
     ];
 
     return (
-        <div className="w-full min-h-full bg-[#0a0a0a] text-white">
+        <div className="flex-1 max-w-5xl mx-auto py-16 px-6 md:px-12 relative">
+            {/* Animated Back Arrow for All Profile Views */}
+            {onClose && (
+                <motion.button
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    whileHover={{ x: -5, scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={onClose}
+                    className="absolute top-12 right-6 md:-right-8 p-3 bg-white/5 border border-white/10 rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors z-50 backdrop-blur-md group"
+                >
+                    <ArrowLeft size={24} className="group-hover:-translate-x-1 transition-transform" />
+                </motion.button>
+            )}
 
-            {/* ── Header card ── */}
-            <div className="px-4 pt-4 pb-3">
+            {/* Header (Refined Pro Typography) */}
+            <div className="flex flex-col md:flex-row gap-12 md:gap-24 items-center md:items-start mb-24">
+                <div className="relative group">
+                    <motion.div
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="story-ring p-[5px] w-36 h-36 md:w-52 md:h-52 relative z-10 bg-black overflow-hidden rounded-full"
+                    >
+                        {isVideo(user.profileImage) ? (
+                            <video
+                                src={user.profileImage}
+                                className="w-full h-full rounded-full border-4 border-black object-cover"
+                                autoPlay
+                                muted
+                                loop
+                                playsInline
+                            />
+                        ) : (
+                            <img
+                                src={user.profileImage || "https://www.svgrepo.com/show/508699/landscape-placeholder.svg"}
+                                className="w-full h-full rounded-full border-4 border-black object-cover"
+                                alt={user.username}
+                            />
+                        )}
+                    </motion.div>
+                    <div className="absolute inset-0 bg-emerald-500/20 blur-[60px] rounded-full -z-10 group-hover:bg-emerald-500/30 transition-all duration-700"></div>
+                </div>
 
-                {/* Avatar + action row */}
-                <div className="flex items-center gap-4 mb-4">
-                    {/* Avatar */}
-                    <div className="relative shrink-0">
-                        <div className="story-ring p-[2.5px] w-[72px] h-[72px] rounded-full bg-black overflow-hidden">
-                            {isVideo(user.profileImage) ? (
-                                <video src={user.profileImage} className="w-full h-full rounded-full object-cover" autoPlay muted loop playsInline />
+                <div className="flex-1 w-full text-center md:text-left">
+                    <div className="flex flex-col md:flex-row items-center gap-6 mb-10">
+                        <div className="flex items-center gap-3">
+                            <h2 className="text-4xl font-bold text-white tracking-tighter">{user.username}</h2>
+                            {user.isPrivate && <Lock className="text-amber-500" size={24} />}
+                        </div>
+                        <div className="flex gap-3">
+                            {isOwnProfile ? (
+                                <>
+                                    <button onClick={() => setIsEditModalOpen(true)} className="px-8 py-3 bg-white text-black text-[10px] font-bold rounded-2xl hover:bg-gray-200 transition-all uppercase tracking-[0.2em] shadow-xl hover:scale-105 active:scale-95">Edit Neural Link</button>
+                                    <button className="p-3 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition-all">
+                                        <Settings size={20} className="text-gray-400" />
+                                    </button>
+                                </>
                             ) : (
-                                <img
-                                    src={user.profileImage || 'https://www.svgrepo.com/show/508699/landscape-placeholder.svg'}
-                                    className="w-full h-full rounded-full object-cover"
-                                    alt={user.username}
-                                />
+                                <>
+                                    <button className="px-10 py-3 bg-emerald-500 text-black text-[10px] font-bold rounded-2xl hover:bg-emerald-400 transition-all uppercase tracking-[0.2em] shadow-[0_0_30px_rgba(16,185,129,0.2)]">Connect</button>
+                                    <button className="px-10 py-3 bg-white/5 text-white text-[10px] font-bold rounded-2xl border border-white/10 hover:bg-white/10 transition-all uppercase tracking-[0.2em]">Message</button>
+                                </>
                             )}
                         </div>
-                        {isRecentlyActive && (
-                            <span className="absolute bottom-0.5 right-0.5 h-3 w-3 rounded-full border-2 border-[#0a0a0a] bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.9)]" title="Active now" />
-                        )}
-                        <div className="absolute inset-0 bg-emerald-500/15 blur-xl rounded-full -z-10" />
                     </div>
 
-                    {/* Stats */}
-                    <div className="flex flex-1 justify-around">
-                        {[
-                            { value: user._count?.posts ?? parentPosts.length ?? 0, label: 'Posts' },
-                            { value: user._count?.followers ?? 0, label: 'Followers' },
-                            { value: user._count?.following ?? 0, label: 'Following' },
-                        ].map(({ value, label }) => (
-                            <div key={label} className="flex flex-col items-center gap-1">
-                                <span className="text-[17px] font-black text-white leading-none">{value}</span>
-                                <span className="text-[10px] text-gray-500 font-semibold">{label}</span>
-                            </div>
-                        ))}
+                    <div className="flex justify-center md:justify-start gap-16 mb-10 border-y border-white/5 py-8 md:border-none md:py-0">
+                        <div className="text-center md:text-left group cursor-pointer">
+                            <span className="text-2xl font-bold text-white block mb-1 group-hover:text-emerald-500 transition-colors">
+                                {user._count?.posts || parentPosts.length || 0}
+                            </span>
+                            <span className="text-[9px] text-gray-500 uppercase tracking-[0.3em] font-bold">Synapses</span>
+                        </div>
+                        <div className="text-center md:text-left group cursor-pointer">
+                            <span className="text-2xl font-bold text-white block mb-1 group-hover:text-emerald-500 transition-colors">{user._count?.followers || 0}</span>
+                            <span className="text-[9px] text-gray-500 uppercase tracking-[0.3em] font-bold">Followers</span>
+                        </div>
+                        <div className="text-center md:text-left group cursor-pointer">
+                            <span className="text-2xl font-bold text-white block mb-1 group-hover:text-emerald-500 transition-colors">{user._count?.following || 0}</span>
+                            <span className="text-[9px] text-gray-500 uppercase tracking-[0.3em] font-bold">Following</span>
+                        </div>
+                    </div>
+
+                    <div className="max-w-lg mx-auto md:mx-0">
+                        <h3 className="text-white font-bold text-lg mb-2 tracking-tight uppercase tracking-[0.1em]">{user.name}</h3>
+                        <p className="text-sm text-gray-500 leading-relaxed font-medium">
+                            {user.bio || "Synchronizing with the neural hive mind. Quantum explorer in the SynapseX realm."}
+                        </p>
                     </div>
                 </div>
-
-                {/* Name + bio */}
-                <div className="mb-3">
-                    <div className="flex items-center gap-1.5 mb-0.5">
-                        <span className="text-[13px] font-black text-white tracking-tight">{user.name || user.username}</span>
-                        {(user.isPrivate || user.neuralGuardianEnabled) && <Shield size={13} className="text-emerald-400" aria-label="Private profile" />}
-                        {user.isVerified && <ShieldCheck size={11} className="text-emerald-400" />}
-                    </div>
-                    <p className="text-[12px] text-gray-400 leading-snug">
-                        {user.bio || 'Quantum Explorer in the SynapseX Realm'}
-                    </p>
-                </div>
-
-                {/* Action buttons */}
-                {isOwnProfile ? (
-                    <div className="flex gap-2">
-                        <button
-                            onClick={() => setIsEditModalOpen(true)}
-                            className="flex-1 py-2 rounded-xl bg-white/[0.08] border border-white/[0.08] text-[12px] font-bold text-white transition-colors hover:bg-white/[0.12] active:scale-95"
-                        >
-                            Edit Neural Link
-                        </button>
-                        <button className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/[0.08] border border-white/[0.08] transition-colors hover:bg-white/[0.12] active:scale-95">
-                            <Settings size={15} className="text-gray-400" />
-                        </button>
-                    </div>
-                ) : (
-                    <div className="flex gap-2">
-                        <button onClick={handleFollow} disabled={followLoading} className={`flex-1 rounded-xl py-2 text-[12px] font-black transition-all active:scale-95 disabled:opacity-60 ${isFollowing || followRequestPending ? 'border border-white/[0.12] bg-white/[0.08] text-white hover:bg-white/[0.12]' : 'bg-emerald-500 text-black shadow-[0_0_20px_rgba(16,185,129,0.25)] hover:bg-emerald-400'}`}>
-                            {followLoading ? 'Updating...' : isFollowing ? 'Following' : followRequestPending ? 'Requested' : 'Follow'}
-                        </button>
-                        <button className="flex-1 py-2 rounded-xl bg-white/[0.08] border border-white/[0.08] text-[12px] font-bold text-white transition-colors hover:bg-white/[0.12] active:scale-95">
-                            Message
-                        </button>
-                    </div>
-                )}
             </div>
 
-            {/* ── Tabs ── */}
-            <div className="border-t border-white/[0.06] flex">
+            {/* Tabs Navigation (Restored Tagged Section) */}
+            <div className="border-t border-white/5 flex justify-center gap-12 text-[9px] font-bold uppercase tracking-[0.4em] text-gray-600 mb-12 relative">
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[9px] font-bold uppercase tracking-[0.15em] border-t-2 -mt-[2px] transition-colors ${
-                            activeTab === tab.id
-                                ? 'border-emerald-400 text-emerald-400'
-                                : 'border-transparent text-gray-600 hover:text-gray-400'
-                        }`}
+                        className={`flex items-center gap-2 py-6 border-t-[3px] -mt-[3px] transition-all relative z-10 ${activeTab === tab.id ? 'border-emerald-500 text-white' : 'border-transparent hover:text-gray-400'}`}
                     >
                         {tab.icon}
-                        <span className="hidden xs:block">{tab.label}</span>
+                        {tab.label}
+                        {activeTab === tab.id && (
+                            <motion.div layoutId="tab-active" className="absolute inset-0 bg-emerald-500/5 -z-10" />
+                        )}
                     </button>
                 ))}
             </div>
 
-            {/* ── Content grid ── */}
-            <div className="min-h-[200px]">
+            {/* Content Area */}
+            <div className="min-h-[400px]">
                 {isLoading ? (
-                    <div className="flex flex-col items-center justify-center py-16 gap-3">
-                        <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                            className="w-8 h-8 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full" />
-                        <p className="text-[9px] text-emerald-500 font-bold uppercase tracking-[0.3em]">Syncing...</p>
+                    <div className="flex flex-col items-center justify-center py-32 gap-4">
+                        <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }} className="w-12 h-12 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full" />
+                        <p className="text-[10px] text-emerald-500 font-bold uppercase tracking-[0.3em] animate-pulse">Syncing Registry...</p>
                     </div>
-                ) : user.isPrivate && !canViewContent ? (
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                        className="flex flex-col items-center justify-center py-16 px-6 text-center">
-                        <div className="w-16 h-16 bg-amber-500/[0.06] border border-amber-500/15 rounded-2xl flex items-center justify-center mb-4">
-                            <Lock size={24} className="text-amber-400" />
+                ) : user.isPrivate && !isOwnProfile ? (
+                    <motion.div
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex flex-col items-center justify-center py-40 text-center"
+                    >
+                        <div className="w-24 h-24 bg-amber-500/5 border border-amber-500/10 rounded-[2.5rem] flex items-center justify-center mb-8 relative">
+                            <div className="absolute inset-0 bg-amber-500/10 blur-2xl rounded-full animate-pulse" />
+                            <Lock size={40} className="text-amber-500 relative z-10" />
                         </div>
-                        <h3 className="text-white text-sm font-black mb-1 uppercase tracking-wide">Neural Link Restricted</h3>
-                        <p className="text-gray-600 text-[10px] font-bold tracking-widest uppercase max-w-xs leading-relaxed">
-                            Follow this user to see their synapses.
+                        <h3 className="text-white text-2xl font-bold mb-2 tracking-tight uppercase">Neural Link Restricted</h3>
+                        <p className="text-gray-600 text-[10px] font-bold tracking-[0.3em] mb-10 uppercase max-w-xs leading-relaxed">
+                            This user has activated their Stealth Shield. Follow them to synchronize with their synapses.
                         </p>
                     </motion.div>
                 ) : (
-                    <div className="grid grid-cols-3 gap-[2px]">
+                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-1 md:gap-8">
                         <AnimatePresence mode="popLayout">
                             {tabData.length > 0 ? (
                                 tabData.map((post, i) => (
                                     <motion.div
                                         key={post.id}
-                                        // Mobile profile posts arrive with a gentle, staggered zoom-in.
-                                        // The small scale difference keeps the profile grid feeling clean.
-                                        initial={{ opacity: 0, scale: 0.975 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 0.98 }}
-                                        transition={{ delay: i * 0.09, duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
-                                        className="aspect-square bg-white/[0.02] overflow-hidden relative cursor-pointer isolate"
+                                        initial={{ opacity: 0, y: 30, scale: 0.9 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={{ opacity: 0, scale: 0.9 }}
+                                        transition={{ delay: i * 0.05, duration: 0.4 }}
+                                        className="aspect-square bg-white/[0.02] border border-white/5 rounded-[2rem] overflow-hidden relative group cursor-pointer shadow-lg hover:shadow-[0_20px_40px_rgba(0,0,0,0.5)] transition-all"
                                         onClick={() => onCinemaMode(post)}
                                     >
-                                        <div className="absolute inset-0 bg-black/40 opacity-0 active:opacity-100 transition-opacity duration-200 z-10 flex items-center justify-center gap-3">
-                                            <div className="flex items-center gap-1 text-white text-[11px] font-bold">
-                                                <Heart size={13} fill="white" />{post._count?.likes || 0}
+                                        <div className="absolute inset-0 bg-emerald-500/20 opacity-0 group-hover:opacity-100 transition-all z-10 flex flex-col items-center justify-center backdrop-blur-sm">
+                                            <div className="flex items-center gap-6 mb-2">
+                                                <div className="flex items-center gap-2 text-white font-bold">
+                                                    <Heart size={18} fill="white" />
+                                                    <span>{post._count?.likes || 0}</span>
+                                                </div>
+                                                <div className="flex items-center gap-2 text-white font-bold">
+                                                    <MessageCircle size={18} fill="white" />
+                                                    <span>{post._count?.comments || 0}</span>
+                                                </div>
                                             </div>
-                                            <div className="flex items-center gap-1 text-white text-[11px] font-bold">
-                                                <MessageCircle size={13} fill="white" />{post._count?.comments || 0}
-                                            </div>
+                                            {post.postPassword && <div className="flex items-center gap-2 text-amber-400 text-[8px] font-bold uppercase tracking-widest mt-4 bg-black/40 px-3 py-1 rounded-full"><Lock size={10} /> Encrypted</div>}
                                         </div>
+
                                         {post.type === 'VIDEO' ? (
                                             <div className="w-full h-full relative">
                                                 <video src={post.mediaUrl} className="w-full h-full object-cover" muted />
-                                                <div className="absolute top-1.5 right-1.5 p-1 bg-black/50 rounded-md">
-                                                    <Play className="text-white" size={10} />
-                                                </div>
+                                                <div className="absolute top-4 right-4 p-2 bg-black/40 backdrop-blur-md rounded-lg"><Play className="text-white" size={14} /></div>
                                             </div>
                                         ) : (
-                                            <img src={post.mediaUrl} alt="Post" className="w-full h-full object-cover" />
+                                            <img src={post.mediaUrl} alt="Post" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                                         )}
-                                        {post.postPassword && (
-                                            <div className="absolute bottom-1 left-1 p-1 bg-black/50 rounded-md">
-                                                <Lock size={9} className="text-amber-400" />
-                                            </div>
-                                        )}
+                                        <div className="absolute bottom-4 right-4 text-white opacity-40">{post.type === 'VIDEO' ? <Monitor size={14} /> : <Hash size={14} />}</div>
                                     </motion.div>
                                 ))
                             ) : (
-                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                                    className="col-span-full py-16 text-center flex flex-col items-center px-6">
-                                    <div className="w-14 h-14 bg-white/[0.04] rounded-2xl flex items-center justify-center mb-4 border border-white/[0.06]">
-                                        {activeTab === 'posts' ? <Grid size={22} className="text-gray-700" /> :
-                                            activeTab === 'reels' ? <Play size={22} className="text-gray-700" /> :
-                                                activeTab === 'saved' ? <Bookmark size={22} className="text-gray-700" /> :
-                                                    activeTab === 'resonance' ? <Zap size={22} className="text-gray-700" /> :
-                                                        <UserIcon size={22} className="text-gray-700" />}
+                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="col-span-full py-40 text-center flex flex-col items-center">
+                                    <div className="w-24 h-24 bg-white/5 rounded-[2rem] flex items-center justify-center mb-8 border border-white/5">
+                                        {activeTab === 'posts' ? <Grid size={32} className="text-gray-700" /> :
+                                            activeTab === 'reels' ? <Play size={32} className="text-gray-700" /> :
+                                                activeTab === 'saved' ? <Bookmark size={32} className="text-gray-700" /> :
+                                                    activeTab === 'resonance' ? <Zap size={32} className="text-gray-700" /> :
+                                                        <UserIcon size={32} className="text-gray-700" />}
                                     </div>
-                                    <h3 className="text-white text-sm font-black mb-1 uppercase tracking-wide">
-                                        {activeTab === 'resonance' ? 'No Resonance' : 'Nothing here yet'}
+                                    <h3 className="text-white text-2xl font-bold mb-2 tracking-tight uppercase">
+                                        {activeTab === 'resonance' ? "Resonance Not Found" : "Segment Empty"}
                                     </h3>
-                                    <p className="text-gray-600 text-[10px] font-bold tracking-widest uppercase mb-6">
-                                        {activeTab === 'resonance' ? "You haven't entangled with this user's content." : 'Start sharing to fill this space.'}
+                                    <p className="text-gray-600 text-xs font-bold tracking-[0.2em] mb-10 uppercase">
+                                        {activeTab === 'resonance' ? "You haven't entangled with this user's content yet." : "Initiate your broadcast for this area."}
                                     </p>
                                     {isOwnProfile && activeTab === 'posts' && (
-                                        <button onClick={onOpenCreatePost}
-                                            className="flex items-center gap-2 px-6 py-2.5 bg-emerald-500 text-black font-bold text-[11px] uppercase tracking-widest rounded-xl hover:bg-emerald-400 transition-all active:scale-95">
-                                            <Plus size={14} /> New post
+                                        <button onClick={onOpenCreatePost} className="flex items-center gap-3 px-10 py-4 bg-emerald-500 text-black font-bold text-[10px] uppercase tracking-[0.3em] rounded-2xl hover:bg-emerald-400 transition-all shadow-2xl">
+                                            <Plus size={16} /> New post
                                         </button>
                                     )}
                                 </motion.div>

@@ -20,7 +20,7 @@ const fetchWithRetry = async (url, options = {}, retries = 2) => {
 };
 import StoryViewer from './StoryViewer';
 import { ReleaseUpdateNotice } from './ReleaseUpdateCenter';
-import NotificationCenter, { LiveFollowRequestPrompt, useNotificationCount } from './NotificationCenter';
+import NotificationCenter, { useNotificationCount } from './NotificationCenter';
 import DirectInbox from '../../Social/DirectInbox';
 import PriyaAssistant from '../../Priya/PriyaAssistant';
 import { saveToCache, loadFromCache } from '../../../utils/synapseCache';
@@ -560,7 +560,6 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
             </AnimatePresence>
             <ReleaseUpdateNotice />
             <NotificationCenter open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
-            <LiveFollowRequestPrompt />
             {/* Priya AI assistant — only in Direct/chat view, above nav bar */}
             {view === 'direct' && <PriyaAssistant />}
         </div>

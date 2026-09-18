@@ -38,17 +38,6 @@ model User {
   platformUpdates                 PlatformUpdate[]
   isVerified                      Boolean          @default(false)
   isPrivate                       Boolean          @default(false)
-  showActivityStatus              Boolean          @default(true)
-  readReceipts                    Boolean          @default(true)
-  ghostViewer                     Boolean          @default(false)
-  protectedStories                Boolean          @default(false)
-  profileVisitAlerts              Boolean          @default(true)
-  quantumDecayEnabled             Boolean          @default(false)
-  quantumDecayDays                Int              @default(30)
-  neuralGuardianEnabled           Boolean          @default(false)
-  lastActiveAt                    DateTime?
-  profileVisitsReceived           ProfileVisit[]   @relation("ProfileOwnerVisits")
-  profileVisitsMade               ProfileVisit[]   @relation("ProfileVisitorVisits")
   creatorModeEnabled              Boolean          @default(false)
   creatorVerificationRequestedAt  DateTime?
   creatorVerificationStatus       String           @default("NONE")
@@ -59,9 +48,6 @@ model User {
   creatorDeepAnalytics            Boolean          @default(false)
   links                           Json?
   notificationClearedAt           DateTime?
-  pendingEmail                    String?          @unique
-  emailChangeOtp                  String?
-  emailChangeOtpExpires           DateTime?
   otp                             String?
   otpExpires                      DateTime?
   createdAt                       DateTime         @default(now())
@@ -100,14 +86,12 @@ model Post {
   savedBy      SavedPost[]
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
-  expiresAt    DateTime?
 }
 
 model Follow {
   id          Int      @id @default(autoincrement())
   followerId  Int
   followingId Int
-  status      String   @default("ACCEPTED")
   follower    User     @relation("Follower", fields: [followerId], references: [id])
   following   User     @relation("Following", fields: [followingId], references: [id])
   createdAt   DateTime @default(now())
@@ -143,22 +127,9 @@ model Story {
   userId    Int
   user      User           @relation(fields: [userId], references: [id])
   expiresAt DateTime
-  isProtected Boolean          @default(false)
   createdAt DateTime       @default(now())
   views     StoryView[]
   messages  StoryMessage[]
-}
-
-model ProfileVisit {
-  id             Int      @id @default(autoincrement())
-  profileOwnerId Int
-  visitorId      Int
-  createdAt      DateTime @default(now())
-  profileOwner   User     @relation("ProfileOwnerVisits", fields: [profileOwnerId], references: [id], onDelete: Cascade)
-  visitor        User     @relation("ProfileVisitorVisits", fields: [visitorId], references: [id], onDelete: Cascade)
-
-  @@index([profileOwnerId, createdAt])
-  @@index([visitorId, createdAt])
 }
 
 model StoryView {

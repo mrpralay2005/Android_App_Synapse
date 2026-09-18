@@ -21,7 +21,7 @@ import authenticateToken from '../middleware/authMiddleware.js';
 const social = new Hono();
 
 // Public/Semi-public Feed
-social.get('/feed', authenticateToken, getFeed);
+social.get('/feed', getFeed);
 social.get('/notifications', authenticateToken, getNotifications);
 social.post('/notifications/clear', authenticateToken, clearNotifications);
 social.post('/upload-url', authenticateToken, getUploadUrl);
@@ -34,7 +34,7 @@ social.get('/posts/:id/comments', getComments);
 social.post('/posts/:id/save', authenticateToken, toggleSave);
 
 // Story System
-social.get('/stories', authenticateToken, getStories);
+social.get('/stories', getStories);
 social.post('/stories', authenticateToken, createStory);
 social.delete('/stories/:id', authenticateToken, deleteStory);
 social.post('/stories/:id/view', authenticateToken, viewStory);

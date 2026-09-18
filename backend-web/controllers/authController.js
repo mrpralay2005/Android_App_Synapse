@@ -2,7 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { setCookie, deleteCookie } from 'hono/cookie';
 import getPrisma from '../prisma/db.js';
-import { sendOTP, sendResetOTP, sendEmailChangeOTP } from '../utils/email.js';
+import { sendOTP, sendResetOTP } from '../utils/email.js';
 
 const isPreviewMode = (c) => c.env.PREVIEW_MODE === 'true';
 const previewAccessDenied = (c) => c.json({ success: false, error: 'This private preview accepts only approved test accounts.' }, 403);
@@ -237,14 +237,6 @@ export const login = async (c) => {
                 bio: user.bio,
                 email: user.email,
                 isPrivate: user.isPrivate,
-                showActivityStatus: user.showActivityStatus,
-                readReceipts: user.readReceipts,
-                ghostViewer: user.ghostViewer,
-                protectedStories: user.protectedStories,
-                profileVisitAlerts: user.profileVisitAlerts,
-                quantumDecayEnabled: user.quantumDecayEnabled,
-                quantumDecayDays: user.quantumDecayDays,
-                neuralGuardianEnabled: user.neuralGuardianEnabled,
                 creatorModeEnabled: user.creatorModeEnabled,
                 creatorVerificationRequestedAt: user.creatorVerificationRequestedAt,
                 creatorVerificationStatus: user.creatorVerificationStatus,
@@ -333,84 +325,6 @@ export const resetPassword = async (c) => {
     } catch (error) {
         console.error("Reset Password Error:", error);
         return c.json({ success: false, error: `Recalibration fail: ${error.message}` }, 500);
-    }
-};
-
-export const requestEmailChange = async (c) => {
-    try {
-        if (isPreviewMode(c)) return previewAccessDenied(c);
-        const { email } = await c.req.json();
-        const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : '';
-        if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
-            return c.json({ success: false, error: 'Enter a valid email address' }, 400);
-        }
-
-        const sessionUser = c.get('user');
-        const prisma = getPrisma(c.env.DATABASE_URL);
-        const currentUser = await prisma.user.findUnique({ where: { id: sessionUser.userId } });
-        if (!currentUser) return c.json({ success: false, error: 'Neural record not found' }, 404);
-        if (currentUser.email.toLowerCase() === normalizedEmail) {
-            return c.json({ success: false, error: 'That is already your current email address' }, 400);
-        }
-
-        const occupied = await prisma.user.findFirst({
-            where: { OR: [{ email: normalizedEmail }, { pendingEmail: normalizedEmail }] },
-            select: { id: true }
-        });
-        if (occupied && occupied.id !== currentUser.id) {
-            return c.json({ success: false, error: 'That email address is already in use' }, 409);
-        }
-
-        const otp = Math.floor(1000 + Math.random() * 9000).toString();
-        const emailSent = await sendEmailChangeOTP(normalizedEmail, otp, c.env);
-        if (!emailSent) return c.json({ success: false, error: 'Unable to send the confirmation code. Please try again.' }, 502);
-
-        await prisma.user.update({
-            where: { id: currentUser.id },
-            data: {
-                pendingEmail: normalizedEmail,
-                emailChangeOtp: otp,
-                emailChangeOtpExpires: new Date(Date.now() + 10 * 60 * 1000)
-            }
-        });
-        return c.json({ success: true, message: 'Confirmation code sent to your new email address' });
-    } catch (error) {
-        console.error('Email Change Request Error:', error);
-        return c.json({ success: false, error: 'Could not start the email change' }, 500);
-    }
-};
-
-export const confirmEmailChange = async (c) => {
-    try {
-        if (isPreviewMode(c)) return previewAccessDenied(c);
-        const { otp } = await c.req.json();
-        const sessionUser = c.get('user');
-        const prisma = getPrisma(c.env.DATABASE_URL);
-        const currentUser = await prisma.user.findUnique({ where: { id: sessionUser.userId } });
-        if (!currentUser?.pendingEmail || !currentUser.emailChangeOtp || !currentUser.emailChangeOtpExpires) {
-            return c.json({ success: false, error: 'No email change is awaiting confirmation' }, 400);
-        }
-        if (new Date() > currentUser.emailChangeOtpExpires) {
-            return c.json({ success: false, error: 'Confirmation code expired. Request a new one.' }, 400);
-        }
-        if (String(otp || '').trim() !== currentUser.emailChangeOtp) {
-            return c.json({ success: false, error: 'Invalid confirmation code' }, 400);
-        }
-
-        const updatedUser = await prisma.user.update({
-            where: { id: currentUser.id },
-            data: {
-                email: currentUser.pendingEmail,
-                pendingEmail: null,
-                emailChangeOtp: null,
-                emailChangeOtpExpires: null
-            },
-            select: { id: true, username: true, name: true, email: true, profileImage: true, isPrivate: true }
-        });
-        return c.json({ success: true, data: updatedUser, message: 'Email address updated successfully' });
-    } catch (error) {
-        console.error('Email Change Confirmation Error:', error);
-        return c.json({ success: false, error: 'Could not confirm the email change' }, 500);
     }
 };
 
