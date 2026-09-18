@@ -7,6 +7,7 @@
     "scripts": {
         "dev": "wrangler dev --env dev",
         "dev-local": "JWT_SECRET=\"synapse_x_quantum_secure_2026\" wrangler dev",
+        "dev:local-only": "XDG_CONFIG_HOME=/tmp/synapse-wrangler-config wrangler dev --config wrangler.local.toml --env local --local --ip 127.0.0.1",
         "deploy": "wrangler deploy",
         "deploy:staging": "wrangler deploy --env staging"
     },

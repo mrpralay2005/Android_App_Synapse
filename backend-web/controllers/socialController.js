@@ -8,8 +8,18 @@ export const getFeed = async (c) => {
         const prisma = getPrisma(c.env.DATABASE_URL);
         const sort = c.req.query('sort') === 'latest' ? 'latest' : 'popular';
 
+        const viewerId = user?.userId;
         const posts = await prisma.post.findMany({
             take: 30,
+            where: {
+                AND: [
+                    { OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
+                    { OR: [
+                        { user: { isPrivate: false } },
+                        ...(viewerId ? [{ userId: viewerId }, { user: { followers: { some: { followerId: viewerId, status: 'ACCEPTED' } } } }] : [])
+                    ] }
+                ]
+            },
             // Popular prioritizes genuine social engagement; newest content is the
             // tie-breaker. Latest is strictly chronological.
             orderBy: sort === 'popular'
@@ -66,16 +76,16 @@ export const getNotifications = async (c) => {
         if (!viewerId) return c.json({ success: false, error: 'Neural authorization missing' }, 401);
         const prisma = getPrisma(c.env.DATABASE_URL);
         const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
-        const viewer = await prisma.user.findUnique({ where: { id: viewerId }, select: { notificationClearedAt: true } });
+        const viewer = await prisma.user.findUnique({ where: { id: viewerId }, select: { notificationClearedAt: true, profileVisitAlerts: true } });
         const activitySince = viewer?.notificationClearedAt && viewer.notificationClearedAt > since ? viewer.notificationClearedAt : since;
 
         const following = await prisma.follow.findMany({
-            where: { followerId: viewerId },
+            where: { followerId: viewerId, status: 'ACCEPTED' },
             select: { followingId: true }
         });
         const followedIds = following.map(link => link.followingId);
 
-        const [posts, stories, sessions] = await Promise.all([
+        const [posts, stories, sessions, profileVisits, followRequests] = await Promise.all([
             prisma.post.findMany({
                 where: { userId: { in: followedIds }, createdAt: { gte: activitySince } },
                 take: 20,
@@ -93,6 +103,18 @@ export const getNotifications = async (c) => {
                 take: 8,
                 orderBy: { createdAt: 'desc' },
                 select: { id: true, createdAt: true, userAgent: true, ipAddress: true }
+            }),
+            viewer?.profileVisitAlerts ? prisma.profileVisit.findMany({
+                where: { profileOwnerId: viewerId, createdAt: { gte: activitySince } },
+                take: 20,
+                orderBy: { createdAt: 'desc' },
+                select: { id: true, createdAt: true, visitor: { select: { username: true, name: true, profileImage: true } } }
+            }) : Promise.resolve([]),
+            prisma.follow.findMany({
+                where: { followingId: viewerId, status: 'PENDING', createdAt: { gte: activitySince } },
+                take: 20,
+                orderBy: { createdAt: 'desc' },
+                select: { id: true, createdAt: true, follower: { select: { username: true, name: true, profileImage: true } } }
             })
         ]);
 
@@ -100,6 +122,8 @@ export const getNotifications = async (c) => {
             ...posts.map(post => ({ id: `post-${post.id}`, type: 'POST', createdAt: post.createdAt, actor: post.user, title: `${post.user.name || post.user.username} shared a post`, detail: 'New post from an identity you follow.' })),
             ...stories.map(story => ({ id: `story-${story.id}`, type: 'STORY', createdAt: story.createdAt, actor: story.user, title: `${story.user.name || story.user.username} added a story`, detail: 'A fresh story is available for the next 24 hours.' })),
             ...sessions.map(session => ({ id: `session-${session.id}`, type: 'SECURITY', createdAt: session.createdAt, actor: null, title: 'New sign-in to your account', detail: `${session.userAgent || 'Unknown device'} · ${session.ipAddress || 'Location protected'}` }))
+            , ...profileVisits.map(visit => ({ id: `profile-visit-${visit.id}`, type: 'PROFILE_VISIT', createdAt: visit.createdAt, actor: visit.visitor, title: `${visit.visitor.name || visit.visitor.username} visited your profile`, detail: 'A profile visit was recorded in your analytics.' }))
+            , ...followRequests.map(request => ({ id: `follow-request-${request.id}`, requestId: request.id, type: 'FOLLOW_REQUEST', createdAt: request.createdAt, actor: request.follower, title: `${request.follower.name || request.follower.username} requested to follow you`, detail: 'Approve this request to share your private profile.' }))
         ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 30);
 
         return c.json({ success: true, data: activity });
@@ -168,6 +192,8 @@ export const createPost = async (c) => {
         if (!user) return c.json({ success: false, error: "Identity missing" }, 401);
         if (!mediaUrl) return c.json({ success: false, error: "Media resource required" }, 400);
 
+        const owner = await prisma.user.findUnique({ where: { id: user.userId }, select: { quantumDecayEnabled: true, quantumDecayDays: true } });
+        const expiresAt = owner?.quantumDecayEnabled ? new Date(Date.now() + owner.quantumDecayDays * 24 * 60 * 60 * 1000) : null;
         const post = await prisma.post.create({
             data: {
                 caption: caption || "",
@@ -175,7 +201,8 @@ export const createPost = async (c) => {
                 type: type || 'IMAGE', // IMAGE or VIDEO
                 postPassword: postPassword || null,
                 thumbnailUrl: thumbnailUrl || null,
-                userId: user.id || user.userId
+                userId: user.id || user.userId,
+                expiresAt
             },
             include: {
                 user: {
@@ -314,13 +341,21 @@ export const getStories = async (c) => {
     try {
         const prisma = getPrisma(c.env.DATABASE_URL);
         const now = new Date();
+        const viewerId = c.get('user')?.userId;
 
         // Fetch stories that haven't expired
         const stories = await prisma.story.findMany({
             where: {
                 expiresAt: { gt: now },
                 // Admin accounts should never be surfaced in the public story rail.
-                user: { role: { not: 'ADMIN' } }
+                user: { role: { not: 'ADMIN' } },
+                OR: [
+                    { isProtected: false },
+                    ...(viewerId ? [
+                        { userId: viewerId },
+                        { user: { followers: { some: { followerId: viewerId, status: 'ACCEPTED' } } } }
+                    ] : [])
+                ]
             },
             include: {
                 user: {
@@ -328,7 +363,9 @@ export const getStories = async (c) => {
                         id: true,
                         username: true,
                         profileImage: true,
-                        role: true
+                        role: true,
+                        showActivityStatus: true,
+                        lastActiveAt: true
                     }
                 }
             },
@@ -354,12 +391,19 @@ export const createStory = async (c) => {
         const expiresAt = new Date();
         expiresAt.setHours(expiresAt.getHours() + 24);
 
+        const owner = await prisma.user.findUnique({
+            where: { id: user.userId },
+            select: { protectedStories: true }
+        });
         const story = await prisma.story.create({
             data: {
                 mediaUrl,
                 type: type || 'IMAGE',
                 userId: user.userId,
-                expiresAt
+                expiresAt,
+                // Vault stories remain follower-only even if the preference is
+                // changed after publishing.
+                isProtected: owner?.protectedStories ?? false
             },
             include: {
                 user: {
@@ -416,6 +460,16 @@ export const viewStory = async (c) => {
         // Filter: Don't count owner's own view
         if (story.userId === user.userId) {
             return c.json({ success: true, ignored: true });
+        }
+
+        const viewer = await prisma.user.findUnique({
+            where: { id: user.userId },
+            select: { ghostViewer: true, readReceipts: true }
+        });
+        // Wraith Mode never leaves a view. Turning feedback off also suppresses
+        // the viewer receipt while preserving normal story access.
+        if (viewer?.ghostViewer || !viewer?.readReceipts) {
+            return c.json({ success: true, anonymous: true });
         }
 
         await prisma.storyView.upsert({

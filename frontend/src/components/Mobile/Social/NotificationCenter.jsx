@@ -5,6 +5,10 @@ import Cookies from 'js-cookie';
 
 const apiUrl = import.meta.env.VITE_API_URL || 'https://synapse-backend.mrpralay2005.workers.dev';
 const readKey = 'synapse_read_notification_ids';
+// Polling is intentionally used instead of an in-memory Worker socket so a
+// notification reaches users regardless of which local, staging, or production
+// Worker instance served their previous request.
+const LIVE_REFRESH_MS = 4000;
 
 // Auto-retry on 500 (Worker cold start)
 const fetchWithRetry = async (url, options = {}, retries = 2) => {
@@ -47,9 +51,23 @@ const NotificationCenter = ({ open, onClose }) => {
         } finally { setLoading(false); }
     };
 
+    const respondToFollowRequest = async (requestId, action) => {
+        try {
+            const token = Cookies.get('synapse_token');
+            const response = await fetch(`${apiUrl}/api/user/follow-requests/${requestId}/respond`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ action })
+            });
+            const data = await response.json();
+            if (!data.success) throw new Error(data.error);
+            setItems(current => current.filter(item => item.requestId !== requestId));
+        } catch (error) { console.error('Follow request update failed:', error); }
+    };
+
     useEffect(() => { if (open) load(); }, [open]);
     useEffect(() => {
-        const poll = window.setInterval(load, 20000);
+        const poll = window.setInterval(load, LIVE_REFRESH_MS);
         return () => window.clearInterval(poll);
     }, []);
 
@@ -96,10 +114,43 @@ export const useNotificationCount = () => {
             try { const token = Cookies.get('synapse_token'); const response = await fetch(`${apiUrl}/api/social/notifications`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }); const data = await response.json(); if (active && data.success) setItems(data.data); } catch { /* keep the app usable offline */ }
         };
         const clearCountImmediately = () => { if (active) setItems([]); };
-        load(); const poll = window.setInterval(load, 20000); window.addEventListener('synapse-notifications-cleared', clearCountImmediately); return () => { active = false; window.clearInterval(poll); window.removeEventListener('synapse-notifications-cleared', clearCountImmediately); };
+        load(); const poll = window.setInterval(load, LIVE_REFRESH_MS); window.addEventListener('synapse-notifications-cleared', clearCountImmediately); return () => { active = false; window.clearInterval(poll); window.removeEventListener('synapse-notifications-cleared', clearCountImmediately); };
     }, []);
     const readIds = useMemo(getReadIds, [items]);
     return items.filter(item => !readIds.has(item.id)).length;
+};
+
+// A live approval prompt makes private-account requests actionable immediately,
+// while the same request remains in the full Activity list as an audit record.
+export const LiveFollowRequestPrompt = () => {
+    const [request, setRequest] = useState(null);
+    useEffect(() => {
+        let active = true;
+        const load = async () => {
+            try {
+                const token = Cookies.get('synapse_token');
+                const res = await fetch(`${apiUrl}/api/social/notifications`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
+                const data = await res.json();
+                if (active && data.success) setRequest(data.data.find(item => item.type === 'FOLLOW_REQUEST') || null);
+            } catch { /* retry on the next live refresh */ }
+        };
+        load();
+        const timer = window.setInterval(load, LIVE_REFRESH_MS);
+        return () => { active = false; window.clearInterval(timer); };
+    }, []);
+    const respond = async (action) => {
+        if (!request) return;
+        try {
+            const token = Cookies.get('synapse_token');
+            const res = await fetch(`${apiUrl}/api/user/follow-requests/${request.requestId}/respond`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ action })
+            });
+            const data = await res.json();
+            if (data.success) setRequest(null);
+        } catch { /* retain request so the owner can retry */ }
+    };
+    if (!request) return null;
+    return <div className="fixed inset-x-4 bottom-28 z-[650] rounded-2xl border border-emerald-400/30 bg-[#141716] p-3 shadow-2xl shadow-black/60"><div className="flex gap-3"><div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-emerald-400/10 text-emerald-300">{request.actor?.profileImage ? <img src={request.actor.profileImage} className="h-full w-full object-cover" alt="" /> : <Bell size={17} />}</div><div className="min-w-0 flex-1"><p className="text-xs font-bold text-white">Follow request</p><p className="truncate text-[11px] text-gray-400">@{request.actor?.username} wants to follow you.</p><div className="mt-2 flex gap-2"><button onClick={() => respond('accept')} className="rounded-lg bg-emerald-400 px-3 py-1.5 text-[10px] font-bold text-black">Accept</button><button onClick={() => respond('decline')} className="rounded-lg bg-white/[0.08] px-3 py-1.5 text-[10px] font-bold text-white">Decline</button></div></div></div></div>;
 };
 
 export default NotificationCenter;

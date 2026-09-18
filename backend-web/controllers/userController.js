@@ -4,6 +4,7 @@ export const getProfile = async (c) => {
     const username = c.req.param('username');
     try {
         const prisma = getPrisma(c.env.DATABASE_URL);
+        const viewerId = c.get('user')?.userId;
         const user = await prisma.user.findUnique({
             where: { username },
             select: {
@@ -14,9 +15,12 @@ export const getProfile = async (c) => {
                 profileImage: true,
                 riskScore: true,
                 isPrivate: true,
+                showActivityStatus: true,
+                lastActiveAt: true,
                 createdAt: true,
                 role: true,
                 posts: {
+                    where: { OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
                     orderBy: { createdAt: 'desc' },
                     include: {
                         _count: {
@@ -27,8 +31,8 @@ export const getProfile = async (c) => {
                 _count: {
                     select: {
                         posts: true,
-                        followers: true,
-                        following: true
+                        followers: { where: { status: 'ACCEPTED' } },
+                        following: { where: { status: 'ACCEPTED' } }
                     }
                 }
             }
@@ -38,10 +42,79 @@ export const getProfile = async (c) => {
             return c.json({ success: false, error: "Identity not found" }, 404);
         }
 
-        return c.json({ success: true, data: user });
+        const isOwnProfile = user.id === viewerId;
+        const follow = !isOwnProfile && viewerId
+            ? await prisma.follow.findUnique({ where: { followerId_followingId: { followerId: viewerId, followingId: user.id } } })
+            : null;
+        const isFollowing = follow?.status === 'ACCEPTED';
+        const followRequestPending = follow?.status === 'PENDING';
+        // Privacy is enforced at the API boundary. A private profile's content
+        // never reaches a non-follower's browser, even if they call the API.
+        const canViewContent = !user.isPrivate || isOwnProfile || isFollowing;
+        const responseUser = canViewContent ? user : {
+            id: user.id,
+            username: user.username,
+            profileImage: user.profileImage,
+            isPrivate: true,
+            _count: { posts: 0, followers: 0, following: 0 }
+        };
+        return c.json({
+            success: true,
+            data: {
+                ...responseUser,
+                posts: canViewContent ? user.posts : [],
+                isFollowing,
+                followRequestPending,
+                canViewContent
+            }
+        });
     } catch (error) {
         console.error("Profile Error:", error);
         return c.json({ success: false, error: "Search failed" }, 500);
+    }
+};
+
+export const toggleFollow = async (c) => {
+    try {
+        const viewerId = c.get('user')?.userId;
+        const username = c.req.param('username');
+        const prisma = getPrisma(c.env.DATABASE_URL);
+        const target = await prisma.user.findUnique({ where: { username }, select: { id: true, username: true, isPrivate: true, neuralGuardianEnabled: true } });
+        if (!target) return c.json({ success: false, error: 'Identity not found' }, 404);
+        if (target.id === viewerId) return c.json({ success: false, error: 'You cannot follow your own profile' }, 400);
+        const existing = await prisma.follow.findUnique({ where: { followerId_followingId: { followerId: viewerId, followingId: target.id } } });
+        if (existing?.status === 'PENDING') {
+            await prisma.follow.delete({ where: { id: existing.id } });
+            return c.json({ success: true, following: false, requested: false, message: `Follow request cancelled for @${target.username}` });
+        }
+        if (existing) {
+            await prisma.follow.delete({ where: { id: existing.id } });
+            return c.json({ success: true, following: false, message: `Unfollowed @${target.username}` });
+        }
+        const requiresApproval = target.isPrivate || target.neuralGuardianEnabled;
+        await prisma.follow.create({ data: { followerId: viewerId, followingId: target.id, status: requiresApproval ? 'PENDING' : 'ACCEPTED' } });
+        return c.json({ success: true, following: !requiresApproval, requested: requiresApproval, message: requiresApproval ? `Follow request sent to @${target.username}` : `Following @${target.username}` });
+    } catch (error) {
+        console.error('Follow toggle error:', error);
+        return c.json({ success: false, error: 'Follow status could not be updated' }, 500);
+    }
+};
+
+export const respondToFollowRequest = async (c) => {
+    try {
+        const ownerId = c.get('user')?.userId;
+        const requestId = parseInt(c.req.param('id'), 10);
+        const { action } = await c.req.json();
+        if (!['accept', 'decline'].includes(action)) return c.json({ success: false, error: 'Choose accept or decline' }, 400);
+        const prisma = getPrisma(c.env.DATABASE_URL);
+        const request = await prisma.follow.findFirst({ where: { id: requestId, followingId: ownerId, status: 'PENDING' } });
+        if (!request) return c.json({ success: false, error: 'Follow request not found' }, 404);
+        if (action === 'accept') await prisma.follow.update({ where: { id: request.id }, data: { status: 'ACCEPTED' } });
+        else await prisma.follow.delete({ where: { id: request.id } });
+        return c.json({ success: true, accepted: action === 'accept' });
+    } catch (error) {
+        console.error('Follow request response error:', error);
+        return c.json({ success: false, error: 'Could not update follow request' }, 500);
     }
 };
 
@@ -72,10 +145,60 @@ export const getSavedItems = async (c) => {
     }
 };
 
+export const recordProfileVisit = async (c) => {
+    try {
+        const visitorId = c.get('user')?.userId;
+        const username = c.req.param('username');
+        const prisma = getPrisma(c.env.DATABASE_URL);
+        const owner = await prisma.user.findUnique({ where: { username }, select: { id: true } });
+        if (!owner) return c.json({ success: false, error: 'Identity not found' }, 404);
+        if (owner.id !== visitorId) {
+            await prisma.profileVisit.create({ data: { profileOwnerId: owner.id, visitorId } });
+        }
+        return c.json({ success: true });
+    } catch (error) {
+        console.error('Profile visit recording failed:', error);
+        return c.json({ success: false, error: 'Profile visit could not be recorded' }, 500);
+    }
+};
+
+export const getAnalytics = async (c) => {
+    try {
+        const userId = c.get('user')?.userId;
+        const prisma = getPrisma(c.env.DATABASE_URL);
+        const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        const [posts, followers, profileVisits, recentVisits] = await Promise.all([
+            prisma.post.findMany({ where: { userId }, select: { _count: { select: { likes: true, comments: true } } } }),
+            prisma.follow.count({ where: { followingId: userId } }),
+            prisma.profileVisit.count({ where: { profileOwnerId: userId, createdAt: { gte: since } } }),
+            prisma.profileVisit.findMany({ where: { profileOwnerId: userId, createdAt: { gte: since } }, select: { createdAt: true } })
+        ]);
+        const likes = posts.reduce((total, post) => total + post._count.likes, 0);
+        const comments = posts.reduce((total, post) => total + post._count.comments, 0);
+        const days = Array.from({ length: 7 }, (_, index) => {
+            const date = new Date();
+            date.setHours(0, 0, 0, 0);
+            date.setDate(date.getDate() - (6 - index));
+            return { label: date.toLocaleDateString('en-US', { weekday: 'short' }), date, visits: 0 };
+        });
+        recentVisits.forEach(({ createdAt }) => {
+            const visitDay = new Date(createdAt); visitDay.setHours(0, 0, 0, 0);
+            const matchingDay = days.find(day => day.date.getTime() === visitDay.getTime());
+            if (matchingDay) matchingDay.visits += 1;
+        });
+        return c.json({ success: true, data: { posts: posts.length, followers, likes, comments, profileVisits, dailyVisits: days.map(({ label, visits }) => ({ label, visits })) } });
+    } catch (error) {
+        console.error('Analytics lookup failed:', error);
+        return c.json({ success: false, error: 'Analytics could not be loaded' }, 500);
+    }
+};
+
 export const updateProfile = async (c) => {
     try {
         const {
             name, bio, profileImage, username, isPrivate, links,
+            showActivityStatus, readReceipts, ghostViewer, protectedStories, profileVisitAlerts,
+            quantumDecayEnabled, quantumDecayDays, neuralGuardianEnabled,
             creatorModeEnabled, creatorHighResUploads, creatorAnonymousShield,
             creatorDeepAnalytics, requestCreatorVerification
         } = await c.req.json();
@@ -90,6 +213,14 @@ export const updateProfile = async (c) => {
                 ...(profileImage && { profileImage }),
                 ...(username && { username }),
                 ...(typeof isPrivate === 'boolean' && { isPrivate }),
+                ...(typeof showActivityStatus === 'boolean' && { showActivityStatus }),
+                ...(typeof readReceipts === 'boolean' && { readReceipts }),
+                ...(typeof ghostViewer === 'boolean' && { ghostViewer }),
+                ...(typeof protectedStories === 'boolean' && { protectedStories }),
+                ...(typeof profileVisitAlerts === 'boolean' && { profileVisitAlerts }),
+                ...(typeof quantumDecayEnabled === 'boolean' && { quantumDecayEnabled }),
+                ...(Number.isInteger(quantumDecayDays) && [7, 30, 90].includes(quantumDecayDays) && { quantumDecayDays }),
+                ...(typeof neuralGuardianEnabled === 'boolean' && { neuralGuardianEnabled, ...(neuralGuardianEnabled ? { isPrivate: true } : {}) }),
                 ...(Array.isArray(links) && { links: links.filter(link => typeof link === 'string').map(link => link.trim()).filter(Boolean) }),
                 ...(typeof creatorModeEnabled === 'boolean' && { creatorModeEnabled }),
                 ...(typeof creatorHighResUploads === 'boolean' && { creatorHighResUploads }),
@@ -110,6 +241,14 @@ export const updateProfile = async (c) => {
                 profileImage: true,
                 riskScore: true,
                 isPrivate: true,
+                showActivityStatus: true,
+                readReceipts: true,
+                ghostViewer: true,
+                protectedStories: true,
+                profileVisitAlerts: true,
+                quantumDecayEnabled: true,
+                quantumDecayDays: true,
+                neuralGuardianEnabled: true,
                 creatorModeEnabled: true,
                 creatorVerificationRequestedAt: true,
                 creatorVerificationStatus: true,
