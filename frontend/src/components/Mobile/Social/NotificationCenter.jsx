@@ -5,6 +5,10 @@ import Cookies from 'js-cookie';
 
 const apiUrl = import.meta.env.VITE_API_URL || 'https://synapse-backend.mrpralay2005.workers.dev';
 const readKey = 'synapse_read_notification_ids';
+// Polling is intentionally used instead of an in-memory Worker socket so a
+// notification reaches users regardless of which local, staging, or production
+// Worker instance served their previous request.
+const LIVE_REFRESH_MS = 4000;
 
 // Auto-retry on 500 (Worker cold start)
 const fetchWithRetry = async (url, options = {}, retries = 2) => {
@@ -49,7 +53,7 @@ const NotificationCenter = ({ open, onClose }) => {
 
     useEffect(() => { if (open) load(); }, [open]);
     useEffect(() => {
-        const poll = window.setInterval(load, 20000);
+        const poll = window.setInterval(load, LIVE_REFRESH_MS);
         return () => window.clearInterval(poll);
     }, []);
 
@@ -96,7 +100,7 @@ export const useNotificationCount = () => {
             try { const token = Cookies.get('synapse_token'); const response = await fetch(`${apiUrl}/api/social/notifications`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }); const data = await response.json(); if (active && data.success) setItems(data.data); } catch { /* keep the app usable offline */ }
         };
         const clearCountImmediately = () => { if (active) setItems([]); };
-        load(); const poll = window.setInterval(load, 20000); window.addEventListener('synapse-notifications-cleared', clearCountImmediately); return () => { active = false; window.clearInterval(poll); window.removeEventListener('synapse-notifications-cleared', clearCountImmediately); };
+        load(); const poll = window.setInterval(load, LIVE_REFRESH_MS); window.addEventListener('synapse-notifications-cleared', clearCountImmediately); return () => { active = false; window.clearInterval(poll); window.removeEventListener('synapse-notifications-cleared', clearCountImmediately); };
     }, []);
     const readIds = useMemo(getReadIds, [items]);
     return items.filter(item => !readIds.has(item.id)).length;
