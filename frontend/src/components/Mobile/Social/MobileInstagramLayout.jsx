@@ -161,6 +161,33 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
         }
     };
 
+    const handleFollowChange = ({ targetUserId, following, targetFollowers, viewerFollowing }) => {
+        const sameUser = (candidate) => String(candidate?.id ?? candidate?.userId) === String(targetUserId);
+        setUserProfile(previous => {
+            if (!sameUser(previous)) return previous;
+            const wasFollowing = Boolean(previous.isFollowing);
+            const followerDelta = following === wasFollowing ? 0 : (following ? 1 : -1);
+            return {
+                ...previous,
+                isFollowing: following,
+                _count: {
+                    ...previous._count,
+                    followers: targetFollowers ?? Math.max(0, (previous._count?.followers ?? 0) + followerDelta)
+                }
+            };
+        });
+        setCurrentUserState(previous => {
+            const followingDelta = following ? 1 : -1;
+            return {
+                ...previous,
+                _count: {
+                    ...previous._count,
+                    following: viewerFollowing ?? Math.max(0, (previous._count?.following ?? 0) + followingDelta)
+                }
+            };
+        });
+    };
+
     const handleCreatePost = async (postData) => {
         try {
             const apiUrl = import.meta.env.VITE_API_URL || 'https://synapse-backend.mrpralay2005.workers.dev';
@@ -341,6 +368,7 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                     onOpenCreatePost={() => setIsPostModalOpen(true)}
                     onCinemaMode={setCinemaPost}
                     onUpdateUser={handleUpdateUser}
+                    onFollowChange={handleFollowChange}
                     onClose={() => handleNavigation('feed')}
                 />
             );
