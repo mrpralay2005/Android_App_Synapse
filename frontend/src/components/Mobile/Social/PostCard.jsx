@@ -245,7 +245,7 @@ const PostCard = ({ post, onInteraction, onCinemaMode, index = 0 }) => {
                 WebkitBackfaceVisibility: 'hidden',
                 transformStyle: 'preserve-3d',
             }}
-            className="group relative bg-[#0f0f0f] border border-white/5 rounded-[2rem] overflow-hidden mb-6 last:mb-0 hover:border-emerald-500/20 transition-[border-color,box-shadow] duration-500 mobile-card"
+            className="synapse-post-card group relative bg-[#0f0f0f] border border-white/5 rounded-[2rem] overflow-hidden mb-6 last:mb-0 hover:border-emerald-500/20 transition-[border-color,box-shadow] duration-500 mobile-card"
         >
             {!isMobileView && (
                 <div className="flex items-center justify-between p-6 px-8">
@@ -477,19 +477,19 @@ const PostCard = ({ post, onInteraction, onCinemaMode, index = 0 }) => {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             transition={{ duration: 0.2, ease: 'easeOut' }}
-                            className="absolute inset-x-0 top-0 z-30 pointer-events-none"
+                            className="synapse-post-mobile-top absolute inset-x-0 top-0 z-30 pointer-events-none"
                         >
                             <div className="flex items-center justify-between p-4 pointer-events-auto">
                                 <div className="flex items-center gap-3">
                                     <div className="relative">
-                                        <div className="w-10 h-10 rounded-full border-2 border-emerald-500/30 p-[2px] bg-black overflow-hidden">
+                                        <div className="synapse-post-mobile-avatar w-10 h-10 rounded-full border-2 border-emerald-500/30 p-[2px] bg-black overflow-hidden">
                                             {isVideo(post.user?.profileImage) ? (
                                                 <video src={post.user?.profileImage} className="w-full h-full rounded-full object-cover border border-black" autoPlay muted loop playsInline />
                                             ) : (
                                                 <img src={post.user?.profileImage || "https://www.svgrepo.com/show/508699/landscape-placeholder.svg"} className="w-full h-full rounded-full object-cover border border-black" alt={post.user?.username} />
                                             )}
                                         </div>
-                                        <div className="absolute -bottom-0.5 -right-0.5 bg-emerald-500 w-3.5 h-3.5 rounded-full border border-black" />
+                                        <div className="synapse-post-mobile-presence absolute -bottom-0.5 -right-0.5 z-10 bg-emerald-500 w-3.5 h-3.5 rounded-full border border-black" style={{ backgroundColor: 'var(--synapse-theme-accent, #10b981)', opacity: 1 }} />
                                     </div>
                                     <div className="flex items-center gap-2 text-white">
                                         <span className="text-sm font-bold tracking-tight">{post.user?.username || 'user'}</span>
@@ -498,7 +498,7 @@ const PostCard = ({ post, onInteraction, onCinemaMode, index = 0 }) => {
                                 </div>
                                 <button
                                     onClick={toggleMobileMenu}
-                                    className="w-9 h-9 rounded-full bg-black/50 border border-white/10 text-white flex items-center justify-center active:scale-95"
+                                    className="synapse-post-mobile-menu-trigger w-9 h-9 rounded-full bg-black/50 border border-white/10 text-white flex items-center justify-center active:scale-95"
                                     aria-label="Open post actions"
                                 >
                                     <MoreHorizontal size={16} />
@@ -511,7 +511,7 @@ const PostCard = ({ post, onInteraction, onCinemaMode, index = 0 }) => {
 
             {isMobileView && showMobileMenu && (
                 <div className="absolute top-4 right-4 z-40">
-                    <div className="rounded-[1.2rem] border border-white/10 bg-black/80 p-2 shadow-2xl backdrop-blur-md">
+                    <div className="synapse-post-mobile-menu rounded-[1.2rem] border border-white/10 bg-black/80 p-2 shadow-2xl backdrop-blur-md">
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -540,22 +540,22 @@ const PostCard = ({ post, onInteraction, onCinemaMode, index = 0 }) => {
                         >
                             <div className="px-4 pb-4 pointer-events-auto">
                                 <div className="flex items-end justify-between gap-2">
-                                    <button onClick={handleLike} className="flex flex-1 flex-col items-center gap-1.5 rounded-[1.25rem] bg-black/45 backdrop-blur-sm border border-white/10 p-2 text-gray-200">
+                                    <button onClick={handleLike} className="synapse-post-mobile-action flex flex-1 flex-col items-center gap-1.5 rounded-[1.25rem] bg-black/45 backdrop-blur-sm border border-white/10 p-2 text-gray-200">
                                         <Heart size={20} fill={isLiked ? 'currentColor' : 'none'} className={isLiked ? 'text-red-500' : 'text-white'} />
                                         <span className="text-[10px] font-bold uppercase tracking-[0.18em]">{likesCount}</span>
                                     </button>
 
-                                    <button onClick={() => setShowComments(!showComments)} className="flex flex-1 flex-col items-center gap-1.5 rounded-[1.25rem] bg-black/45 backdrop-blur-sm border border-white/10 p-2 text-gray-200">
+                                    <button onClick={() => setShowComments(!showComments)} className="synapse-post-mobile-action flex flex-1 flex-col items-center gap-1.5 rounded-[1.25rem] bg-black/45 backdrop-blur-sm border border-white/10 p-2 text-gray-200">
                                         <MessageCircle size={20} className={showComments ? 'text-emerald-500' : 'text-white'} />
                                         <span className="text-[10px] font-bold uppercase tracking-[0.18em]">{post._count?.comments || 0}</span>
                                     </button>
 
-                                    <button onClick={handleShare} className="flex flex-1 flex-col items-center gap-1.5 rounded-[1.25rem] bg-black/45 backdrop-blur-sm border border-white/10 p-2 text-gray-200">
+                                    <button onClick={handleShare} className="synapse-post-mobile-action flex flex-1 flex-col items-center gap-1.5 rounded-[1.25rem] bg-black/45 backdrop-blur-sm border border-white/10 p-2 text-gray-200">
                                         <Share2 size={20} className="text-white" />
                                         <span className="text-[10px] font-bold uppercase tracking-[0.18em]">Share</span>
                                     </button>
 
-                                    <button onClick={handleSave} className="flex flex-1 flex-col items-center gap-1.5 rounded-[1.25rem] bg-black/45 backdrop-blur-sm border border-white/10 p-2 text-gray-200">
+                                    <button onClick={handleSave} className="synapse-post-mobile-action flex flex-1 flex-col items-center gap-1.5 rounded-[1.25rem] bg-black/45 backdrop-blur-sm border border-white/10 p-2 text-gray-200">
                                         <Bookmark size={20} fill={isSaved ? 'currentColor' : 'none'} className={isSaved ? 'text-amber-400' : 'text-white'} />
                                         <span className="text-[10px] font-bold uppercase tracking-[0.18em]">{isSaved ? 'Saved' : 'Save'}</span>
                                     </button>

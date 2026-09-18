@@ -191,7 +191,7 @@ const FeedView = ({ posts, stories = [], suggestedUsers = [], onCreateClick, loa
     }, [stories, suggestedUsers, myStories, currentUser]);
 
     return (
-        <div className="flex-1 max-w-2xl mx-auto pt-2 pb-5 px-0">
+        <div className="synapse-feed flex-1 max-w-2xl mx-auto pt-2 pb-5 px-0">
             <div className="mb-2">
                 <div className="flex gap-3 overflow-x-auto hide-scrollbar py-1 items-center pl-0 pr-1 w-full">
                     {loading ? (
@@ -275,13 +275,13 @@ const FeedView = ({ posts, stories = [], suggestedUsers = [], onCreateClick, loa
 
             <div className="flex items-center justify-between mb-4">
                 <h3 className="text-white font-black text-xl tracking-[-0.04em]">Feeds</h3>
-                <div className="flex rounded-xl border border-white/[0.08] bg-white/[0.045] p-1 shadow-inner shadow-black/20">
+                <div className="synapse-feed-sort flex rounded-xl border border-white/[0.08] bg-white/[0.045] p-1 shadow-inner shadow-black/20">
                     {[
                         { id: 'latest', label: 'Latest' },
                         { id: 'popular', label: 'Popular' }
                     ].map(option => {
                         const selected = feedSort === option.id;
-                        return <button key={option.id} onClick={() => onFeedSortChange?.(option.id)} className={`rounded-lg px-4 py-1.5 text-[10px] uppercase tracking-[0.16em] transition-all ${selected ? 'bg-emerald-400 font-black text-black shadow-[0_4px_12px_rgba(52,211,153,0.18)]' : 'font-semibold text-gray-400 hover:text-white'}`}>{option.label}</button>;
+                        return <button key={option.id} onClick={() => onFeedSortChange?.(option.id)} className={`synapse-feed-sort-option rounded-lg px-4 py-1.5 text-[10px] uppercase tracking-[0.16em] transition-all ${selected ? 'bg-emerald-400 font-black text-black shadow-[0_4px_12px_rgba(52,211,153,0.18)]' : 'font-semibold text-gray-400 hover:text-white'}`}>{option.label}</button>;
                     })}
                 </div>
             </div>

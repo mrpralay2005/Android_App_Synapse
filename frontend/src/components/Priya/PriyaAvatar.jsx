@@ -35,7 +35,7 @@ const PriyaAvatar = ({ size = 96, className = '', animated = true, showRing = tr
                 alt="Priya"
                 width={size}
                 height={size}
-                className={`rounded-full object-cover ${className}`}
+            className={`synapse-priya-avatar rounded-full object-cover ${className}`}
                 style={{ width: size, height: size }}
             />
         );
@@ -43,14 +43,14 @@ const PriyaAvatar = ({ size = 96, className = '', animated = true, showRing = tr
 
     return (
         <div
-            className={`relative shrink-0 ${className}`}
+            className={`synapse-priya-avatar relative shrink-0 ${className}`}
             style={{ width: size, height: size }}
             aria-label="Priya"
             role="img"
         >
             {showRing && (
                 <motion.span
-                    className="absolute inset-0 rounded-full"
+                    className="synapse-priya-ring absolute inset-0 rounded-full"
                     style={{
                         background: 'conic-gradient(from 0deg, #10b981, #22d3ee, #34d399, #10b981)'
                     }}
@@ -63,7 +63,7 @@ const PriyaAvatar = ({ size = 96, className = '', animated = true, showRing = tr
                 viewBox="0 0 100 100"
                 width={size}
                 height={size}
-                className="relative block rounded-full"
+                className="synapse-priya-art relative block rounded-full"
                 style={{ filter: 'drop-shadow(0 6px 18px rgba(16,185,129,0.35))' }}
             >
                 <defs>

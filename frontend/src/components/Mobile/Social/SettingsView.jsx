@@ -17,6 +17,10 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
     const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
     const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
     const [previousSection, setPreviousSection] = useState(null);
+    const [interfaceTheme, setInterfaceTheme] = useState(() => {
+        const savedTheme = typeof window !== 'undefined' ? localStorage.getItem('synapse_interface_theme') : null;
+        return ['prism', 'atelier', 'signal'].includes(savedTheme) ? savedTheme : 'current';
+    });
 
     useEffect(() => {
         const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -217,6 +221,19 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
     };
 
     const savePrivacySetting = (key, label) => saveSetting(key, !formData[key], label);
+
+    // A theme is only a local visual preference.  Keeping it out of saveSetting
+    // prevents a palette change from touching user data or an authenticated API.
+    const selectInterfaceTheme = (themeId) => {
+        setInterfaceTheme(themeId);
+        if (themeId === 'current') {
+            localStorage.removeItem('synapse_interface_theme');
+            document.documentElement.removeAttribute('data-synapse-theme');
+            return;
+        }
+        localStorage.setItem('synapse_interface_theme', themeId);
+        document.documentElement.dataset.synapseTheme = themeId;
+    };
 
     const downloadArchive = async () => {
         setLoading(true);
@@ -449,7 +466,7 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
 
     if (isMobile && !mobileDetailOpen) {
         return (
-            <div className="flex h-full w-full flex-col bg-[#0a0a0a] px-3 pb-3 pt-2">
+            <div className="synapse-settings flex h-full w-full flex-col bg-[#0a0a0a] px-3 pb-3 pt-2">
                 <div className="mb-6 flex h-10 items-center justify-between">
                     <button onClick={onBack} className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white transition-colors active:bg-white/10" aria-label="Back to feed">
                         <ChevronLeft size={18} />
@@ -489,7 +506,7 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
 
     if (isMobile && mobileDetailOpen) {
         return (
-            <div className="flex h-full w-full flex-col bg-[#0f0f0f]">
+            <div className="synapse-settings flex h-full w-full flex-col bg-[#0f0f0f]">
                 <div className="settings-mobile-header relative flex h-14 items-center justify-between border-b border-white/10 px-4">
                     <button
                         onClick={closeMobileSection}
@@ -1206,39 +1223,43 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
                         )}
 
                         {activeSection === 'interface' && (
-                            <motion.div initial="hidden" animate="visible" variants={{ visible: { transition: { staggerChildren: 0.1 } } }} className="space-y-12">
+                            <motion.div initial="hidden" animate="visible" variants={{ visible: { transition: { staggerChildren: 0.08 } } }} className="space-y-6">
                                 <section>
-                                    <motion.h3 variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="text-2xl font-bold text-white mb-8 tracking-tight">Neural Interface Saturation</motion.h3>
-                                    <div className="space-y-12">
-                                        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="space-y-6">
-                                            <div className="flex justify-between items-end mb-2">
-                                                <label className="text-[11px] font-bold text-gray-500 uppercase tracking-widest">Glow Intensity</label>
-                                                <span className="text-emerald-500 font-bold text-xs uppercase tracking-widest">85% High Voltage</span>
-                                            </div>
-                                            <div className="h-2 bg-white/5 rounded-full relative group cursor-pointer">
-                                                <div className="absolute left-0 top-0 bottom-0 w-[85%] bg-emerald-500 shadow-[0_0_20px_#10b981] rounded-full group-hover:bg-emerald-400 transition-all" />
-                                                <motion.div whileHover={{ scale: 1.2 }} className="absolute left-[85%] top-1/2 -translate-y-1/2 w-5 h-5 bg-white rounded-full shadow-lg border-2 border-emerald-500 z-10" />
-                                            </div>
-                                        </motion.div>
-
-                                        <motion.div variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="grid grid-cols-3 gap-6">
-                                            {[
-                                                { name: 'Emerald Core', color: 'bg-emerald-500' },
-                                                { name: 'Sapphire Flux', color: 'bg-blue-500' },
-                                                { name: 'Solar Flare', color: 'bg-orange-500' }
-                                            ].map((theme, i) => (
-                                                <motion.div
-                                                    key={theme.name}
-                                                    whileHover={{ y: -5, scale: 1.02 }}
-                                                    className={`p-5 rounded-[2rem] border transition-all cursor-pointer ${i === 0 ? 'border-emerald-500 bg-emerald-500/5 shadow-lg shadow-emerald-500/10' : 'border-white/5 bg-white/[0.02] hover:bg-white/5'}`}
-                                                >
-                                                    <div className={`w-full h-24 rounded-2xl mb-4 ${theme.color} opacity-20 shadow-inner`} />
-                                                    <p className="text-[10px] font-bold text-center uppercase tracking-widest text-white">{theme.name}</p>
-                                                </motion.div>
-                                            ))}
-                                        </motion.div>
-                                    </div>
+                                    <motion.h3 variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="text-2xl font-bold text-white tracking-tight">Neural Interface</motion.h3>
+                                    <motion.p variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }} className="mt-2 text-xs leading-relaxed text-gray-500">Choose an interface identity. Themes change only this device’s visuals; your account, posts, chats and security session stay untouched.</motion.p>
                                 </section>
+
+                                <div className="space-y-3">
+                                    {[
+                                        { id: 'current', name: 'Current · SynapseX', label: 'DEFAULT', description: 'Your existing emerald interface, preserved exactly as it is today.', preview: 'from-[#071b16] via-[#0a4537] to-[#10b981]' },
+                                        { id: 'prism', name: 'Prism Relay', label: 'LUMINOUS', description: 'Midnight indigo, cyan signal light and soft glass-like cards.', preview: 'from-[#101332] via-[#2448a8] to-[#67e8f9]' },
+                                        { id: 'atelier', name: 'Atelier Nocturne', label: 'EDITORIAL', description: 'Plum ink, warm rose accents, expressive typography and rounded forms.', preview: 'from-[#2a1426] via-[#75394f] to-[#fda4af]' },
+                                        { id: 'signal', name: 'Signal Terminal', label: 'FOCUSED', description: 'Monochrome console surfaces, square edges and crisp green signal text.', preview: 'from-[#080b09] via-[#17251c] to-[#b6f36a]' },
+                                    ].map((theme) => {
+                                        const selected = interfaceTheme === theme.id;
+                                        return (
+                                            <motion.button
+                                                key={theme.id}
+                                                type="button"
+                                                onClick={() => selectInterfaceTheme(theme.id)}
+                                                whileTap={{ scale: 0.985 }}
+                                                aria-pressed={selected}
+                                                className={`theme-choice w-full overflow-hidden rounded-2xl border p-3 text-left transition-all ${selected ? 'theme-choice-selected border-emerald-400/70 bg-emerald-500/[0.09] shadow-lg shadow-emerald-500/10' : 'border-white/10 bg-white/[0.03] active:bg-white/[0.07]'}`}
+                                            >
+                                                <div className={`h-16 rounded-xl bg-gradient-to-br ${theme.preview} p-3`}>
+                                                    <div className="flex h-full items-start justify-between">
+                                                        <span className="rounded-full bg-black/25 px-2 py-1 text-[8px] font-black tracking-[0.18em] text-white/90">{theme.label}</span>
+                                                        <span className={`flex h-5 w-5 items-center justify-center rounded-full border text-[10px] ${selected ? 'border-white bg-white text-black' : 'border-white/40 bg-black/15 text-transparent'}`}>✓</span>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-start gap-3 px-1 pt-3">
+                                                    <div className="min-w-0 flex-1"><p className="text-sm font-bold text-white">{theme.name}</p><p className="mt-1 text-[10px] leading-relaxed text-gray-500">{theme.description}</p></div>
+                                                </div>
+                                            </motion.button>
+                                        );
+                                    })}
+                                </div>
+                                <p className="px-1 text-[10px] leading-relaxed text-gray-600">Current is always safe to select. It removes the visual overlay and restores the original interface without reloading or signing you out.</p>
                             </motion.div>
                         )}
 
@@ -1415,7 +1436,7 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
             }
 
             return (
-                <div className="h-full w-full overflow-hidden bg-[#0f0f0f]">
+                <div className="synapse-settings h-full w-full overflow-hidden bg-[#0f0f0f]">
                     <div className="flex h-full w-full">
                         <aside className="hidden w-[320px] border-r border-white/10 bg-[#111316] p-5 lg:block">
                             <div className="mb-6 text-[1.2rem] font-black tracking-[-0.06em] text-white">Settings</div>
