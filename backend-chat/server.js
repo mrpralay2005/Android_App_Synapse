@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { prettyJSON } from 'hono/pretty-json';
+import getChatPrisma from './prisma/db.js';
 
 import chatRoutes from './routes/chatRoutes.js';
 
@@ -46,7 +47,6 @@ app.route('/api/chat', chatRoutes);
 // ── Scheduled keep-alive: runs every 4 minutes via Cloudflare Cron.
 const scheduled = async (event, env, ctx) => {
     try {
-        const getChatPrisma = (await import('./prisma/db.js')).default;
         const db = getChatPrisma(env.DATABASE_URL);
         await db.$queryRaw`SELECT 1`;
         console.log('[Cron] Chat DB keep-alive OK');
