@@ -443,8 +443,22 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
         if (!text || !pendingUser || sending) return;
         setSending(true);
         setThreadError('');
+
+        // Show message instantly in phantom thread (clock icon).
+        const optimisticMsg = {
+            id: `optimistic-${Date.now()}`,
+            senderId: meId,
+            content: text,
+            createdAt: new Date().toISOString(),
+            _optimistic: true,
+        };
+        setMessages(prev => [...prev, optimisticMsg]);
+        setComposer('');
+        isScrolledUp.current = false;
+        requestAnimationFrame(() => scrollToBottom(true));
+
         try {
-            // 1. Create the real conversation now.
+            // 1. Create the real conversation.
             const convRes = await createConversation({ participantIds: [pendingUser.id] });
             if (!convRes?.success) throw new Error('Could not start conversation');
             const convId = convRes.data.id;
@@ -452,28 +466,33 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
             // 2. Send the message.
             await sendMessage(convId, text);
 
-            // 3. Clear phantom and jump straight into the real thread — no inbox
-            //    refresh first so there's zero flash back to the inbox list.
-            setComposer('');
+            // 3. Mark optimistic as confirmed (tick) — still in phantom view, no flash.
+            setMessages(prev => prev.map(m =>
+                m.id === optimisticMsg.id ? { ...m, _optimistic: false } : m
+            ));
+
+            // 4. Refresh inbox so the real convo is in state BEFORE we switch views.
+            await refreshInbox();
+
+            // 5. Switch to real thread — inbox has the convo now, no black flash.
             setPendingUser(null);
             setActiveId(convId);
-            setMessages([]);
             setThreadError('');
             isScrolledUp.current = false;
             setNeedsPassword(false);
             needsPasswordRef.current = false;
 
-            // Load the thread immediately.
-            loadThread(convId, { showSpinner: true });
-
-            // Refresh inbox silently in background — don't await.
-            refreshInbox();
+            // 6. Load real messages silently (replaces optimistic without blink).
+            loadThread(convId, { showSpinner: false });
         } catch (err) {
+            setMessages(prev => prev.map(m =>
+                m.id === optimisticMsg.id ? { ...m, _optimistic: false, _failed: true } : m
+            ));
             setThreadError(err.message || 'Failed to send');
         } finally {
             setSending(false);
         }
-    }, [composer, pendingUser, sending, loadThread, refreshInbox]);
+    }, [composer, pendingUser, sending, meId, loadThread, refreshInbox, scrollToBottom]);
 
     // Typing indicator — debounced, fire on first keypress then stop after 3 s idle.
     const handleComposerChange = useCallback((value) => {
