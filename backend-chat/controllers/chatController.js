@@ -102,7 +102,7 @@ export const searchChatUsers = async (c) => {
         const prisma = getChatPrisma(c.env.DATABASE_URL);
 
         const query = (c.req.query('q') || '').trim();
-        const limit = Math.min(Math.max(parseInt(c.req.query('limit'), 10) || 10, 1), 25);
+        const limit = Math.min(Math.max(parseInt(c.req.query('limit'), 10) || 10, 1), 100);
 
         const users = await prisma.$queryRaw`
             SELECT id, username, name, "profileImage"
