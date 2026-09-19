@@ -9,6 +9,10 @@ compatibility_flags = [ "nodejs_compat" ]
 [secrets]
 required = [ "DATABASE_URL", "JWT_SECRET" ]
 
+# Keep Neon DB warm — runs every 4 minutes to prevent auto-suspend.
+[triggers]
+crons = ["*/4 * * * *"]
+
 [env.staging]
 name = "synapse-chat-staging"
 

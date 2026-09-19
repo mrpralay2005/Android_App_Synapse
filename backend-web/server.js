@@ -85,4 +85,17 @@ app.route('/api/social', socialRoutes);
 app.route('/api/admin', adminRoutes);
 app.route('/api/ai', aiRoutes);
 
-export default app;
+// ── Scheduled keep-alive: runs every 4 minutes via Cloudflare Cron.
+// Fires a lightweight DB query to prevent Neon from auto-suspending.
+const scheduled = async (event, env, ctx) => {
+    try {
+        const getPrisma = (await import('./prisma/db.js')).default;
+        const db = getPrisma(env.DATABASE_URL);
+        await db.$queryRaw`SELECT 1`;
+        console.log('[Cron] DB keep-alive OK');
+    } catch (e) {
+        console.error('[Cron] DB keep-alive failed:', e.message);
+    }
+};
+
+export default { fetch: app.fetch, scheduled };
