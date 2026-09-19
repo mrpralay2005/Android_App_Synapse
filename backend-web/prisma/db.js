@@ -49,7 +49,7 @@ export const getAuthPrisma = (databaseUrl) => {
 // Neon branches can briefly wake or rebalance. Retry only the operation that
 // failed, with a small bounded backoff; credentials and application errors are
 // returned normally by their callers and are not hidden by this helper.
-export const retryTransientDatabaseOperation = async (operation, attempts = 3) => {
+export const retryTransientDatabaseOperation = async (operation, attempts = 4) => {
     let lastError;
     for (let attempt = 0; attempt < attempts; attempt += 1) {
         try {
@@ -57,7 +57,9 @@ export const retryTransientDatabaseOperation = async (operation, attempts = 3) =
         } catch (error) {
             lastError = error;
             if (attempt < attempts - 1) {
-                await new Promise((resolve) => setTimeout(resolve, 250 * (attempt + 1)));
+                // Neon cold start typically takes 1-3 seconds. Give it enough
+                // time to wake before the next attempt.
+                await new Promise((resolve) => setTimeout(resolve, 800 * (attempt + 1)));
             }
         }
     }
