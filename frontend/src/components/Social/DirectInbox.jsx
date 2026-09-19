@@ -84,15 +84,16 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
     const [pendingUser, setPendingUser]   = useState(null); // { id, username, name, avatarUrl }
 
     // ── Refs ───────────────────────────────────────────────────────────────────
-    const scrollRef       = useRef(null);
-    const typingTimeout   = useRef(null);
-    const peopleTimer     = useRef(null);   // debounce for user search
-    const activeIdRef     = useRef(null);   // always mirrors activeId without closure stale issues
-    const isScrolledUp    = useRef(false);  // don't force-scroll if user is reading history
+    const scrollRef           = useRef(null);
+    const typingTimeout       = useRef(null);
+    const peopleTimer         = useRef(null);
+    const activeIdRef         = useRef(null);
+    const isScrolledUp        = useRef(false);
+    const deepLinkActiveRef   = useRef(false); // true while deep-link is in flight
 
     // Keep refs in sync
-    activeIdRef.current        = activeId;
-    needsPasswordRef.current   = needsPassword;
+    activeIdRef.current      = activeId;
+    needsPasswordRef.current = needsPassword;
 
     // ── Derived ────────────────────────────────────────────────────────────────
     const activeConversation = useMemo(
@@ -258,44 +259,56 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
 
     // Deep-link: visit profile → click Message → open their thread instantly.
     useEffect(() => {
-        if (!initialUser?.id) return;
-        let cancelled = false;
+        if (!initialUser?.id) {
+            deepLinkActiveRef.current = false;
+            return;
+        }
 
-        // Step 1 — check local cache for instant open (zero network delay).
+        deepLinkActiveRef.current = true;
+
+        // Helper — opens a real convo directly from the object (no stale closure).
+        const openConvObj = (conv) => {
+            setConversations(prev => {
+                const already = prev.find(c => c.id === conv.id);
+                return already ? prev : [conv, ...prev];
+            });
+            setPendingUser(null);
+            setMessages([]);
+            setComposer('');
+            setActiveId(conv.id);
+            isScrolledUp.current = false;
+            if (conv.locked) {
+                clearUnlockToken(conv.id);
+                setNeedsPassword(true);
+                needsPasswordRef.current = true;
+            } else {
+                setNeedsPassword(false);
+                needsPasswordRef.current = false;
+                loadThread(conv.id, { showSpinner: true });
+            }
+        };
+
+        // Step 1 — check sessionStorage cache first (instant, zero network).
         try {
             const cached = sessionStorage.getItem('synapse_inbox_cache');
             if (cached) {
                 const cachedConvos = JSON.parse(cached);
                 const existing = cachedConvos.find((conv) =>
-                    !conv.isGroup && (conv.others || []).some((o) => (o.id ?? o.userId) === initialUser.id)
+                    !conv.isGroup &&
+                    (conv.others || []).some((o) => (o.userId ?? o.id) === initialUser.id)
                 );
                 if (existing) {
-                    // Found in cache — set conversations + open directly.
-                    // Pass the conv object so openConversation doesn't need stale state.
                     setConversations(cachedConvos);
-                    setPendingUser(null);
-                    setMessages([]);
-                    setComposer('');
-                    setActiveId(existing.id);
-                    isScrolledUp.current = false;
-                    if (existing.locked) {
-                        clearUnlockToken(existing.id);
-                        setNeedsPassword(true);
-                        needsPasswordRef.current = true;
-                    } else {
-                        setNeedsPassword(false);
-                        needsPasswordRef.current = false;
-                        loadThread(existing.id, { showSpinner: true });
-                    }
+                    openConvObj(existing);
                     onConsumed?.();
-                    // Refresh in background to sync latest state.
-                    refreshInbox();
+                    deepLinkActiveRef.current = false;
+                    refreshInbox(); // background sync
                     return;
                 }
             }
         } catch { /* cache unavailable */ }
 
-        // Step 2 — no cache hit, show phantom immediately.
+        // Step 2 — no cache hit → show phantom immediately.
         setPendingUser({
             id: initialUser.id,
             username: initialUser.username || initialUser.name || 'User',
@@ -308,37 +321,26 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
         setThreadError('');
         onConsumed?.();
 
-        // Step 3 — background: fetch real inbox, switch if convo found.
-        // Note: cancelled is set true by cleanup if this component re-renders
-        // (which happens when onConsumed clears directUser in parent).
+        // Step 3 — background fetch: if a real convo exists, switch to it.
         (async () => {
             try {
                 const inboxRes = await listConversations();
-                if (cancelled) return;
+                // Guard: if user already navigated away, don't redirect them back.
+                if (!deepLinkActiveRef.current) return;
                 if (!inboxRes?.success) return;
                 const existing = (inboxRes.data || []).find((conv) =>
-                    !conv.isGroup && (conv.others || []).some((o) => (o.id ?? o.userId) === initialUser.id)
+                    !conv.isGroup &&
+                    (conv.others || []).some((o) => (o.userId ?? o.id) === initialUser.id)
                 );
-                if (cancelled) return;
+                if (!deepLinkActiveRef.current) return;
                 if (existing) {
                     setConversations(inboxRes.data);
-                    setPendingUser(null);
-                    setActiveId(existing.id);
-                    isScrolledUp.current = false;
-                    if (existing.locked) {
-                        clearUnlockToken(existing.id);
-                        setNeedsPassword(true);
-                        needsPasswordRef.current = true;
-                    } else {
-                        setNeedsPassword(false);
-                        needsPasswordRef.current = false;
-                        loadThread(existing.id, { showSpinner: true });
-                    }
+                    openConvObj(existing);
                 }
             } catch { /* silent */ }
         })();
 
-        return () => { cancelled = true; };
+        return () => { deepLinkActiveRef.current = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [initialUser?.id]);
 
@@ -714,7 +716,7 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
                     <>
                         {/* Header */}
                         <div className="flex items-center gap-3 border-b border-white/10 bg-[#070707] px-3 py-3 md:px-5">
-                            <button onClick={() => { setPendingUser(null); setComposer(''); setThreadError(''); }}
+                            <button onClick={() => { deepLinkActiveRef.current = false; setPendingUser(null); setComposer(''); setThreadError(''); }}
                                 aria-label="Back to inbox"
                                 className="rounded-full p-2 text-gray-400 hover:bg-white/10 hover:text-white">
                                 <ChevronLeft size={18} />
@@ -803,7 +805,7 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
                     <>
                         {/* Thread header */}
                         <div className="flex items-center gap-3 border-b border-white/10 bg-[#070707] px-3 py-3 md:px-5">
-                            <button onClick={() => setActiveId(null)} aria-label="Back to inbox"
+                            <button onClick={() => { deepLinkActiveRef.current = false; setActiveId(null); }} aria-label="Back to inbox"
                                 className="rounded-full p-2 text-gray-400 hover:bg-white/10 hover:text-white md:hidden">
                                 <ChevronLeft size={18} />
                             </button>
@@ -901,7 +903,7 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
                     <PasswordGate key="password-gate"
                         conversationTitle={threadTitleOf(activeConversation)}
                         onSubmit={handleUnlock}
-                        onClose={() => { setNeedsPassword(false); needsPasswordRef.current = false; setActiveId(null); }}
+                        onClose={() => { deepLinkActiveRef.current = false; setNeedsPassword(false); needsPasswordRef.current = false; setActiveId(null); }}
                         busy={unlockBusy} error={unlockError} />
                 )}
             </AnimatePresence>
