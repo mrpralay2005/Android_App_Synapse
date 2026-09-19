@@ -267,7 +267,7 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
             if (cached) {
                 const cachedConvos = JSON.parse(cached);
                 const existing = cachedConvos.find((conv) =>
-                    !conv.isGroup && (conv.others || []).some((o) => o.id === initialUser.id)
+                    !conv.isGroup && (conv.others || []).some((o) => (o.id ?? o.userId) === initialUser.id)
                 );
                 if (existing) {
                     // Found in cache — set conversations + open directly.
@@ -309,16 +309,18 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
         onConsumed?.();
 
         // Step 3 — background: fetch real inbox, switch if convo found.
+        // Note: cancelled is set true by cleanup if this component re-renders
+        // (which happens when onConsumed clears directUser in parent).
         (async () => {
             try {
                 const inboxRes = await listConversations();
-                if (cancelled || !inboxRes?.success) return;
+                if (cancelled) return;
+                if (!inboxRes?.success) return;
                 const existing = (inboxRes.data || []).find((conv) =>
-                    !conv.isGroup && (conv.others || []).some((o) => o.id === initialUser.id)
+                    !conv.isGroup && (conv.others || []).some((o) => (o.id ?? o.userId) === initialUser.id)
                 );
                 if (cancelled) return;
                 if (existing) {
-                    // Real convo found — switch directly without relying on stale state.
                     setConversations(inboxRes.data);
                     setPendingUser(null);
                     setActiveId(existing.id);
