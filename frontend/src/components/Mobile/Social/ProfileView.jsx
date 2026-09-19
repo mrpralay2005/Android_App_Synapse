@@ -9,7 +9,7 @@ const isVideo = (url) => {
     return url.match(/\.(mp4|webm|mov|m4v|m3u8|ogv)$|video/i);
 };
 
-const ProfileView = ({ user, currentUser, posts: parentPosts = [], onOpenCreatePost, loading: parentLoading, onCinemaMode, onUpdateUser, onFollowChange, onClose }) => {
+const ProfileView = ({ user, currentUser, posts: parentPosts = [], onOpenCreatePost, loading: parentLoading, onCinemaMode, onUpdateUser, onFollowChange, onClose, onMessage }) => {
     const [activeTab, setActiveTab] = useState('posts');
     const [tabData, setTabData] = useState([]);
     const [localLoading, setLocalLoading] = useState(false);
@@ -189,7 +189,9 @@ const ProfileView = ({ user, currentUser, posts: parentPosts = [], onOpenCreateP
                         <button onClick={handleFollow} disabled={followLoading} className={`flex-1 rounded-xl py-2 text-[12px] font-black transition-all active:scale-95 disabled:opacity-60 ${isFollowing ? 'border border-white/[0.12] bg-white/[0.08] text-white hover:bg-white/[0.12]' : 'bg-emerald-500 text-black shadow-[0_0_20px_rgba(16,185,129,0.25)] hover:bg-emerald-400'}`}>
                             {followLoading ? 'Updating...' : isFollowing ? 'Following' : 'Follow'}
                         </button>
-                        <button className="flex-1 py-2 rounded-xl bg-white/[0.08] border border-white/[0.08] text-[12px] font-bold text-white transition-colors hover:bg-white/[0.12] active:scale-95">
+                        <button
+                                onClick={() => onMessage?.(user.id)}
+                                className="flex-1 py-2 rounded-xl bg-white/[0.08] border border-white/[0.08] text-[12px] font-bold text-white transition-colors hover:bg-white/[0.12] active:scale-95">
                             Message
                         </button>
                     </div>

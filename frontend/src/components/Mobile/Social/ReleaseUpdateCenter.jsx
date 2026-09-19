@@ -69,32 +69,76 @@ const hardReload = async (version) => {
 };
 
 const startWebUpdate = async (version, setProgress) => {
-    setProgress({ value: 15, label: 'Clearing cache and checking for update…' });
+    // Stage 1 — Clear local cache immediately
+    setProgress({ value: 8, label: 'Stage 1 · Clearing local cache…' });
+    try {
+        if ('serviceWorker' in navigator) {
+            const regs = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(regs.map(r => r.unregister()));
+        }
+        if ('caches' in window) {
+            const keys = await caches.keys();
+            await Promise.all(keys.map(k => caches.delete(k)));
+        }
+    } catch { /* ok */ }
     await pause(600);
 
-    // Check if the build marker on the server is different from what's running.
-    // If yes — new build is live, reload immediately.
-    // If same — Cloudflare built this version a while ago and it's already deployed;
-    // the user just hasn't reloaded since. Force a hard reload anyway.
-    const deployedMarker = await getBuildMarker();
+    // Stage 2 — Check if Cloudflare has already finished building
+    setProgress({ value: 20, label: 'Stage 2 · Checking Cloudflare deployment…' });
+    await pause(400);
 
-    if (deployedMarker && deployedMarker !== runningBuildMarker) {
-        // New build detected — reload with new marker
-        setProgress({ value: 90, label: 'New version found — restarting…' });
+    const currentMarker = await getBuildMarker();
+
+    if (currentMarker && currentMarker !== runningBuildMarker) {
+        // Build already done — reload immediately
+        setProgress({ value: 85, label: 'Stage 3 · New build ready — synchronising…' });
+        await pause(600);
+        setProgress({ value: 100, label: 'Complete · Restarting SynapseX…' });
         await pause(500);
-        setProgress({ value: 100, label: 'Restarting SynapseX…' });
-        await pause(400);
         await hardReload(version);
         return;
     }
 
-    // Same build marker — means either:
-    // (a) The build was published long ago and user is already on the latest build
-    // (b) The cache is serving the old index.html but new files are available
-    // Either way — hard reload clears everything and gets the freshest version.
-    setProgress({ value: 60, label: 'Clearing old cache…' });
-    await pause(700);
-    setProgress({ value: 100, label: 'Restarting SynapseX…' });
+    // Stage 3 — Build still in progress — poll until Cloudflare finishes
+    // Cloudflare Pages typically takes 60-180 seconds to build and deploy.
+    setProgress({ value: 30, label: 'Stage 3 · Waiting for Cloudflare build…' });
+    await pause(500);
+
+    let elapsed = 0;
+    const maxWait = 180; // seconds
+    const pollInterval = 5; // seconds
+
+    for (let attempt = 1; attempt <= maxWait / pollInterval; attempt++) {
+        await pause(pollInterval * 1000);
+        elapsed += pollInterval;
+
+        const marker = await getBuildMarker();
+
+        if (marker && marker !== runningBuildMarker) {
+            // Cloudflare finished — proceed to install
+            setProgress({ value: 80, label: 'Stage 4 · Build complete — downloading update…' });
+            await pause(800);
+            setProgress({ value: 92, label: 'Stage 5 · Installing new version…' });
+            await pause(600);
+            setProgress({ value: 100, label: 'Complete · Restarting SynapseX…' });
+            await pause(500);
+            await hardReload(version);
+            return;
+        }
+
+        // Progress bar advances proportionally while waiting
+        const waitProgress = Math.min(75, 30 + Math.round((elapsed / maxWait) * 45));
+        const remaining = maxWait - elapsed;
+        setProgress({
+            value: waitProgress,
+            label: `Stage 3 · Building on Cloudflare… (~${remaining}s remaining)`
+        });
+    }
+
+    // Timed out after 3 minutes — force reload anyway, build may have finished
+    setProgress({ value: 95, label: 'Stage 4 · Finalising — restarting…' });
+    await pause(500);
+    setProgress({ value: 100, label: 'Complete · Restarting SynapseX…' });
     await pause(400);
     await hardReload(version);
 };
