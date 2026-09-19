@@ -42,6 +42,7 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
     const [notificationsOpen, setNotificationsOpen] = useState(false);
     const [feedSort, setFeedSort] = useState('popular');
     const [chatUnread, setChatUnread] = useState(0);
+    const [directUserId, setDirectUserId] = useState(null);
     const unreadNotifications = useNotificationCount();
 
     useEffect(() => {
@@ -370,6 +371,12 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                     onUpdateUser={handleUpdateUser}
                     onFollowChange={handleFollowChange}
                     onClose={() => handleNavigation('feed')}
+                    onMessage={(userId) => {
+                        setDirectUserId(userId);
+                        handleNavigation('direct');
+                        // Clear after navigation so revisiting Direct tab normally doesn't re-open
+                        setTimeout(() => setDirectUserId(null), 1000);
+                    }}
                 />
             );
         }
@@ -383,6 +390,7 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                 <div className="h-full">
                     <DirectInbox
                         currentUser={currentUserState}
+                        initialUserId={directUserId}
                         onUnreadChange={(n) => setChatUnread(n)}
                         onExit={() => handleNavigation('feed')}
                     />
