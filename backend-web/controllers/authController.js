@@ -151,6 +151,10 @@ export const login = async (c) => {
             return c.json({ success: false, error: "Credentials required" }, 400);
         }
 
+        // Fire a cheap warmup ping first so Neon wakes before the real query.
+        // If Neon is cold this takes ~1-2s; the real query then succeeds immediately.
+        try { await prisma.$queryRaw`SELECT 1`; } catch { /* ignore — retry below handles it */ }
+
         const user = await retryTransientDatabaseOperation(() => prisma.user.findUnique({ where: { username } }));
         if (!user) {
             return c.json({ success: false, error: "Access Denied: Neural mismatch" }, 401);
