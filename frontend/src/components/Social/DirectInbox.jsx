@@ -26,6 +26,33 @@ const threadTitleOf = (conv) => {
 
 const threadAvatarOf = (conv) => (conv?.others || [])[0]?.profile || null;
 
+// Profile IDs and chat participant IDs can arrive as numbers or strings from
+// different services. Compare their values, not their JavaScript types.
+const isOneToOneWithUser = (conversation, userId) =>
+    !conversation?.isGroup && (conversation?.others || []).some(
+        (other) => String(other?.userId ?? other?.id) === String(userId)
+    );
+
+const profileFromUser = (user) => ({
+    id: user?.id ?? user?.userId,
+    username: user?.username || user?.name || 'User',
+    name: user?.name || user?.username || 'User',
+    profileImage: user?.profileImage || user?.avatarUrl || null,
+});
+
+// The create endpoint intentionally returns a compact response. This preview
+// keeps a profile-launched thread named correctly until the inbox refresh fills
+// in the complete server conversation object.
+const conversationPreviewFor = (conversationId, user, locked = false) => ({
+    id: conversationId,
+    isGroup: false,
+    title: null,
+    locked,
+    others: [{ userId: user?.id ?? user?.userId, profile: profileFromUser(user), typing: false }],
+    unreadCount: 0,
+    lastMessage: null,
+});
+
 // Simple shallow-equal for message arrays — skip setState when nothing changed.
 const messagesChanged = (prev, next) => {
     if (prev.length !== next.length) return true;
@@ -133,6 +160,7 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
             onUnreadChange?.(res.totalUnread || 0);
             // Persist to sessionStorage so remount shows content instantly.
             try { sessionStorage.setItem('synapse_inbox_cache', JSON.stringify(data)); } catch { /* quota */ }
+            return data;
         } catch { /* silent — keep last known state */ }
     }, [onUnreadChange]);
 
@@ -158,24 +186,36 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
             // message for the same content arrives, then they're quietly replaced.
             setMessages(prev => {
                 const serverMsgs = res.data || [];
+                // Once a send succeeds, retain its temporary React key while
+                // attaching the server ID. Replacing it later would remount the
+                // bubble and make the clock-to-tick transition flicker.
+                const stableLocalByServerId = new Map(
+                    prev.filter((message) => message._serverId).map((message) => [message._serverId, message])
+                );
+                const serverWithStableKeys = serverMsgs.map((message) => {
+                    const local = stableLocalByServerId.get(message.id);
+                    return local
+                        ? { ...message, id: local.id, _serverId: message.id, _optimistic: false }
+                        : message;
+                });
                 // Find optimistic messages that are still pending (not yet confirmed).
-                const optimisticPending = prev.filter(m => m._optimistic && !m._failed);
+                const optimisticPending = prev.filter(m => m._optimistic && !m._failed && !m._serverId);
                 if (optimisticPending.length === 0) {
                     // No optimistic messages — just do the normal change-check swap.
-                    return messagesChanged(prev, serverMsgs) ? serverMsgs : prev;
+                    return messagesChanged(prev, serverWithStableKeys) ? serverWithStableKeys : prev;
                 }
                 // Merge: take server messages, then append any optimistic entries
                 // whose content doesn't already appear as the last server message
                 // (meaning the server hasn't confirmed them yet).
-                const lastServerContent = serverMsgs.length
-                    ? serverMsgs[serverMsgs.length - 1].content
+                const lastServerContent = serverWithStableKeys.length
+                    ? serverWithStableKeys[serverWithStableKeys.length - 1].content
                     : null;
                 const stillPending = optimisticPending.filter(
                     m => m.content !== lastServerContent
                 );
                 return stillPending.length > 0
-                    ? [...serverMsgs, ...stillPending]
-                    : serverMsgs;
+                    ? [...serverWithStableKeys, ...stillPending]
+                    : serverWithStableKeys;
             });
 
             // Only clear the gate if this poll belongs to the still-active conversation.
@@ -268,23 +308,36 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
 
         // Helper — opens a real convo directly from the object (no stale closure).
         const openConvObj = (conv) => {
+            // A stale cache can contain the conversation membership before the
+            // user profile join arrives. Use the profile the visitor just chose
+            // as a display fallback rather than ever rendering a generic title.
+            const displayReadyConversation = {
+                ...conv,
+                others: (conv.others || []).map((other) =>
+                    String(other?.userId ?? other?.id) === String(initialUser.id) && !other?.profile
+                        ? { ...other, profile: profileFromUser(initialUser) }
+                        : other
+                )
+            };
             setConversations(prev => {
-                const already = prev.find(c => c.id === conv.id);
-                return already ? prev : [conv, ...prev];
+                const already = prev.find(c => String(c.id) === String(displayReadyConversation.id));
+                return already
+                    ? prev.map((item) => String(item.id) === String(displayReadyConversation.id) ? displayReadyConversation : item)
+                    : [displayReadyConversation, ...prev];
             });
             setPendingUser(null);
             setMessages([]);
             setComposer('');
-            setActiveId(conv.id);
+            setActiveId(displayReadyConversation.id);
             isScrolledUp.current = false;
-            if (conv.locked) {
-                clearUnlockToken(conv.id);
+            if (displayReadyConversation.locked) {
+                clearUnlockToken(displayReadyConversation.id);
                 setNeedsPassword(true);
                 needsPasswordRef.current = true;
             } else {
                 setNeedsPassword(false);
                 needsPasswordRef.current = false;
-                loadThread(conv.id, { showSpinner: true });
+                loadThread(displayReadyConversation.id, { showSpinner: true });
             }
         };
 
@@ -293,10 +346,7 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
             const cached = sessionStorage.getItem('synapse_inbox_cache');
             if (cached) {
                 const cachedConvos = JSON.parse(cached);
-                const existing = cachedConvos.find((conv) =>
-                    !conv.isGroup &&
-                    (conv.others || []).some((o) => (o.userId ?? o.id) === initialUser.id)
-                );
+                const existing = cachedConvos.find((conv) => isOneToOneWithUser(conv, initialUser.id));
                 if (existing) {
                     setConversations(cachedConvos);
                     openConvObj(existing);
@@ -328,10 +378,7 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
                 // Guard: if user already navigated away, don't redirect them back.
                 if (!deepLinkActiveRef.current) return;
                 if (!inboxRes?.success) return;
-                const existing = (inboxRes.data || []).find((conv) =>
-                    !conv.isGroup &&
-                    (conv.others || []).some((o) => (o.userId ?? o.id) === initialUser.id)
-                );
+                const existing = (inboxRes.data || []).find((conv) => isOneToOneWithUser(conv, initialUser.id));
                 if (!deepLinkActiveRef.current) return;
                 if (existing) {
                     setConversations(inboxRes.data);
@@ -456,11 +503,12 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
         requestAnimationFrame(() => scrollToBottom(true));
 
         try {
-            await sendMessage(convId, text);
+            const sent = await sendMessage(convId, text);
+            if (!sent?.success) throw new Error(sent?.error || 'Failed to send');
             // Mark the optimistic message as confirmed (show tick) BEFORE loadThread
             // replaces it — this prevents the blink caused by key change on remount.
             setMessages(prev => prev.map(m =>
-                m.id === optimisticMsg.id ? { ...m, _optimistic: false } : m
+                m.id === optimisticMsg.id ? { ...m, _optimistic: false, _serverId: sent.data?.id } : m
             ));
             // Replace optimistic message with real one from server.
             await loadThread(convId, { showSpinner: false });
@@ -507,23 +555,44 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
         requestAnimationFrame(() => scrollToBottom(true));
 
         try {
-            // 1. Create the real conversation.
+            // 1. Create the real conversation, or receive the existing 1:1 id.
             const convRes = await createConversation({ participantIds: [pendingUser.id] });
             if (!convRes?.success) throw new Error('Could not start conversation');
             const convId = convRes.data.id;
 
+            // Resolve its full inbox object before sending. This preserves the
+            // profile name and correctly stops at the password gate if the
+            // backend reused a locked conversation while the deep-link lookup
+            // was still in flight.
+            const refreshed = await refreshInbox();
+            const resolvedConversation = (refreshed || []).find((conversation) => String(conversation.id) === String(convId));
+            const conversation = resolvedConversation || conversationPreviewFor(convId, pendingUser, Boolean(convRes.data?.locked));
+            if (conversation.locked) {
+                setConversations(previous => previous.some((item) => String(item.id) === String(convId)) ? previous : [conversation, ...previous]);
+                setMessages([]);
+                setPendingUser(null);
+                setActiveId(convId);
+                setComposer(text);
+                setNeedsPassword(true);
+                needsPasswordRef.current = true;
+                clearUnlockToken(convId);
+                return;
+            }
+
             // 2. Send the message.
-            await sendMessage(convId, text);
+            const sent = await sendMessage(convId, text);
+            if (!sent?.success) throw new Error(sent?.error || 'Failed to send');
 
             // 3. Mark optimistic as confirmed (tick) — still in phantom view, no flash.
             setMessages(prev => prev.map(m =>
-                m.id === optimisticMsg.id ? { ...m, _optimistic: false } : m
+                m.id === optimisticMsg.id ? { ...m, _optimistic: false, _serverId: sent.data?.id } : m
             ));
 
-            // 4. Refresh inbox so the real convo is in state BEFORE we switch views.
-            await refreshInbox();
+            // 4. Keep a complete name/avatar immediately, even before a future
+            // inbox poll returns. No empty "Chat" title can appear.
+            setConversations(previous => previous.some((item) => String(item.id) === String(convId)) ? previous : [conversation, ...previous]);
 
-            // 5. Switch to real thread — inbox has the convo now, no black flash.
+            // 5. Switch to real thread without clearing the optimistic bubble.
             setPendingUser(null);
             setActiveId(convId);
             setThreadError('');
@@ -531,7 +600,8 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
             setNeedsPassword(false);
             needsPasswordRef.current = false;
 
-            // 6. Load real messages silently (replaces optimistic without blink).
+            // 6. Load history silently. Stable local keys keep the sent bubble
+            // mounted while its clock changes to a tick.
             loadThread(convId, { showSpinner: false });
         } catch (err) {
             setMessages(prev => prev.map(m =>
