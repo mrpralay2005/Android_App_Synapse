@@ -256,15 +256,40 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
         if (activeId === null) refreshInbox();
     }, [activeId, refreshInbox]);
 
-    // Deep-link: open a phantom thread for a specific user WITHOUT creating a
-    // conversation. The conversation is only created when the first message is sent.
-    // We set pendingUser instantly from the passed-in user object — zero API calls,
-    // zero delay. If a real convo already exists we open it directly (background check).
+    // Deep-link: visit profile → click Message → open their thread instantly.
+    // Logic:
+    //   1. Check sessionStorage inbox cache first — if convo found, open it instantly (no flash).
+    //   2. Show phantom thread immediately as fallback while background check runs.
+    //   3. Background: fetch real inbox — if convo exists switch to it (handles locked correctly).
+    //   4. If no convo exists, stay in phantom — create only on first message send.
     useEffect(() => {
         if (!initialUser?.id) return;
         let cancelled = false;
 
-        // Set phantom immediately — user sees the chat view instantly.
+        // Step 1 — check local cache for instant open (zero network delay).
+        try {
+            const cached = sessionStorage.getItem('synapse_inbox_cache');
+            if (cached) {
+                const cachedConvos = JSON.parse(cached);
+                const existing = cachedConvos.find((conv) =>
+                    !conv.isGroup && (conv.others || []).some((o) => o.id === initialUser.id)
+                );
+                if (existing) {
+                    // Found in cache — open instantly, no phantom needed.
+                    setConversations(cachedConvos);
+                    setPendingUser(null);
+                    setMessages([]);
+                    setComposer('');
+                    onConsumed?.();
+                    openConversation(existing.id);
+                    // Still refresh in background to sync latest state.
+                    refreshInbox();
+                    return;
+                }
+            }
+        } catch { /* cache unavailable */ }
+
+        // Step 2 — no cache hit, show phantom immediately.
         setPendingUser({
             id: initialUser.id,
             username: initialUser.username || initialUser.name || 'User',
@@ -277,7 +302,7 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
         setThreadError('');
         onConsumed?.();
 
-        // In background, check if a real convo already exists — if so, switch to it.
+        // Step 3 — background: fetch real inbox, switch if convo found.
         (async () => {
             try {
                 const inboxRes = await listConversations();
@@ -285,12 +310,15 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
                 const existing = (inboxRes.data || []).find((conv) =>
                     !conv.isGroup && (conv.others || []).some((o) => o.id === initialUser.id)
                 );
-                if (existing && !cancelled) {
+                if (cancelled) return;
+                if (existing) {
+                    // Real convo found — switch seamlessly (openConversation handles lock gate).
                     setConversations(inboxRes.data);
                     setPendingUser(null);
                     openConversation(existing.id);
                 }
-            } catch { /* silent — phantom thread stays open */ }
+                // else: stay in phantom thread, user hasn't chatted before.
+            } catch { /* silent */ }
         })();
 
         return () => { cancelled = true; };
@@ -728,7 +756,7 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
                             <div className="flex items-center gap-2">
                                 <input
                                     value={composer}
-                                    onChange={(e) => setComposer(e.target.value)}
+                                    onChange={(e) => { setComposer(e.target.value); setThreadError(''); }}
                                     placeholder={`Message ${pendingUser.username || pendingUser.name}...`}
                                     autoFocus
                                     className="min-w-0 flex-1 rounded-full border border-white/10 bg-white/5 px-4 py-2.5 text-[13px] text-white outline-none placeholder:text-gray-600 focus:border-emerald-500/50" />
