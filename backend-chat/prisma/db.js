@@ -3,9 +3,11 @@ import { PrismaNeon } from '@prisma/adapter-neon';
 import { Pool, neonConfig } from '@neondatabase/serverless';
 
 // Reuse WebSocket connections within the same Worker instance for speed.
-// Each Worker isolate still gets its own pool — this just avoids
-// re-handshaking on every request within the same warm instance.
 neonConfig.fetchConnectionCache = true;
+
+// Fail fast — don't let a sleeping Neon DB hang the whole Worker.
+neonConfig.fetchEndpoint = (host) =>
+    `https://${host}/sql`;
 
 const getChatPrisma = (databaseUrl) => {
     if (!databaseUrl) {
@@ -13,7 +15,11 @@ const getChatPrisma = (databaseUrl) => {
     }
 
     try {
-        const pool = new Pool({ connectionString: databaseUrl });
+        const pool = new Pool({
+            connectionString: databaseUrl,
+            connectionTimeoutMillis: 8000,  // fail after 8s instead of hanging
+            idleTimeoutMillis: 10000,
+        });
         const adapter = new PrismaNeon(pool);
         return new PrismaClient({
             adapter,

@@ -190,7 +190,7 @@ const ProfileView = ({ user, currentUser, posts: parentPosts = [], onOpenCreateP
                             {followLoading ? 'Updating...' : isFollowing ? 'Following' : 'Follow'}
                         </button>
                         <button
-                                onClick={() => onMessage?.(user.id)}
+                                onClick={() => onMessage?.(user)}
                                 className="flex-1 py-2 rounded-xl bg-white/[0.08] border border-white/[0.08] text-[12px] font-bold text-white transition-colors hover:bg-white/[0.12] active:scale-95">
                             Message
                         </button>
