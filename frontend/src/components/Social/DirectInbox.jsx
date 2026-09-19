@@ -35,7 +35,7 @@ const messagesChanged = (prev, next) => {
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
-const DirectInbox = ({ currentUser, initialUserId = null, onUnreadChange, onExit = null }) => {
+const DirectInbox = ({ currentUser, initialUserId = null, onConsumed, onUnreadChange, onExit = null }) => {
 
     // ── Inbox state ────────────────────────────────────────────────────────────
     const [conversations, setConversations] = useState(() => {
@@ -253,11 +253,13 @@ const DirectInbox = ({ currentUser, initialUserId = null, onUnreadChange, onExit
                         // Real convo exists — open it directly, no phantom needed.
                         setConversations(inboxRes.data);
                         openConversation(existing.id);
+                        onConsumed?.();
                         return;
                     }
                 }
                 // No existing convo — resolve the user's display info for the phantom header.
-                const userRes = await searchChatUsers('', 20);
+                // Use a large limit so we don't miss less-active users.
+                const userRes = await searchChatUsers('', 100);
                 if (cancelled) return;
                 const found = (userRes?.data || []).find((u) => u.id === initialUserId);
                 const profile = found
@@ -266,6 +268,7 @@ const DirectInbox = ({ currentUser, initialUserId = null, onUnreadChange, onExit
                 setPendingUser(profile);
                 setActiveId(null);
                 setComposer('');
+                onConsumed?.();
             } catch (err) {
                 if (!cancelled) console.error('Deep-link chat failed:', err);
             }

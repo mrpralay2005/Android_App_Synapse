@@ -374,8 +374,6 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                     onMessage={(userId) => {
                         setDirectUserId(userId);
                         handleNavigation('direct');
-                        // Clear after navigation so revisiting Direct tab normally doesn't re-open
-                        setTimeout(() => setDirectUserId(null), 1000);
                     }}
                 />
             );
@@ -391,8 +389,9 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                     <DirectInbox
                         currentUser={currentUserState}
                         initialUserId={directUserId}
+                        onConsumed={() => setDirectUserId(null)}
                         onUnreadChange={(n) => setChatUnread(n)}
-                        onExit={() => handleNavigation('feed')}
+                        onExit={() => { setDirectUserId(null); handleNavigation('feed'); }}
                     />
                 </div>
             );
