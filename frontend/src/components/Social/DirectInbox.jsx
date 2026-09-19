@@ -272,7 +272,9 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
             avatarUrl: initialUser.profileImage || initialUser.avatarUrl || null,
         });
         setActiveId(null);
+        setMessages([]);
         setComposer('');
+        setThreadError('');
         onConsumed?.();
 
         // In background, check if a real convo already exists — if so, switch to it.
@@ -681,8 +683,9 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
                             </div>
                         </div>
 
-                        {/* Empty messages area */}
-                        <div className="hide-scrollbar min-h-0 flex-1 overflow-y-auto px-3 py-4 md:px-5"
+                        {/* Messages area — renders optimistic messages while sending */}
+                        <div ref={scrollRef} onScroll={handleScrollPane}
+                            className="hide-scrollbar min-h-0 flex-1 overflow-y-auto px-3 py-4 md:px-5"
                             style={{
                                 backgroundImage: 'url(/chat-wallpaper.svg)',
                                 backgroundSize: 'cover',
@@ -692,9 +695,31 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
                             {threadError && (
                                 <p className="py-4 text-center text-[12px] text-red-400">{threadError}</p>
                             )}
-                            <p className="py-10 text-center text-[12px] text-gray-600">
-                                Say hello to {pendingUser.username || pendingUser.name} 👋
-                            </p>
+                            {messages.length === 0 && (
+                                <p className="py-10 text-center text-[12px] text-gray-600">
+                                    Say hello to {pendingUser.username || pendingUser.name} 👋
+                                </p>
+                            )}
+                            {messages.map((msg) => {
+                                const mine = msg.senderId === meId;
+                                return (
+                                    <div key={msg.id} className={`flex w-full ${mine ? 'justify-end' : 'justify-start'}`}>
+                                        <div className={`max-w-[78%] rounded-2xl px-3.5 py-2 transition-opacity ${mine ? 'rounded-br-sm bg-emerald-500 text-black' : 'rounded-bl-sm border border-white/10 bg-white/[0.06] text-gray-100'} ${msg._optimistic ? 'opacity-70' : 'opacity-100'} ${msg._failed ? '!bg-red-500/80' : ''}`}>
+                                            <p className="whitespace-pre-line break-words text-[13px] leading-relaxed">{msg.content}</p>
+                                            <div className={`mt-1 flex items-center justify-end gap-1 text-[9px] ${mine ? 'text-black/60' : 'text-gray-500'}`}>
+                                                <span>{formatClock(msg.createdAt)}</span>
+                                                {mine && (
+                                                    msg._failed
+                                                        ? <AlertCircle size={10} className="text-white" />
+                                                        : msg._optimistic
+                                                            ? <Clock size={9} className="opacity-60 animate-pulse" />
+                                                            : <Check size={10} />
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
 
                         {/* Composer */}
