@@ -257,11 +257,6 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
     }, [activeId, refreshInbox]);
 
     // Deep-link: visit profile → click Message → open their thread instantly.
-    // Logic:
-    //   1. Check sessionStorage inbox cache first — if convo found, open it instantly (no flash).
-    //   2. Show phantom thread immediately as fallback while background check runs.
-    //   3. Background: fetch real inbox — if convo exists switch to it (handles locked correctly).
-    //   4. If no convo exists, stay in phantom — create only on first message send.
     useEffect(() => {
         if (!initialUser?.id) return;
         let cancelled = false;
@@ -275,14 +270,25 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
                     !conv.isGroup && (conv.others || []).some((o) => o.id === initialUser.id)
                 );
                 if (existing) {
-                    // Found in cache — open instantly, no phantom needed.
+                    // Found in cache — set conversations + open directly.
+                    // Pass the conv object so openConversation doesn't need stale state.
                     setConversations(cachedConvos);
                     setPendingUser(null);
                     setMessages([]);
                     setComposer('');
+                    setActiveId(existing.id);
+                    isScrolledUp.current = false;
+                    if (existing.locked) {
+                        clearUnlockToken(existing.id);
+                        setNeedsPassword(true);
+                        needsPasswordRef.current = true;
+                    } else {
+                        setNeedsPassword(false);
+                        needsPasswordRef.current = false;
+                        loadThread(existing.id, { showSpinner: true });
+                    }
                     onConsumed?.();
-                    openConversation(existing.id);
-                    // Still refresh in background to sync latest state.
+                    // Refresh in background to sync latest state.
                     refreshInbox();
                     return;
                 }
@@ -312,12 +318,21 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
                 );
                 if (cancelled) return;
                 if (existing) {
-                    // Real convo found — switch seamlessly (openConversation handles lock gate).
+                    // Real convo found — switch directly without relying on stale state.
                     setConversations(inboxRes.data);
                     setPendingUser(null);
-                    openConversation(existing.id);
+                    setActiveId(existing.id);
+                    isScrolledUp.current = false;
+                    if (existing.locked) {
+                        clearUnlockToken(existing.id);
+                        setNeedsPassword(true);
+                        needsPasswordRef.current = true;
+                    } else {
+                        setNeedsPassword(false);
+                        needsPasswordRef.current = false;
+                        loadThread(existing.id, { showSpinner: true });
+                    }
                 }
-                // else: stay in phantom thread, user hasn't chatted before.
             } catch { /* silent */ }
         })();
 
