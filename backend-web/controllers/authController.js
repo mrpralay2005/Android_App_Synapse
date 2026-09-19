@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { setCookie, deleteCookie } from 'hono/cookie';
-import getPrisma from '../prisma/db.js';
+import getPrisma, { getAuthPrisma, retryTransientDatabaseOperation } from '../prisma/db.js';
 import { sendOTP, sendResetOTP, sendEmailChangeOTP } from '../utils/email.js';
 
 const isPreviewMode = (c) => c.env.PREVIEW_MODE === 'true';
@@ -145,13 +145,13 @@ export const resendOTP = async (c) => {
 export const login = async (c) => {
     try {
         const { username, password, behaviorData } = await c.req.json();
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getAuthPrisma(c.env.DATABASE_URL);
 
         if (!username || !password) {
             return c.json({ success: false, error: "Credentials required" }, 400);
         }
 
-        const user = await prisma.user.findUnique({ where: { username } });
+        const user = await retryTransientDatabaseOperation(() => prisma.user.findUnique({ where: { username } }));
         if (!user) {
             return c.json({ success: false, error: "Access Denied: Neural mismatch" }, 401);
         }
@@ -165,10 +165,10 @@ export const login = async (c) => {
 
         // AUTO-VERIFY EXISTING USERS (FIX FOR OLD ACCOUNTS)
         if (user.isVerified === false && !user.otp) {
-            await prisma.user.update({
+            await retryTransientDatabaseOperation(() => prisma.user.update({
                 where: { id: user.id },
                 data: { isVerified: true }
-            });
+            }));
         } else if (!user.isVerified) {
             return c.json({ success: false, error: "Neural link not verified. Please check your email." }, 403);
         }
@@ -197,30 +197,30 @@ export const login = async (c) => {
             }
         }
 
-        await prisma.user.update({
+        await retryTransientDatabaseOperation(() => prisma.user.update({
             where: { id: user.id },
             data: { riskScore, lastLogin: new Date() }
-        });
+        }));
 
         const token = jwt.sign(
             { userId: user.id, username: user.username, role: user.role },
             c.env.JWT_SECRET || 'fallback_secret',
-            { expiresIn: '2h' }
+            { expiresIn: '30d' }
         );
 
         // CREATE PROFESSIONAL SESSIONID (Like Instagram/Facebook)
         const userAgent = c.req.header('user-agent');
         const ipAddress = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'local';
-        const sessionExpires = new Date(Date.now() + 2 * 60 * 60 * 1000);
+        const sessionExpires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-        const session = await prisma.session.create({
+        const session = await retryTransientDatabaseOperation(() => prisma.session.create({
             data: {
                 userId: user.id,
                 userAgent,
                 ipAddress,
                 expiresAt: sessionExpires
             }
-        });
+        }));
 
         // Return session data (Frontend can handle it if needed)
         c.header('X-Synapse-Debug', 'v3-no-cookies');
@@ -261,7 +261,7 @@ export const login = async (c) => {
         });
     } catch (error) {
         console.error("Login Error:", error);
-        return c.json({ success: false, error: `Neural link failure: ${error.message}` }, 500);
+        return c.json({ success: false, error: 'Temporary database connection issue. Please retry.' }, 503);
     }
 };
 

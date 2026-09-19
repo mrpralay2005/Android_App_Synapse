@@ -90,4 +90,30 @@ const scheduled = async (event, env, ctx) => {
     }
 };
 
-export default { fetch: app.fetch, scheduled };
+// A Worker/runtime failure can occur outside Hono's route error boundary. Send
+// a real JSON response with CORS in that case, so localhost receives a useful
+// recoverable error instead of the browser's misleading CORS-only message.
+const fetchWithFailureBoundary = async (request, env, ctx) => {
+    try {
+        return await app.fetch(request, env, ctx);
+    } catch (error) {
+        console.error('[Worker boundary error]:', error?.message || error);
+        const origin = request.headers.get('Origin');
+        return new Response(JSON.stringify({
+            success: false,
+            error: 'Temporary service issue. Please retry.'
+        }), {
+            status: 503,
+            headers: {
+                'Content-Type': 'application/json',
+                ...(origin ? {
+                    'Access-Control-Allow-Origin': origin,
+                    'Access-Control-Allow-Credentials': 'true',
+                    'Vary': 'Origin'
+                } : {})
+            }
+        });
+    }
+};
+
+export default { fetch: fetchWithFailureBoundary, scheduled };
