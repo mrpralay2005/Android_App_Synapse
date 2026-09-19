@@ -4,10 +4,12 @@ compatibility_date = "2025-01-01"
 compatibility_flags = [ "nodejs_compat" ]
 
 # Cloudflare Workers AI — Priya's brain.
-# This binding is declared here so wrangler deploy never wipes it from Cloudflare.
-# Local dev: wrangler automatically uses a remote AI proxy for this binding.
 [ai]
 binding = "AI"
+
+# Keep Neon DB warm — runs every 4 minutes to prevent auto-suspend.
+[triggers]
+crons = ["*/4 * * * *"]
 
 [vars]
 AI_BACKEND_URL = "https://your-ai-backend.onrender.com"

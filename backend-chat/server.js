@@ -43,4 +43,16 @@ app.get('/', (c) => {
 // API Routes — chat lives under /api/chat only, in its own Worker.
 app.route('/api/chat', chatRoutes);
 
-export default app;
+// ── Scheduled keep-alive: runs every 4 minutes via Cloudflare Cron.
+const scheduled = async (event, env, ctx) => {
+    try {
+        const getChatPrisma = (await import('./prisma/db.js')).default;
+        const db = getChatPrisma(env.DATABASE_URL);
+        await db.$queryRaw`SELECT 1`;
+        console.log('[Cron] Chat DB keep-alive OK');
+    } catch (e) {
+        console.error('[Cron] Chat DB keep-alive failed:', e.message);
+    }
+};
+
+export default { fetch: app.fetch, scheduled };
