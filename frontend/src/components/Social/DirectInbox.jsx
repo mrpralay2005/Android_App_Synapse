@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Search, MessageCircle, Lock, Plus, ChevronLeft, Send, ShieldCheck } from 'lucide-react';
+import { Search, MessageCircle, Lock, Plus, ChevronLeft, Send, ShieldCheck, Check, Clock, AlertCircle } from 'lucide-react';
 import { ChatAvatar, LockBadge, formatDay, formatClock } from './ChatBits';
 import NewChatModal from './NewChatModal';
 import PasswordGate from './PasswordGate';
@@ -35,7 +35,7 @@ const messagesChanged = (prev, next) => {
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
-const DirectInbox = ({ currentUser, initialUserId = null, onConsumed, onUnreadChange, onExit = null }) => {
+const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChange, onExit = null }) => {
 
     // ── Inbox state ────────────────────────────────────────────────────────────
     const [conversations, setConversations] = useState(() => {
@@ -152,8 +152,30 @@ const DirectInbox = ({ currentUser, initialUserId = null, onConsumed, onUnreadCh
             const res = await getMessages(conversationId, { limit: 50 });
             if (!res?.success) throw new Error('Failed to load messages');
 
-            // Only update messages state when content actually changed.
-            setMessages(prev => messagesChanged(prev, res.data || []) ? (res.data || []) : prev);
+            // Merge server messages with any pending optimistic messages so we
+            // never blink — optimistic entries stay visible until the real server
+            // message for the same content arrives, then they're quietly replaced.
+            setMessages(prev => {
+                const serverMsgs = res.data || [];
+                // Find optimistic messages that are still pending (not yet confirmed).
+                const optimisticPending = prev.filter(m => m._optimistic && !m._failed);
+                if (optimisticPending.length === 0) {
+                    // No optimistic messages — just do the normal change-check swap.
+                    return messagesChanged(prev, serverMsgs) ? serverMsgs : prev;
+                }
+                // Merge: take server messages, then append any optimistic entries
+                // whose content doesn't already appear as the last server message
+                // (meaning the server hasn't confirmed them yet).
+                const lastServerContent = serverMsgs.length
+                    ? serverMsgs[serverMsgs.length - 1].content
+                    : null;
+                const stillPending = optimisticPending.filter(
+                    m => m.content !== lastServerContent
+                );
+                return stillPending.length > 0
+                    ? [...serverMsgs, ...stillPending]
+                    : serverMsgs;
+            });
 
             // Only clear the gate if this poll belongs to the still-active conversation.
             if (activeIdRef.current === conversationId) {
@@ -236,46 +258,42 @@ const DirectInbox = ({ currentUser, initialUserId = null, onConsumed, onUnreadCh
 
     // Deep-link: open a phantom thread for a specific user WITHOUT creating a
     // conversation. The conversation is only created when the first message is sent.
-    // If the user backs out without sending, nothing is persisted.
+    // We set pendingUser instantly from the passed-in user object — zero API calls,
+    // zero delay. If a real convo already exists we open it directly (background check).
     useEffect(() => {
-        if (!initialUserId) return;
+        if (!initialUser?.id) return;
         let cancelled = false;
+
+        // Set phantom immediately — user sees the chat view instantly.
+        setPendingUser({
+            id: initialUser.id,
+            username: initialUser.username || initialUser.name || 'User',
+            name: initialUser.name || initialUser.username || 'User',
+            avatarUrl: initialUser.profileImage || initialUser.avatarUrl || null,
+        });
+        setActiveId(null);
+        setComposer('');
+        onConsumed?.();
+
+        // In background, check if a real convo already exists — if so, switch to it.
         (async () => {
             try {
-                // First check if we already have a real conversation with this user.
                 const inboxRes = await listConversations();
-                if (cancelled) return;
-                if (inboxRes?.success) {
-                    const existing = (inboxRes.data || []).find((conv) =>
-                        !conv.isGroup && (conv.others || []).some((o) => o.id === initialUserId)
-                    );
-                    if (existing) {
-                        // Real convo exists — open it directly, no phantom needed.
-                        setConversations(inboxRes.data);
-                        openConversation(existing.id);
-                        onConsumed?.();
-                        return;
-                    }
+                if (cancelled || !inboxRes?.success) return;
+                const existing = (inboxRes.data || []).find((conv) =>
+                    !conv.isGroup && (conv.others || []).some((o) => o.id === initialUser.id)
+                );
+                if (existing && !cancelled) {
+                    setConversations(inboxRes.data);
+                    setPendingUser(null);
+                    openConversation(existing.id);
                 }
-                // No existing convo — resolve the user's display info for the phantom header.
-                // Use a large limit so we don't miss less-active users.
-                const userRes = await searchChatUsers('', 100);
-                if (cancelled) return;
-                const found = (userRes?.data || []).find((u) => u.id === initialUserId);
-                const profile = found
-                    ? { id: found.id, username: found.username || found.name, name: found.name, avatarUrl: found.profileImage }
-                    : { id: initialUserId, username: 'User', name: 'User', avatarUrl: null };
-                setPendingUser(profile);
-                setActiveId(null);
-                setComposer('');
-                onConsumed?.();
-            } catch (err) {
-                if (!cancelled) console.error('Deep-link chat failed:', err);
-            }
+            } catch { /* silent — phantom thread stays open */ }
         })();
+
         return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [initialUserId]);
+    }, [initialUser?.id]);
 
     // Scroll to bottom when new messages arrive (only if near the bottom).
     useEffect(() => {
@@ -390,11 +408,18 @@ const DirectInbox = ({ currentUser, initialUserId = null, onConsumed, onUnreadCh
 
         try {
             await sendMessage(convId, text);
+            // Mark the optimistic message as confirmed (show tick) BEFORE loadThread
+            // replaces it — this prevents the blink caused by key change on remount.
+            setMessages(prev => prev.map(m =>
+                m.id === optimisticMsg.id ? { ...m, _optimistic: false } : m
+            ));
             // Replace optimistic message with real one from server.
             await loadThread(convId, { showSpinner: false });
         } catch (err) {
-            // Remove the optimistic message on failure.
-            setMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
+            // Mark the optimistic message as failed instead of removing it.
+            setMessages(prev => prev.map(m =>
+                m.id === optimisticMsg.id ? { ...m, _optimistic: false, _failed: true } : m
+            ));
             if (err?.locked || err?.status === 423) {
                 setNeedsPassword(true);
                 needsPasswordRef.current = true;
@@ -427,17 +452,28 @@ const DirectInbox = ({ currentUser, initialUserId = null, onConsumed, onUnreadCh
             // 2. Send the message.
             await sendMessage(convId, text);
 
-            // 3. Transition to the real thread — clear phantom state.
-            setPendingUser(null);
+            // 3. Clear phantom and jump straight into the real thread — no inbox
+            //    refresh first so there's zero flash back to the inbox list.
             setComposer('');
-            await refreshInbox();
-            openConversation(convId);
+            setPendingUser(null);
+            setActiveId(convId);
+            setMessages([]);
+            setThreadError('');
+            isScrolledUp.current = false;
+            setNeedsPassword(false);
+            needsPasswordRef.current = false;
+
+            // Load the thread immediately.
+            loadThread(convId, { showSpinner: true });
+
+            // Refresh inbox silently in background — don't await.
+            refreshInbox();
         } catch (err) {
             setThreadError(err.message || 'Failed to send');
         } finally {
             setSending(false);
         }
-    }, [composer, pendingUser, sending, refreshInbox, openConversation]);
+    }, [composer, pendingUser, sending, loadThread, refreshInbox]);
 
     // Typing indicator — debounced, fire on first keypress then stop after 3 s idle.
     const handleComposerChange = useCallback((value) => {
@@ -724,9 +760,18 @@ const DirectInbox = ({ currentUser, initialUserId = null, onConsumed, onUnreadCh
                                 const mine = msg.senderId === meId;
                                 return (
                                     <div key={msg.id} className={`flex w-full ${mine ? 'justify-end' : 'justify-start'}`}>
-                                        <div className={`max-w-[78%] rounded-2xl px-3.5 py-2 ${mine ? 'rounded-br-sm bg-emerald-500 text-black' : 'rounded-bl-sm border border-white/10 bg-white/[0.06] text-gray-100'}`}>
+                                        <div className={`max-w-[78%] rounded-2xl px-3.5 py-2 transition-opacity ${mine ? 'rounded-br-sm bg-emerald-500 text-black' : 'rounded-bl-sm border border-white/10 bg-white/[0.06] text-gray-100'} ${msg._optimistic ? 'opacity-70' : 'opacity-100'} ${msg._failed ? 'bg-red-500/80' : ''}`}>
                                             <p className="whitespace-pre-line break-words text-[13px] leading-relaxed">{msg.content}</p>
-                                            <p className={`mt-1 text-right text-[9px] ${mine ? 'text-black/60' : 'text-gray-500'}`}>{formatClock(msg.createdAt)}</p>
+                                            <div className={`mt-1 flex items-center justify-end gap-1 text-[9px] ${mine ? 'text-black/60' : 'text-gray-500'}`}>
+                                                <span>{formatClock(msg.createdAt)}</span>
+                                                {mine && (
+                                                    msg._failed
+                                                        ? <AlertCircle size={10} className="text-white" />
+                                                        : msg._optimistic
+                                                            ? <Clock size={9} className="opacity-60 animate-pulse" />
+                                                            : <Check size={10} />
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 );
