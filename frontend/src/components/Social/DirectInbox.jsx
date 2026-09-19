@@ -78,6 +78,11 @@ const DirectInbox = ({ currentUser, initialUserId = null, onUnreadChange, onExit
     const [lockBusy, setLockBusy]         = useState(false);
     const [lockError, setLockError]       = useState('');
 
+    // ── Phantom thread (deep-link: open chat without creating convo yet) ───────
+    // Set when the user clicks "Message" on a profile. Cleared when they send
+    // their first message (which creates the real convo) or back out.
+    const [pendingUser, setPendingUser]   = useState(null); // { id, username, name, avatarUrl }
+
     // ── Refs ───────────────────────────────────────────────────────────────────
     const scrollRef       = useRef(null);
     const typingTimeout   = useRef(null);
@@ -229,17 +234,38 @@ const DirectInbox = ({ currentUser, initialUserId = null, onUnreadChange, onExit
         if (activeId === null) refreshInbox();
     }, [activeId, refreshInbox]);
 
-    // Deep-link: open (or create) thread for a specific user.
+    // Deep-link: open a phantom thread for a specific user WITHOUT creating a
+    // conversation. The conversation is only created when the first message is sent.
+    // If the user backs out without sending, nothing is persisted.
     useEffect(() => {
         if (!initialUserId) return;
         let cancelled = false;
         (async () => {
             try {
-                const res = await createConversation({ participantIds: [initialUserId] });
-                if (!cancelled && res?.success) {
-                    await refreshInbox();
-                    openConversation(res.data.id);
+                // First check if we already have a real conversation with this user.
+                const inboxRes = await listConversations();
+                if (cancelled) return;
+                if (inboxRes?.success) {
+                    const existing = (inboxRes.data || []).find((conv) =>
+                        !conv.isGroup && (conv.others || []).some((o) => o.id === initialUserId)
+                    );
+                    if (existing) {
+                        // Real convo exists — open it directly, no phantom needed.
+                        setConversations(inboxRes.data);
+                        openConversation(existing.id);
+                        return;
+                    }
                 }
+                // No existing convo — resolve the user's display info for the phantom header.
+                const userRes = await searchChatUsers('', 20);
+                if (cancelled) return;
+                const found = (userRes?.data || []).find((u) => u.id === initialUserId);
+                const profile = found
+                    ? { id: found.id, username: found.username || found.name, name: found.name, avatarUrl: found.profileImage }
+                    : { id: initialUserId, username: 'User', name: 'User', avatarUrl: null };
+                setPendingUser(profile);
+                setActiveId(null);
+                setComposer('');
             } catch (err) {
                 if (!cancelled) console.error('Deep-link chat failed:', err);
             }
@@ -379,6 +405,37 @@ const DirectInbox = ({ currentUser, initialUserId = null, onUnreadChange, onExit
         }
     }, [composer, sending, loadThread, meId, scrollToBottom]);
 
+    // ─────────────────────────────────────────────────────────────────────────
+    // Phantom-thread send — creates the conversation on the fly then sends.
+    // Nothing is persisted if the user exits without sending.
+    // ─────────────────────────────────────────────────────────────────────────
+    const handlePendingSend = useCallback(async (e) => {
+        e?.preventDefault();
+        const text = composer.trim();
+        if (!text || !pendingUser || sending) return;
+        setSending(true);
+        setThreadError('');
+        try {
+            // 1. Create the real conversation now.
+            const convRes = await createConversation({ participantIds: [pendingUser.id] });
+            if (!convRes?.success) throw new Error('Could not start conversation');
+            const convId = convRes.data.id;
+
+            // 2. Send the message.
+            await sendMessage(convId, text);
+
+            // 3. Transition to the real thread — clear phantom state.
+            setPendingUser(null);
+            setComposer('');
+            await refreshInbox();
+            openConversation(convId);
+        } catch (err) {
+            setThreadError(err.message || 'Failed to send');
+        } finally {
+            setSending(false);
+        }
+    }, [composer, pendingUser, sending, refreshInbox, openConversation]);
+
     // Typing indicator — debounced, fire on first keypress then stop after 3 s idle.
     const handleComposerChange = useCallback((value) => {
         setComposer(value);
@@ -471,7 +528,7 @@ const DirectInbox = ({ currentUser, initialUserId = null, onUnreadChange, onExit
         <div className="synapse-chat flex h-full min-h-0 w-full flex-col bg-black text-white md:flex-row">
 
             {/* ── Inbox sidebar ── */}
-            <div className={`flex w-full flex-col border-white/5 bg-[#070707] md:w-[340px] md:shrink-0 md:border-r ${activeId ? 'hidden md:flex' : 'flex'} min-h-0 flex-1 md:flex-none`}>
+            <div className={`flex w-full flex-col border-white/5 bg-[#070707] md:w-[340px] md:shrink-0 md:border-r ${(activeId || pendingUser) ? 'hidden md:flex' : 'flex'} min-h-0 flex-1 md:flex-none`}>
                 <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3.5">
                     {onExit && (
                         <button onClick={onExit} aria-label="Back to feed"
@@ -546,8 +603,61 @@ const DirectInbox = ({ currentUser, initialUserId = null, onUnreadChange, onExit
             </div>
 
             {/* ── Thread pane ── */}
-            <div className={`min-h-0 flex-1 flex-col bg-[#080808] ${activeId ? 'flex' : 'hidden md:flex'}`}>
-                {!activeConversation ? (
+            <div className={`min-h-0 flex-1 flex-col bg-[#080808] ${(activeId || pendingUser) ? 'flex' : 'hidden md:flex'}`}>
+                {/* ── Phantom thread (new conversation, not yet created) ── */}
+                {!activeId && pendingUser ? (
+                    <>
+                        {/* Header */}
+                        <div className="flex items-center gap-3 border-b border-white/10 bg-[#070707] px-3 py-3 md:px-5">
+                            <button onClick={() => { setPendingUser(null); setComposer(''); setThreadError(''); }}
+                                aria-label="Back to inbox"
+                                className="rounded-full p-2 text-gray-400 hover:bg-white/10 hover:text-white">
+                                <ChevronLeft size={18} />
+                            </button>
+                            <ChatAvatar user={{ username: pendingUser.username, name: pendingUser.name, profileImage: pendingUser.avatarUrl }} size={40} />
+                            <div className="min-w-0 flex-1">
+                                <p className="truncate text-[13px] font-bold text-white">
+                                    {pendingUser.username || pendingUser.name}
+                                </p>
+                                <p className="text-[11px] text-gray-500">Start a new conversation</p>
+                            </div>
+                        </div>
+
+                        {/* Empty messages area */}
+                        <div className="hide-scrollbar min-h-0 flex-1 overflow-y-auto px-3 py-4 md:px-5"
+                            style={{
+                                backgroundImage: 'url(/chat-wallpaper.svg)',
+                                backgroundSize: 'cover',
+                                backgroundRepeat: 'no-repeat',
+                                backgroundPosition: 'center',
+                            }}>
+                            {threadError && (
+                                <p className="py-4 text-center text-[12px] text-red-400">{threadError}</p>
+                            )}
+                            <p className="py-10 text-center text-[12px] text-gray-600">
+                                Say hello to {pendingUser.username || pendingUser.name} 👋
+                            </p>
+                        </div>
+
+                        {/* Composer */}
+                        <form onSubmit={handlePendingSend}
+                            className="shrink-0 border-t border-white/10 bg-[#070707] px-3 py-3 md:px-5">
+                            <div className="flex items-center gap-2">
+                                <input
+                                    value={composer}
+                                    onChange={(e) => setComposer(e.target.value)}
+                                    placeholder={`Message ${pendingUser.username || pendingUser.name}...`}
+                                    autoFocus
+                                    className="min-w-0 flex-1 rounded-full border border-white/10 bg-white/5 px-4 py-2.5 text-[13px] text-white outline-none placeholder:text-gray-600 focus:border-emerald-500/50" />
+                                <button type="submit" disabled={!composer.trim() || sending}
+                                    aria-label="Send message"
+                                    className="shrink-0 rounded-full bg-emerald-500 p-2.5 text-black transition-all hover:bg-emerald-400 disabled:opacity-30">
+                                    <Send size={16} />
+                                </button>
+                            </div>
+                        </form>
+                    </>
+                ) : !activeConversation ? (
                     <div className="hidden flex-1 flex-col items-center justify-center px-8 text-center md:flex">
                         <span className="flex h-16 w-16 items-center justify-center rounded-3xl border border-white/10 bg-white/[0.03] text-gray-500">
                             <MessageCircle size={26} />
