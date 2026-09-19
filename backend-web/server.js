@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { prettyJSON } from 'hono/pretty-json';
+import getPrisma from './prisma/db.js';
 
 // Import Routes
 import authRoutes from './routes/authRoutes.js';
@@ -9,16 +10,12 @@ import userRoutes from './routes/userRoutes.js';
 import socialRoutes from './routes/socialRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
-import getPrisma from './prisma/db.js';
 
 const app = new Hono();
 
-// 1. UNIVERSAL CORS (Hono Official Middleware)
-// This is the most reliable way to handle CORS in Hono/Workers
+// 1. UNIVERSAL CORS
 app.use('*', cors({
     origin: (origin) => {
-        // Echo back the origin to support credentials: true
-        // If no origin (direct access), use allow-all
         return origin || '*';
     },
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -52,17 +49,14 @@ app.get('/api/test-db', async (c) => {
     }
 });
 
-// Professional Error Handling
+// Error handling
 app.onError((err, c) => {
     console.error(`[Neural Crash]: ${err.message}`);
-
-    // Fallback: Ensure CORS headers are still sent even if Hono's middleware fails
     const origin = c.req.header('Origin');
     if (origin) {
         c.header('Access-Control-Allow-Origin', origin);
         c.header('Access-Control-Allow-Credentials', 'true');
     }
-
     return c.json({
         success: false,
         error: {
@@ -85,11 +79,9 @@ app.route('/api/social', socialRoutes);
 app.route('/api/admin', adminRoutes);
 app.route('/api/ai', aiRoutes);
 
-// ── Scheduled keep-alive: runs every 4 minutes via Cloudflare Cron.
-// Fires a lightweight DB query to prevent Neon from auto-suspending.
+// ── Scheduled keep-alive: fires every 4 minutes to prevent Neon DB auto-suspend.
 const scheduled = async (event, env, ctx) => {
     try {
-        const getPrisma = (await import('./prisma/db.js')).default;
         const db = getPrisma(env.DATABASE_URL);
         await db.$queryRaw`SELECT 1`;
         console.log('[Cron] DB keep-alive OK');
