@@ -1,6 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { PrismaLibSQL } from '@prisma/adapter-libsql';
-import { createClient } from '@libsql/client';
+import { PrismaLibSql } from '@prisma/adapter-libsql';
 
 const getPrisma = (envOrUrl) => {
     let databaseUrl, authToken;
@@ -18,17 +17,14 @@ const getPrisma = (envOrUrl) => {
     if (!databaseUrl) throw new Error('DATABASE_URL is missing.');
     if (!authToken) throw new Error('TURSO_AUTH_TOKEN is missing.');
     
-    // Create libsql client directly
-    const libsql = createClient({
+    // Use PrismaLibSql factory class
+    const adapter = new PrismaLibSql({
         url: databaseUrl,
         authToken: authToken
     });
     
-    // Use PrismaLibSQL adapter (not factory class)
-    const adapter = new PrismaLibSQL(libsql);
-    
     return new PrismaClient({ 
-        adapter, 
+        driverAdapters: adapter, 
         log: ['error']
     });
 };
