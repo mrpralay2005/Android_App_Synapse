@@ -19,7 +19,7 @@ const canUsePreview = (c, user) => {
 export const register = async (c) => {
     try {
         // Preview is intentionally a closed test environment. Accounts are
-        // prepared in its isolated Neon branch, never registered from the UI.
+        // prepared separately, never registered from the UI.
         if (isPreviewMode(c)) return previewAccessDenied(c);
         const { name, username, email, password } = await c.req.json();
         const prisma = getPrisma(c.env);

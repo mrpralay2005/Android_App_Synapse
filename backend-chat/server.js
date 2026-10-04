@@ -47,9 +47,9 @@ app.route('/api/chat', chatRoutes);
 // ── Scheduled keep-alive: runs every 4 minutes via Cloudflare Cron.
 const scheduled = async (event, env, ctx) => {
     try {
-        const db = getChatPrisma(env.DATABASE_URL);
+        const db = getChatPrisma(env);
         await db.$queryRaw`SELECT 1`;
-        console.log('[Cron] Chat DB keep-alive OK');
+        console.log('[Cron] Chat Turso DB keep-alive OK');
     } catch (e) {
         console.error('[Cron] Chat DB keep-alive failed:', e.message);
     }

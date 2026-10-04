@@ -328,11 +328,8 @@ export const getMessages = async (c) => {
             take: limit
         });
 
-        // Mark read up to now.
-        await prisma.chatParticipant.update({
-            where: { id: participant.id },
-            data: { lastReadAt: new Date() }
-        });
+        // Mark read up to now using raw SQL for Turso
+        await prisma.$executeRaw`UPDATE chatParticipant SET lastReadAt = ${new Date().toISOString()} WHERE id = ${participant.id}`;
 
         return c.json({
             success: true,
@@ -374,14 +371,10 @@ export const sendMessage = async (c) => {
         const message = await prisma.chatMessage.create({
             data: { conversationId, senderId: viewer.userId, content: text }
         });
-        await prisma.chatConversation.update({
-            where: { id: conversationId },
-            data: { updatedAt: new Date() }
-        });
-        await prisma.chatParticipant.update({
-            where: { id: participant.id },
-            data: { lastReadAt: new Date(), typingAt: null }
-        });
+        
+        const now = new Date().toISOString();
+        await prisma.$executeRaw`UPDATE chatConversation SET updatedAt = ${now} WHERE id = ${conversationId}`;
+        await prisma.$executeRaw`UPDATE chatParticipant SET lastReadAt = ${now}, typingAt = NULL WHERE id = ${participant.id}`;
 
         return c.json({ success: true, data: message }, 201);
     } catch (error) {
@@ -457,10 +450,7 @@ export const setConversationPassword = async (c) => {
                 const ok = await bcrypt.compare(String(currentPassword), conversation.passwordHash);
                 if (!ok) return c.json({ success: false, locked: true, error: 'Incorrect chat password' }, 401);
             }
-            await prisma.chatConversation.update({
-                where: { id: conversationId },
-                data: { passwordHash: null, passwordSalt: null, passwordSetBy: null, passwordSetAt: null }
-            });
+            await prisma.$executeRaw`UPDATE chatConversation SET passwordHash = NULL, passwordSalt = NULL, passwordSetBy = NULL, passwordSetAt = NULL WHERE id = ${conversationId}`;
             return c.json({ success: true, locked: false });
         }
 
@@ -517,10 +507,8 @@ export const setTyping = async (c) => {
         const participant = await requireParticipant(prisma, conversationId, viewer.userId);
         if (!participant) return c.json({ success: false, error: 'Not a member of this conversation' }, 403);
 
-        await prisma.chatParticipant.update({
-            where: { id: participant.id },
-            data: { typingAt: typing ? new Date() : null }
-        });
+        const typingTime = typing ? new Date().toISOString() : null;
+        await prisma.$executeRaw`UPDATE chatParticipant SET typingAt = ${typingTime} WHERE id = ${participant.id}`;
 
         return c.json({ success: true });
     } catch (error) {
