@@ -50,8 +50,14 @@ const LoginBox = ({ onSwitch, onBack, onLoginSuccess, onForgot, previewMode = fa
     const handleSubmit = async (e) => {
         e.preventDefault();
         const enteredUsername = formData.username.trim().toLowerCase();
-        const approvedUsername = previewTestUsername.trim().toLowerCase();
-        if (previewMode && (!approvedUsername || enteredUsername !== approvedUsername)) {
+        
+        // Support comma-separated list of approved usernames
+        const approvedUsernames = previewTestUsername
+            .split(',')
+            .map(u => u.trim().toLowerCase())
+            .filter(Boolean);
+            
+        if (previewMode && approvedUsernames.length > 0 && !approvedUsernames.includes(enteredUsername)) {
             setStatus({ type: 'error', message: 'Private preview: use the approved test account only.' });
             return;
         }
