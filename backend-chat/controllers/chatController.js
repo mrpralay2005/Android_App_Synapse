@@ -99,7 +99,7 @@ const requireUnlocked = (c, conversation, viewerId) => {
 export const searchChatUsers = async (c) => {
     try {
         const viewer = c.get('user');
-        const prisma = getChatPrisma(c.env.DATABASE_URL);
+        const prisma = getChatPrisma(c.env);
 
         const query = (c.req.query('q') || '').trim();
         const limit = Math.min(Math.max(parseInt(c.req.query('limit'), 10) || 10, 1), 100);
@@ -128,7 +128,7 @@ export const searchChatUsers = async (c) => {
 export const listConversations = async (c) => {
     try {
         const viewer = c.get('user');
-        const prisma = getChatPrisma(c.env.DATABASE_URL);
+        const prisma = getChatPrisma(c.env);
 
         const memberships = await prisma.chatParticipant.findMany({
             where: { userId: viewer.userId },
@@ -226,7 +226,7 @@ export const listConversations = async (c) => {
 export const createConversation = async (c) => {
     try {
         const viewer = c.get('user');
-        const prisma = getChatPrisma(c.env.DATABASE_URL);
+        const prisma = getChatPrisma(c.env);
         const { participantIds, title, password } = await c.req.json();
 
         const ids = Array.from(
@@ -302,7 +302,7 @@ export const createConversation = async (c) => {
 export const getMessages = async (c) => {
     try {
         const viewer = c.get('user');
-        const prisma = getChatPrisma(c.env.DATABASE_URL);
+        const prisma = getChatPrisma(c.env);
         const conversationId = asInt(c.req.param('id'));
         if (!conversationId) return c.json({ success: false, error: 'Invalid conversation' }, 400);
 
@@ -351,7 +351,7 @@ export const getMessages = async (c) => {
 export const sendMessage = async (c) => {
     try {
         const viewer = c.get('user');
-        const prisma = getChatPrisma(c.env.DATABASE_URL);
+        const prisma = getChatPrisma(c.env);
         const conversationId = asInt(c.req.param('id'));
         if (!conversationId) return c.json({ success: false, error: 'Invalid conversation' }, 400);
 
@@ -397,7 +397,7 @@ export const sendMessage = async (c) => {
 export const unlockConversation = async (c) => {
     try {
         const viewer = c.get('user');
-        const prisma = getChatPrisma(c.env.DATABASE_URL);
+        const prisma = getChatPrisma(c.env);
         const conversationId = asInt(c.req.param('id'));
         if (!conversationId) return c.json({ success: false, error: 'Invalid conversation' }, 400);
 
@@ -437,7 +437,7 @@ export const unlockConversation = async (c) => {
 export const setConversationPassword = async (c) => {
     try {
         const viewer = c.get('user');
-        const prisma = getChatPrisma(c.env.DATABASE_URL);
+        const prisma = getChatPrisma(c.env);
         const conversationId = asInt(c.req.param('id'));
         if (!conversationId) return c.json({ success: false, error: 'Invalid conversation' }, 400);
 
@@ -509,7 +509,7 @@ export const setConversationPassword = async (c) => {
 export const setTyping = async (c) => {
     try {
         const viewer = c.get('user');
-        const prisma = getChatPrisma(c.env.DATABASE_URL);
+        const prisma = getChatPrisma(c.env);
         const conversationId = asInt(c.req.param('id'));
         if (!conversationId) return c.json({ success: false, error: 'Invalid conversation' }, 400);
 
@@ -536,7 +536,7 @@ export const setTyping = async (c) => {
 export const getUnreadCount = async (c) => {
     try {
         const viewer = c.get('user');
-        const prisma = getChatPrisma(c.env.DATABASE_URL);
+        const prisma = getChatPrisma(c.env);
 
         const memberships = await prisma.chatParticipant.findMany({
             where: { userId: viewer.userId },

@@ -5,7 +5,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 export const getFeed = async (c) => {
     try {
         const user = c.get('user');
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
         const sort = c.req.query('sort') === 'latest' ? 'latest' : 'popular';
 
         const viewerId = user?.userId;
@@ -74,7 +74,7 @@ export const getNotifications = async (c) => {
     try {
         const viewerId = c.get('user')?.userId;
         if (!viewerId) return c.json({ success: false, error: 'Neural authorization missing' }, 401);
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
         const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
         const viewer = await prisma.user.findUnique({ where: { id: viewerId }, select: { notificationClearedAt: true, profileVisitAlerts: true, notificationPostAlerts: true, notificationStoryAlerts: true, notificationSecurityAlerts: true } });
         const activitySince = viewer?.notificationClearedAt && viewer.notificationClearedAt > since ? viewer.notificationClearedAt : since;
@@ -130,7 +130,7 @@ export const clearNotifications = async (c) => {
     try {
         const viewerId = c.get('user')?.userId;
         if (!viewerId) return c.json({ success: false, error: 'Neural authorization missing' }, 401);
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
         await prisma.user.update({ where: { id: viewerId }, data: { notificationClearedAt: new Date() } });
         return c.json({ success: true, message: 'Activity cleared' });
     } catch (error) {
@@ -180,7 +180,7 @@ export const createPost = async (c) => {
     try {
         const { caption, mediaUrl, type, postPassword, thumbnailUrl } = await c.req.json();
         const user = c.get('user');
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
 
         if (!user) return c.json({ success: false, error: "Identity missing" }, 401);
         if (!mediaUrl) return c.json({ success: false, error: "Media resource required" }, 400);
@@ -220,7 +220,7 @@ export const toggleLike = async (c) => {
     try {
         const postId = parseInt(c.req.param('id'));
         const user = c.get('user');
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
 
         const existingLike = await prisma.like.findUnique({
             where: {
@@ -254,7 +254,7 @@ export const addComment = async (c) => {
         const postId = parseInt(c.req.param('id'));
         const { content } = await c.req.json();
         const user = c.get('user');
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
 
         if (!content) return c.json({ success: false, error: "Synapse content required" }, 400);
 
@@ -281,7 +281,7 @@ export const toggleSave = async (c) => {
     try {
         const postId = parseInt(c.req.param('id'));
         const user = c.get('user');
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
 
         const existingSave = await prisma.savedPost.findUnique({
             where: {
@@ -312,7 +312,7 @@ export const toggleSave = async (c) => {
 export const getComments = async (c) => {
     try {
         const postId = parseInt(c.req.param('id'));
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
 
         const comments = await prisma.comment.findMany({
             where: { postId },
@@ -332,7 +332,7 @@ export const getComments = async (c) => {
 
 export const getStories = async (c) => {
     try {
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
         const now = new Date();
         const viewerId = c.get('user')?.userId;
 
@@ -376,7 +376,7 @@ export const createStory = async (c) => {
     try {
         const { mediaUrl, type } = await c.req.json();
         const user = c.get('user');
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
 
         if (!mediaUrl) return c.json({ success: false, error: "Media resource required" }, 400);
 
@@ -416,7 +416,7 @@ export const deleteStory = async (c) => {
     try {
         const storyId = parseInt(c.req.param('id'));
         const user = c.get('user');
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
 
         const story = await prisma.story.findUnique({
             where: { id: storyId }
@@ -439,7 +439,7 @@ export const viewStory = async (c) => {
     try {
         const storyId = parseInt(c.req.param('id'));
         const user = c.get('user');
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
 
         // Optimization: Don't fetch story body just to check owner, but we need ownerId.
         // Assuming we might need to check if story exists anyway.
@@ -491,7 +491,7 @@ export const replyToStory = async (c) => {
         const storyId = parseInt(c.req.param('id'));
         const { content } = await c.req.json();
         const user = c.get('user');
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
 
         if (!content) return c.json({ success: false, error: "Content required" }, 400);
 
@@ -519,7 +519,7 @@ export const getStoryDetails = async (c) => {
     try {
         const storyId = parseInt(c.req.param('id'));
         const user = c.get('user');
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
 
         const story = await prisma.story.findUnique({ where: { id: storyId } });
         if (!story) return c.json({ success: false, error: "Story not found" }, 404);

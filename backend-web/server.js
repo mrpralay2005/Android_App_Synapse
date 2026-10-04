@@ -43,7 +43,7 @@ app.get('/api/debug-env', (c) => {
 
 app.get('/api/test-db', async (c) => {
     try {
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
         const userCount = await prisma.user.count();
         return c.json({ success: true, message: "Connection Established", userCount });
     } catch (err) {
