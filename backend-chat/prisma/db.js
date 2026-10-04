@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { PrismaLibSql } from '@prisma/adapter-libsql';
+import { PrismaLibSQL } from '@prisma/adapter-libsql';
 
 const getChatPrisma = (envOrUrl) => {
     let databaseUrl, authToken;
@@ -18,7 +18,7 @@ const getChatPrisma = (envOrUrl) => {
     if (!authToken) throw new Error('CHAT TURSO_AUTH_TOKEN is missing.');
     
     // Follow exact Turso/Prisma docs pattern
-    const adapter = new PrismaLibSql({
+    const adapter = new PrismaLibSQL({
         url: databaseUrl,
         authToken
     });
