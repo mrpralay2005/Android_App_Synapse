@@ -92,7 +92,8 @@ export const verifyOTP = async (c) => {
         if (user.otp !== otp) return c.json({ success: false, error: "Invalid neural access code" }, 400);
         if (new Date() > user.otpExpires) return c.json({ success: false, error: "Neural code expired" }, 400);
 
-        await prisma.user.update({
+        // Use updateMany for Turso compatibility (avoids cross-database reference issues)
+        await prisma.user.updateMany({
             where: { id: user.id },
             data: {
                 isVerified: true,
