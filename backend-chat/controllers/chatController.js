@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import getChatPrisma from '../prisma/db.js';
+import getChatPrisma, { getWebClient } from '../prisma/db.js';
 
 const MIN_PASSWORD_LENGTH = 4;
 const MAX_PASSWORD_LENGTH = 72;
@@ -99,22 +99,21 @@ const requireUnlocked = (c, conversation, viewerId) => {
 export const searchChatUsers = async (c) => {
     try {
         const viewer = c.get('user');
-        const prisma = getChatPrisma(c.env);
+        const webClient = getWebClient(c.env);
 
         const query = (c.req.query('q') || '').trim();
         const limit = Math.min(Math.max(parseInt(c.req.query('limit'), 10) || 10, 1), 100);
 
-        const users = await prisma.$queryRaw`
-            SELECT id, username, name, "profileImage"
-            FROM "User"
-            WHERE id <> ${viewer.userId}
-              AND role <> 'ADMIN'::"Role"
-              AND (${query} = '' OR username ILIKE ${`%${query}%`} OR COALESCE(name, '') ILIKE ${`%${query}%`})
-            ORDER BY "createdAt" DESC
-            LIMIT ${limit}
-        `;
+        // Use libsql client directly for cross-database queries
+        const result = await webClient.execute({
+            sql: `SELECT id, username, name, profileImage FROM User
+                  WHERE id <> ? AND role <> 'ADMIN'
+                  AND (? = '' OR username LIKE ? OR COALESCE(name, '') LIKE ?)
+                  ORDER BY createdAt DESC LIMIT ?`,
+            args: [viewer.userId, query, `%${query}%`, `%${query}%`, limit]
+        });
 
-        return c.json({ success: true, data: users });
+        return c.json({ success: true, data: result.rows });
     } catch (error) {
         console.error('Chat user directory error:', error);
         return c.json({ success: false, error: 'Failed to load people' }, 500);
@@ -129,6 +128,7 @@ export const listConversations = async (c) => {
     try {
         const viewer = c.get('user');
         const prisma = getChatPrisma(c.env);
+        const webClient = getWebClient(c.env);
 
         const memberships = await prisma.chatParticipant.findMany({
             where: { userId: viewer.userId },
@@ -142,8 +142,7 @@ export const listConversations = async (c) => {
                         }
                     }
                 }
-            },
-            orderBy: { conversation: { updatedAt: 'desc' } }
+            }
         });
 
         const otherIds = new Set();
@@ -153,13 +152,14 @@ export const listConversations = async (c) => {
             });
         });
 
-        const others = otherIds.size
-            ? await prisma.$queryRaw`
-                SELECT id, username, name, "profileImage" FROM "User"
-                WHERE id = ANY(${Array.from(otherIds)})
-              `
-            : [];
-        const otherById = new Map(others.map((u) => [u.id, u]));
+        let otherById = new Map();
+        if (otherIds.size > 0) {
+            const othersList = await webClient.execute({
+                sql: `SELECT id, username, name, profileImage FROM User WHERE id IN (${Array.from(otherIds).map(() => '?').join(',')})`,
+                args: Array.from(otherIds)
+            });
+            otherById = new Map(othersList.rows.map((u) => [u.id, u]));
+        }
         const typingFreshSince = new Date(Date.now() - TYPING_FRESH_MS);
 
         const conversations = memberships.map((m) => {
@@ -259,13 +259,13 @@ export const createConversation = async (c) => {
         // Reuse an existing 1:1 thread instead of spawning duplicates.
         if (ids.length === 1 && !title) {
             const existing = await prisma.$queryRaw`
-                SELECT "conversationId" FROM "ChatParticipant"
-                WHERE "conversationId" IN (
-                    SELECT "conversationId" FROM "ChatParticipant" WHERE "userId" = ${viewer.userId}
+                SELECT conversationId FROM ChatParticipant
+                WHERE conversationId IN (
+                    SELECT conversationId FROM ChatParticipant WHERE userId = ${viewer.userId}
                 )
-                GROUP BY "conversationId"
+                GROUP BY conversationId
                 HAVING COUNT(*) = 2
-                   AND BOOL_AND("userId" IN (${viewer.userId}, ${ids[0]}))
+                   AND SUM(CASE WHEN userId IN (${viewer.userId}, ${ids[0]}) THEN 1 ELSE 0 END) = 2
             `;
             if (existing?.length) {
                 return c.json({ success: true, data: { id: existing[0].conversationId, reused: true } }, 200);

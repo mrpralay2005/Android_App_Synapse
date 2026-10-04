@@ -29,6 +29,20 @@ const getChatPrisma = (envOrUrl) => {
     return prisma;
 };
 
+// Web database connection for User queries
+export const getWebClient = (env) => {
+    const databaseUrl = env.WEB_DATABASE_URL;
+    const authToken = env.WEB_TURSO_AUTH_TOKEN;
+    
+    if (!databaseUrl) throw new Error('WEB_DATABASE_URL is missing.');
+    if (!authToken) throw new Error('WEB_TURSO_AUTH_TOKEN is missing.');
+    
+    return createClient({
+        url: databaseUrl,
+        authToken
+    });
+};
+
 export const retryTransientDatabaseOperation = async (operation, attempts = 3) => {
     let lastError;
     for (let attempt = 0; attempt < attempts; attempt++) {

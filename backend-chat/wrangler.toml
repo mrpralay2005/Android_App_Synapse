@@ -3,11 +3,13 @@ main = "server.js"
 compatibility_date = "2025-01-01"
 compatibility_flags = [ "nodejs_compat" ]
 
-# DATABASE_URL must be the dedicated chat Neon branch. JWT_SECRET must be the
-# same value used by the production synapse-backend Worker: chat verifies the
-# login JWT issued there.  Values live in Cloudflare Worker secrets, never here.
+# DATABASE_URL = chat database (Turso)
+# WEB_DATABASE_URL = web database (Turso) - for User queries
+# TURSO_AUTH_TOKEN = auth token for chat database
+# WEB_TURSO_AUTH_TOKEN = auth token for web database
+# JWT_SECRET = same value used by synapse-backend for token verification
 [secrets]
-required = [ "DATABASE_URL", "JWT_SECRET" ]
+required = [ "DATABASE_URL", "TURSO_AUTH_TOKEN", "WEB_DATABASE_URL", "WEB_TURSO_AUTH_TOKEN", "JWT_SECRET" ]
 
 # Keep Neon DB warm — runs every 4 minutes to prevent auto-suspend.
 [triggers]
@@ -17,7 +19,7 @@ crons = ["*/4 * * * *"]
 name = "synapse-chat-staging"
 
 [env.staging.secrets]
-required = [ "DATABASE_URL", "JWT_SECRET" ]
+required = [ "DATABASE_URL", "TURSO_AUTH_TOKEN", "WEB_DATABASE_URL", "WEB_TURSO_AUTH_TOKEN", "JWT_SECRET" ]
 
 [observability]
 enabled = true
