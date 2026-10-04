@@ -8,11 +8,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
-  USER
-  ADMIN
-}
-
 model User {
   id                              Int              @id @default(autoincrement())
   email                           String           @unique
@@ -21,7 +16,7 @@ model User {
   name                            String?
   bio                             String?          @default("Quantum Explorer in the SynapseX Realm")
   profileImage                    String? // No default value as requested
-  role                            Role             @default(USER)
+  role                            String           @default("USER") // USER or ADMIN
   riskScore                       Float?           @default(0.0)
   lastLogin                       DateTime?
   posts                           Post[]
@@ -59,7 +54,7 @@ model User {
   creatorHighResUploads           Boolean          @default(false)
   creatorAnonymousShield          Boolean          @default(false)
   creatorDeepAnalytics            Boolean          @default(false)
-  links                           Json?
+  links                           String?          // JSON stored as text
   notificationClearedAt           DateTime?
   pendingEmail                    String?          @unique
   emailChangeOtp                  String?
@@ -83,17 +78,12 @@ model PlatformUpdate {
   createdAt       DateTime @default(now())
 }
 
-enum MediaType {
-  IMAGE
-  VIDEO
-}
-
 model Post {
   id           Int         @id @default(autoincrement())
   caption      String?
   mediaUrl     String // Generic URL for both image and video
   thumbnailUrl String? // For video previews
-  type         MediaType   @default(IMAGE)
+  type         String      @default("IMAGE") // IMAGE or VIDEO
   postPassword String? // Password protection for specific posts
   userId       Int
   user         User        @relation(fields: [userId], references: [id])
@@ -140,7 +130,7 @@ model Comment {
 model Story {
   id        Int            @id @default(autoincrement())
   mediaUrl  String
-  type      MediaType      @default(IMAGE)
+  type      String         @default("IMAGE") // IMAGE or VIDEO
   userId    Int
   user      User           @relation(fields: [userId], references: [id])
   expiresAt DateTime
