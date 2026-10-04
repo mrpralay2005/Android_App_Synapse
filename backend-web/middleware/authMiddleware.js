@@ -38,7 +38,7 @@ const authenticateToken = async (c, next) => {
         // have explicitly kept Neural Presence enabled.
         try {
             const prisma = getPrisma(c.env);
-            await prisma.user.updateMany({ where: { id: user.userId }, data: { lastActiveAt: new Date() } });
+            await prisma.$executeRaw`UPDATE user SET lastActiveAt = ${new Date()} WHERE id = ${user.userId}`;
         } catch (presenceError) {
             // Presence must never prevent an otherwise valid authenticated request.
             console.warn('Presence update skipped:', presenceError?.message);

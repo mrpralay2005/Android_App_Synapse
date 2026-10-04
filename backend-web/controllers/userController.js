@@ -196,7 +196,7 @@ export const purgeActivity = async (c) => {
         const [storyViews, profileVisits] = await prisma.$transaction([
             prisma.storyView.deleteMany({ where: { userId } }),
             prisma.profileVisit.deleteMany({ where: { visitorId: userId } }),
-            prisma.user.updateMany({ where: { id: userId }, data: { notificationClearedAt: new Date() } })
+            prisma.$executeRaw`UPDATE user SET notificationClearedAt = ${new Date()} WHERE id = ${userId}`
         ]);
         return c.json({ success: true, data: { storyViewsCleared: storyViews.count, profileVisitsCleared: profileVisits.count } });
     } catch (error) {

@@ -172,10 +172,9 @@ export const login = async (c) => {
 
         // AUTO-VERIFY EXISTING USERS (FIX FOR OLD ACCOUNTS)
         if (user.isVerified === false && !user.otp) {
-            await retryTransientDatabaseOperation(() => prisma.user.updateMany({
-                where: { id: user.id },
-                data: { isVerified: true }
-            }));
+            await retryTransientDatabaseOperation(() => 
+                prisma.$executeRaw`UPDATE user SET isVerified = 1 WHERE id = ${user.id}`
+            );
         } else if (!user.isVerified) {
             return c.json({ success: false, error: "Neural link not verified. Please check your email." }, 403);
         }
@@ -204,10 +203,9 @@ export const login = async (c) => {
             }
         }
 
-        await retryTransientDatabaseOperation(() => prisma.user.updateMany({
-            where: { id: user.id },
-            data: { riskScore, lastLogin: new Date() }
-        }));
+        await retryTransientDatabaseOperation(() => 
+            prisma.$executeRaw`UPDATE user SET riskScore = ${riskScore}, lastLogin = ${new Date()} WHERE id = ${user.id}`
+        );
 
         const token = jwt.sign(
             { userId: user.id, username: user.username, role: user.role },
@@ -291,10 +289,7 @@ export const forgotPassword = async (c) => {
         const otp = Math.floor(1000 + Math.random() * 9000).toString();
         const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
 
-        await prisma.user.updateMany({
-            where: { id: user.id },
-            data: { otp, otpExpires }
-        });
+        await prisma.$executeRaw`UPDATE user SET otp = ${otp}, otpExpires = ${otpExpires} WHERE id = ${user.id}`;
 
         // Send reset OTP
         const emailSent = await sendResetOTP(email, otp, c.env);
@@ -329,15 +324,7 @@ export const resetPassword = async (c) => {
 
         const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-        await prisma.user.updateMany({
-            where: { id: user.id },
-            data: {
-                password: hashedPassword,
-                otp: null,
-                otpExpires: null,
-                isVerified: true // Auto-verify if they reset password
-            }
-        });
+        await prisma.$executeRaw`UPDATE user SET password = ${hashedPassword}, otp = NULL, otpExpires = NULL, isVerified = 1 WHERE id = ${user.id}`;
 
         return c.json({ success: true, message: "Neural key successfully recalibrated" });
     } catch (error) {
@@ -375,14 +362,9 @@ export const requestEmailChange = async (c) => {
         const emailSent = await sendEmailChangeOTP(normalizedEmail, otp, c.env);
         if (!emailSent) return c.json({ success: false, error: 'Unable to send the confirmation code. Please try again.' }, 502);
 
-        await prisma.user.updateMany({
-            where: { id: currentUser.id },
-            data: {
-                pendingEmail: normalizedEmail,
-                emailChangeOtp: otp,
-                emailChangeOtpExpires: new Date(Date.now() + 10 * 60 * 1000)
-            }
-        });
+        const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
+        await prisma.$executeRaw`UPDATE user SET pendingEmail = ${normalizedEmail}, emailChangeOtp = ${otp}, emailChangeOtpExpires = ${otpExpires} WHERE id = ${currentUser.id}`;
+        
         return c.json({ success: true, message: 'Confirmation code sent to your new email address' });
     } catch (error) {
         console.error('Email Change Request Error:', error);
@@ -407,15 +389,7 @@ export const confirmEmailChange = async (c) => {
             return c.json({ success: false, error: 'Invalid confirmation code' }, 400);
         }
 
-        await prisma.user.updateMany({
-            where: { id: currentUser.id },
-            data: {
-                email: currentUser.pendingEmail,
-                pendingEmail: null,
-                emailChangeOtp: null,
-                emailChangeOtpExpires: null
-            }
-        });
+        await prisma.$executeRaw`UPDATE user SET email = ${currentUser.pendingEmail}, pendingEmail = NULL, emailChangeOtp = NULL, emailChangeOtpExpires = NULL WHERE id = ${currentUser.id}`;
         
         // Fetch updated user for response
         const updatedUser = await prisma.user.findUnique({
