@@ -31,7 +31,15 @@ function App() {
     const [view, setView] = useState(() => localStorage.getItem('synapse_last_view') || 'landing');
     const [isLoading, setIsLoading] = useState(true);
     const [isExited, setIsExited] = useState(false);
-    const [otpEmail, setOtpEmail] = useState('');
+    const [otpEmail, setOtpEmail] = useState(() => sessionStorage.getItem('synapse_otp_email') || '');
+    
+    // Persist OTP email to sessionStorage
+    useEffect(() => {
+        if (otpEmail) {
+            sessionStorage.setItem('synapse_otp_email', otpEmail);
+            console.log('📧 OTP Email saved:', otpEmail);
+        }
+    }, [otpEmail]);
     const [isMobileView, setIsMobileView] = useState(() => {
         if (typeof window === 'undefined') return false;
         return window.innerWidth < 768;
