@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { setCookie, deleteCookie } from 'hono/cookie';
-import getPrisma, { getAuthPrisma, retryTransientDatabaseOperation } from '../prisma/db.js';
+import getPrisma from '../prisma/db.js';
 import { sendOTP, sendResetOTP, sendEmailChangeOTP } from '../utils/email.js';
 
 const isPreviewMode = (c) => c.env.PREVIEW_MODE === 'true';

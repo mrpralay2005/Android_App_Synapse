@@ -81,12 +81,12 @@ app.route('/api/social', socialRoutes);
 app.route('/api/admin', adminRoutes);
 app.route('/api/ai', aiRoutes);
 
-// ── Scheduled keep-alive: fires every 4 minutes to prevent Neon DB auto-suspend.
+// ── Scheduled keep-alive: fires every 4 minutes to prevent Turso DB auto-suspend.
 const scheduled = async (event, env, ctx) => {
     try {
-        const db = getPrisma(env.DATABASE_URL);
+        const db = getPrisma(env);
         await db.$queryRaw`SELECT 1`;
-        console.log('[Cron] DB keep-alive OK');
+        console.log('[Cron] Turso DB keep-alive OK');
     } catch (e) {
         console.error('[Cron] DB keep-alive failed:', e.message);
     }
