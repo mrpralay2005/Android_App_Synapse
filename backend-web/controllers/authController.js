@@ -411,22 +411,13 @@ export const getMe = async (c) => {
         const prisma = getPrisma(c.env);
         c.header('X-Synapse-Debug', 'v5-sync-active');
 
-        // Aggressively clear any conflicting domain cookies
-        deleteCookie(c, 'session_id', { path: '/', secure: true, sameSite: 'None' });
-        deleteCookie(c, 'synapse_token', { path: '/', secure: true, sameSite: 'None' });
+        // Get authenticated user from middleware
+        const authUser = c.get('user');
+        if (!authUser) return c.json({ success: false, error: "No neural link found" }, 401);
 
-        const cookieToken = c.req.cookie('synapse_token');
-        const authHeader = c.req.header('authorization');
-        const token = cookieToken || (authHeader?.startsWith('Bearer ') ? authHeader.split(' ')[1] : null);
-
-        if (!token) return c.json({ success: false, error: "No neural link found" }, 401);
-
-        // 2. Verify Token
-        const decoded = jwt.verify(token, c.env.JWT_SECRET || 'fallback_secret');
-
-        // 3. Get User
+        // Get full user data from database
         const user = await prisma.user.findUnique({
-            where: { id: decoded.userId }
+            where: { id: authUser.userId }
         });
 
         if (!user) return c.json({ success: false, error: "Identity corrupted" }, 404);
