@@ -1,32 +1,35 @@
 import { PrismaClient } from '@prisma/client';
-import { PrismaNeon } from '@prisma/adapter-neon';
-import { Pool, neonConfig } from '@neondatabase/serverless';
+import { PrismaLibSQL } from '@prisma/adapter-libsql';
+import { createClient } from '@libsql/client';
 
-// Configure Neon for Cloudflare Workers with aggressive connection management
-neonConfig.fetchConnectionCache = true;
-neonConfig.useSecureWebSocket = true;
-neonConfig.pipelineConnect = "password";
+// Single libSQL client instance - reuse across all requests in this Worker
+let globalClient = null;
 
-// Single pool instance - reuse across all requests in this Worker
-let globalPool = null;
-
-const getPrisma = (databaseUrl) => {
-    if (!databaseUrl) throw new Error('DATABASE_URL is missing.');
+const getPrisma = (envOrUrl) => {
+    let databaseUrl, authToken;
     
-    // Create pool only once per Worker instance
-    if (!globalPool) {
-        globalPool = new Pool({ 
-            connectionString: databaseUrl,
-            // Aggressive limits for Supabase free tier
-            max: 1, // Absolute minimum - one connection per Worker
-            min: 0, // No minimum connections
-            idleTimeoutMillis: 3000, // Close idle very fast (3s)
-            connectionTimeoutMillis: 3000, // Fail fast
-            maxUses: 1000, // Recycle connection after 1000 queries
+    // If passed an object with env vars, extract both
+    if (typeof envOrUrl === 'object' && envOrUrl !== null && !envOrUrl.startsWith) {
+        databaseUrl = envOrUrl.DATABASE_URL;
+        authToken = envOrUrl.TURSO_AUTH_TOKEN;
+    } else {
+        // Old style: just URL passed (for backwards compat during migration)
+        databaseUrl = envOrUrl;
+        authToken = process.env.TURSO_AUTH_TOKEN;
+    }
+    
+    if (!databaseUrl) throw new Error('DATABASE_URL is missing.');
+    if (!authToken) throw new Error('TURSO_AUTH_TOKEN is missing.');
+    
+    // Create libSQL client only once per Worker instance
+    if (!globalClient) {
+        globalClient = createClient({
+            url: databaseUrl,
+            authToken: authToken
         });
     }
     
-    const adapter = new PrismaNeon(globalPool);
+    const adapter = new PrismaLibSQL(globalClient);
     return new PrismaClient({ 
         adapter, 
         log: ['error']

@@ -27,7 +27,7 @@ export const getAllUsers = async (c) => {
     const denied = requireAdmin(c);
     if (denied) return denied;
     try {
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
         const users = await prisma.user.findMany({
             select: { id: true, username: true, email: true, name: true, role: true, riskScore: true, lastLogin: true, creatorVerificationStatus: true, creatorVerifiedAt: true },
             orderBy: { createdAt: 'desc' }
@@ -43,7 +43,7 @@ export const getAdminOverview = async (c) => {
     const denied = requireAdmin(c);
     if (denied) return denied;
     try {
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
         const [totalUsers, pendingVerifications, verifiedCreators, totalPosts, recentUpdates] = await Promise.all([
             prisma.user.count(), prisma.user.count({ where: { creatorVerificationStatus: 'PENDING' } }),
             prisma.user.count({ where: { creatorVerificationStatus: 'APPROVED' } }), prisma.post.count(),
@@ -59,7 +59,7 @@ export const getCreatorRequests = async (c) => {
     const denied = requireAdmin(c);
     if (denied) return denied;
     try {
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
         const requests = await prisma.user.findMany({ where: { creatorVerificationStatus: 'PENDING' }, select: { id: true, username: true, name: true, email: true, profileImage: true, createdAt: true, creatorVerificationRequestedAt: true }, orderBy: { creatorVerificationRequestedAt: 'asc' } });
         return c.json({ success: true, data: requests });
     } catch (error) {
@@ -75,7 +75,7 @@ export const reviewCreatorRequest = async (c) => {
         const { decision } = await c.req.json();
         if (!Number.isInteger(requestId) || !['APPROVED', 'REJECTED'].includes(decision)) return c.json({ success: false, error: 'A valid approval decision is required' }, 400);
         const admin = c.get('user');
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
         const account = await prisma.user.update({ where: { id: requestId }, data: { creatorVerificationStatus: decision, creatorVerifiedAt: decision === 'APPROVED' ? new Date() : null, creatorVerificationReviewedById: admin.userId }, select: { id: true, username: true, creatorVerificationStatus: true, creatorVerifiedAt: true } });
         return c.json({ success: true, data: account });
     } catch (error) {
@@ -87,7 +87,7 @@ export const getPlatformUpdates = async (c) => {
     const denied = requireAdmin(c);
     if (denied) return denied;
     try {
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
         return c.json({ success: true, data: await prisma.platformUpdate.findMany({ orderBy: { publishedAt: 'desc' }, include: { author: { select: { username: true } } } }) });
     } catch (error) {
         return c.json({ success: false, error: 'Unable to load release updates' }, 500);
@@ -101,7 +101,7 @@ export const getReleaseReadiness = async (c) => {
     const denied = requireAdmin(c);
     if (denied) return denied;
     try {
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
         const [latestCommit, latestRelease] = await Promise.all([
             getLatestMainCommit(c),
             prisma.platformUpdate.findFirst({
@@ -139,7 +139,7 @@ export const getReleaseReadiness = async (c) => {
 // to every signed-in SynapseX user in System Support.
 export const getLatestPlatformUpdate = async (c) => {
     try {
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
         const update = await prisma.platformUpdate.findFirst({
             where: { isPublished: true },
             orderBy: { publishedAt: 'desc' },
@@ -195,7 +195,7 @@ export const publishPlatformUpdate = async (c) => {
         }
 
         const admin = c.get('user');
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
         const update = await prisma.platformUpdate.create({
             data: { title: title.trim(), summary: summary.trim(), version: version.trim(), sourceCommitSha: latestCommit?.sha || null, authorId: admin.userId },
             include: { author: { select: { username: true } } }
@@ -213,7 +213,7 @@ export const getAiUsage = async (c) => {
     const denied = requireAdmin(c);
     if (denied) return denied;
     try {
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
 
         const now = new Date();
         const startOfDay   = new Date(now); startOfDay.setHours(0, 0, 0, 0);

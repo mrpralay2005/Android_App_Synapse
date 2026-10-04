@@ -3,7 +3,7 @@ import getPrisma, { retryTransientDatabaseOperation } from '../prisma/db.js';
 export const getProfile = async (c) => {
     const username = c.req.param('username');
     try {
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
         const viewerId = c.get('user')?.userId;
         const user = await prisma.user.findUnique({
             where: { username },
@@ -76,7 +76,7 @@ export const toggleFollow = async (c) => {
     try {
         const viewerId = c.get('user')?.userId;
         const username = c.req.param('username');
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
         
         const target = await retryTransientDatabaseOperation(() =>
             prisma.user.findUnique({ where: { username }, select: { id: true, username: true } })
@@ -124,7 +124,7 @@ export const toggleFollow = async (c) => {
 export const getSavedItems = async (c) => {
     try {
         const user = c.get('user');
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
 
         const saved = await prisma.savedPost.findMany({
             where: { userId: user.userId },
@@ -153,7 +153,7 @@ export const getSavedItems = async (c) => {
 export const exportArchive = async (c) => {
     try {
         const userId = c.get('user')?.userId;
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
         const [profile, posts, stories, comments, likes, savedPosts, followers, following] = await Promise.all([
             prisma.user.findUnique({ where: { id: userId }, select: { id: true, username: true, name: true, email: true, bio: true, profileImage: true, isPrivate: true, links: true, createdAt: true } }),
             prisma.post.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, select: { id: true, caption: true, mediaUrl: true, thumbnailUrl: true, type: true, createdAt: true, updatedAt: true, expiresAt: true } }),
@@ -176,7 +176,7 @@ export const exportArchive = async (c) => {
 export const purgeActivity = async (c) => {
     try {
         const userId = c.get('user')?.userId;
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
         const [storyViews, profileVisits] = await prisma.$transaction([
             prisma.storyView.deleteMany({ where: { userId } }),
             prisma.profileVisit.deleteMany({ where: { visitorId: userId } }),
@@ -193,7 +193,7 @@ export const recordProfileVisit = async (c) => {
     try {
         const visitorId = c.get('user')?.userId;
         const username = c.req.param('username');
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
         const owner = await prisma.user.findUnique({ where: { username }, select: { id: true } });
         if (!owner) return c.json({ success: false, error: 'Identity not found' }, 404);
         if (owner.id !== visitorId) {
@@ -209,7 +209,7 @@ export const recordProfileVisit = async (c) => {
 export const getAnalytics = async (c) => {
     try {
         const userId = c.get('user')?.userId;
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
         const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
         const [posts, followers, profileVisits, recentVisits] = await Promise.all([
             prisma.post.findMany({ where: { userId }, select: { _count: { select: { likes: true, comments: true } } } }),
@@ -248,7 +248,7 @@ export const updateProfile = async (c) => {
             creatorDeepAnalytics, requestCreatorVerification
         } = await c.req.json();
         const user = c.get('user');
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
 
         const updatedUser = await retryTransientDatabaseOperation(() =>
             prisma.user.update({
@@ -329,7 +329,7 @@ export const getResonance = async (c) => {
     try {
         const targetUsername = c.req.param('username');
         const currentUser = c.get('user');
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
 
         // Find posts liked by BOTH users
         const mutualPosts = await prisma.post.findMany({
@@ -355,7 +355,7 @@ export const getResonance = async (c) => {
 
 export const getSuggestedUsers = async (c) => {
     try {
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
         const limit = parseInt(c.req.query('limit')) || 10;
 
         // Fetch users for the story bar (suggested users)

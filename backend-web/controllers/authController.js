@@ -22,7 +22,7 @@ export const register = async (c) => {
         // prepared in its isolated Neon branch, never registered from the UI.
         if (isPreviewMode(c)) return previewAccessDenied(c);
         const { name, username, email, password } = await c.req.json();
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
 
         if (!email || !password || !username) {
             return c.json({ success: false, error: "Missing required fields" }, 400);
@@ -75,7 +75,7 @@ export const verifyOTP = async (c) => {
     try {
         if (isPreviewMode(c)) return previewAccessDenied(c);
         const { email, otp } = await c.req.json();
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
 
         const user = await prisma.user.findUnique({ where: { email } });
 
@@ -103,7 +103,7 @@ export const resendOTP = async (c) => {
     try {
         if (isPreviewMode(c)) return previewAccessDenied(c);
         const { email } = await c.req.json();
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
 
         if (!email) {
             return c.json({ success: false, error: "Email required for resend" }, 400);
@@ -278,7 +278,7 @@ export const forgotPassword = async (c) => {
     try {
         if (isPreviewMode(c)) return previewAccessDenied(c);
         const { email } = await c.req.json();
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
 
         const user = await prisma.user.findUnique({
             where: { email },
@@ -321,7 +321,7 @@ export const resetPassword = async (c) => {
     try {
         if (isPreviewMode(c)) return previewAccessDenied(c);
         const { email, otp, newPassword } = await c.req.json();
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
 
         const user = await prisma.user.findUnique({ where: { email } });
 
@@ -358,7 +358,7 @@ export const requestEmailChange = async (c) => {
         }
 
         const sessionUser = c.get('user');
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
         const currentUser = await prisma.user.findUnique({ where: { id: sessionUser.userId } });
         if (!currentUser) return c.json({ success: false, error: 'Neural record not found' }, 404);
         if (currentUser.email.toLowerCase() === normalizedEmail) {
@@ -397,7 +397,7 @@ export const confirmEmailChange = async (c) => {
         if (isPreviewMode(c)) return previewAccessDenied(c);
         const { otp } = await c.req.json();
         const sessionUser = c.get('user');
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
         const currentUser = await prisma.user.findUnique({ where: { id: sessionUser.userId } });
         if (!currentUser?.pendingEmail || !currentUser.emailChangeOtp || !currentUser.emailChangeOtpExpires) {
             return c.json({ success: false, error: 'No email change is awaiting confirmation' }, 400);
@@ -444,7 +444,7 @@ export const logout = async (c) => {
 
 export const getMe = async (c) => {
     try {
-        const prisma = getPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
         c.header('X-Synapse-Debug', 'v5-sync-active');
 
         // Aggressively clear any conflicting domain cookies
