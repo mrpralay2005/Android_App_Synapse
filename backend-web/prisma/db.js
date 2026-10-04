@@ -1,9 +1,5 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaLibSql } from '@prisma/adapter-libsql';
-import { createClient } from '@libsql/client';
-
-// Single libSQL client instance - reuse across all requests in this Worker
-let globalClient = null;
 
 const getPrisma = (envOrUrl) => {
     let databaseUrl, authToken;
@@ -21,19 +17,14 @@ const getPrisma = (envOrUrl) => {
     if (!databaseUrl) throw new Error('DATABASE_URL is missing.');
     if (!authToken) throw new Error('TURSO_AUTH_TOKEN is missing.');
     
-    // Create libSQL client only once per Worker instance
-    if (!globalClient) {
-        globalClient = createClient({
-            url: databaseUrl,
-            authToken: authToken
-        });
-    }
-    
-    const adapter = new PrismaLibSql(globalClient);
-    return new PrismaClient({ 
-        adapter, 
-        log: ['error']
+    // Follow exact Turso/Prisma docs pattern
+    const adapter = new PrismaLibSql({
+        url: databaseUrl,
+        authToken
     });
+    
+    const prisma = new PrismaClient({ adapter });
+    return prisma;
 };
 
 export const getAuthPrisma = getPrisma;
