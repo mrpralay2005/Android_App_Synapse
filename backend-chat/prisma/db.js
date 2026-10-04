@@ -17,16 +17,14 @@ const getChatPrisma = (envOrUrl) => {
     if (!databaseUrl) throw new Error('CHAT DATABASE_URL is missing.');
     if (!authToken) throw new Error('CHAT TURSO_AUTH_TOKEN is missing.');
     
-    // Use PrismaLibSql factory class
+    // Follow exact Turso/Prisma docs pattern
     const adapter = new PrismaLibSql({
         url: databaseUrl,
-        authToken: authToken
+        authToken
     });
     
-    return new PrismaClient({ 
-        adapter, 
-        log: ['error']
-    });
+    const prisma = new PrismaClient({ adapter });
+    return prisma;
 };
 
 export const retryTransientDatabaseOperation = async (operation, attempts = 3) => {

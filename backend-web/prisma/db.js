@@ -17,16 +17,14 @@ const getPrisma = (envOrUrl) => {
     if (!databaseUrl) throw new Error('DATABASE_URL is missing.');
     if (!authToken) throw new Error('TURSO_AUTH_TOKEN is missing.');
     
-    // Use PrismaLibSql factory class
+    // Follow exact Turso/Prisma docs pattern
     const adapter = new PrismaLibSql({
         url: databaseUrl,
-        authToken: authToken
+        authToken
     });
     
-    return new PrismaClient({ 
-        adapter, 
-        log: ['error']
-    });
+    const prisma = new PrismaClient({ adapter });
+    return prisma;
 };
 
 export const getAuthPrisma = getPrisma;
