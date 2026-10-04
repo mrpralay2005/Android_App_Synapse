@@ -1,9 +1,6 @@
 import { PrismaClient } from '@prisma/client';
-import { PrismaLibSql } from '@prisma/adapter-libsql';
+import { PrismaLibSQL } from '@prisma/adapter-libsql';
 import { createClient } from '@libsql/client';
-
-// Single libSQL client instance - reuse across all requests in this Worker
-let globalClient = null;
 
 const getChatPrisma = (envOrUrl) => {
     let databaseUrl, authToken;
@@ -21,11 +18,14 @@ const getChatPrisma = (envOrUrl) => {
     if (!databaseUrl) throw new Error('CHAT DATABASE_URL is missing.');
     if (!authToken) throw new Error('CHAT TURSO_AUTH_TOKEN is missing.');
     
-    // Create adapter using PrismaLibSql factory
-    const adapter = new PrismaLibSql({
+    // Create libsql client directly
+    const libsql = createClient({
         url: databaseUrl,
         authToken: authToken
     });
+    
+    // Use PrismaLibSQL adapter (not factory class)
+    const adapter = new PrismaLibSQL(libsql);
     
     return new PrismaClient({ 
         adapter, 
