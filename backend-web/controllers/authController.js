@@ -59,11 +59,20 @@ export const register = async (c) => {
     } catch (error) {
         console.error("Registration Error:", error);
 
-        // Handle duplicate email/username
+        // Handle duplicate email/username (Prisma)
         if (error.code === 'P2002') {
             return c.json({
                 success: false,
                 error: "Identity overlap detected: This email or username is already synced to the network."
+            }, 409);
+        }
+
+        // Handle SQLite UNIQUE constraint errors
+        if (error.message?.includes('UNIQUE constraint failed')) {
+            const field = error.message.includes('email') ? 'email' : 'username';
+            return c.json({
+                success: false,
+                error: `Identity overlap detected: This ${field} is already synced to the network.`
             }, 409);
         }
 
