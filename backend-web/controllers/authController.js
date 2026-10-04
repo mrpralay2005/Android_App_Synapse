@@ -143,20 +143,11 @@ export const resendOTP = async (c) => {
 export const login = async (c) => {
     try {
         const { username, password, behaviorData } = await c.req.json();
-        const prisma = getAuthPrisma(c.env.DATABASE_URL);
+        const prisma = getPrisma(c.env);
 
         if (!username || !password) {
             return c.json({ success: false, error: "Credentials required" }, 400);
         }
-
-        // Fire a cheap warmup ping first so Neon wakes before the real query.
-        // Supabase pooler needs extra time to wake up (~2-3s on cold start).
-        try { 
-            await Promise.race([
-                prisma.$queryRaw`SELECT 1`,
-                new Promise(resolve => setTimeout(resolve, 3000))
-            ]);
-        } catch { /* ignore — retry below handles it */ }
 
         const user = await prisma.user.findUnique({ where: { username } });
         if (!user) {
