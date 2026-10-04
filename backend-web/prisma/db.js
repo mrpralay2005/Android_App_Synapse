@@ -29,13 +29,7 @@ const getPrisma = (databaseUrl) => {
     const adapter = new PrismaNeon(pool);
     return new PrismaClient({ 
         adapter, 
-        log: ['error'],
-        // Shorter timeouts to fail fast instead of hanging
-        datasources: {
-            db: {
-                url: databaseUrl
-            }
-        }
+        log: ['error']
     });
 };
 

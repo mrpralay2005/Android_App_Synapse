@@ -29,12 +29,7 @@ const getChatPrisma = (databaseUrl) => {
     const adapter = new PrismaNeon(pool);
     return new PrismaClient({ 
         adapter, 
-        log: ['error'],
-        datasources: {
-            db: {
-                url: databaseUrl
-            }
-        }
+        log: ['error']
     });
 };
 
