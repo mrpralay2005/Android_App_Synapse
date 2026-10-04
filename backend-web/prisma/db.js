@@ -16,15 +16,16 @@ const getPrisma = (databaseUrl) => {
 
 export const getAuthPrisma = getPrisma;
 
-export const retryTransientDatabaseOperation = async (operation, attempts = 2) => {
+export const retryTransientDatabaseOperation = async (operation, attempts = 3) => {
     let lastError;
     for (let attempt = 0; attempt < attempts; attempt++) {
         try {
             return await operation();
         } catch (error) {
             lastError = error;
+            // Longer delays for Supabase warmup (500ms, 1000ms, 1500ms)
             if (attempt < attempts - 1) {
-                await new Promise(r => setTimeout(r, 300 * (attempt + 1)));
+                await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
             }
         }
     }

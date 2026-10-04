@@ -152,8 +152,13 @@ export const login = async (c) => {
         }
 
         // Fire a cheap warmup ping first so Neon wakes before the real query.
-        // If Neon is cold this takes ~1-2s; the real query then succeeds immediately.
-        try { await prisma.$queryRaw`SELECT 1`; } catch { /* ignore — retry below handles it */ }
+        // Supabase pooler needs extra time to wake up (~2-3s on cold start).
+        try { 
+            await Promise.race([
+                prisma.$queryRaw`SELECT 1`,
+                new Promise(resolve => setTimeout(resolve, 3000))
+            ]);
+        } catch { /* ignore — retry below handles it */ }
 
         const user = await retryTransientDatabaseOperation(() => prisma.user.findUnique({ where: { username } }));
         if (!user) {
