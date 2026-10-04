@@ -45,12 +45,20 @@ const OTPBox = ({ email, onVerified, onBack }) => {
 
         setStatus({ type: 'loading', message: 'Decrypting Neural Code...' });
 
+        // Get email from props or sessionStorage as fallback
+        const emailToUse = email || sessionStorage.getItem('synapse_otp_email');
+        
+        if (!emailToUse) {
+            setStatus({ type: 'error', message: 'Email address not found. Please go back and sign up again.' });
+            return;
+        }
+
         try {
             const apiUrl = import.meta.env.VITE_API_URL || "https://synapse-backend.mrpralay2005.workers.dev";
             const response = await fetch(`${apiUrl}/api/auth/verify-otp`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, otp: fullOtp })
+                body: JSON.stringify({ email: emailToUse, otp: fullOtp })
             });
 
             const data = await response.json();
@@ -68,12 +76,20 @@ const OTPBox = ({ email, onVerified, onBack }) => {
     const handleResendOTP = async () => {
         setStatus({ type: 'loading', message: 'Resending Neural Access Code...' });
 
+        // Get email from props or sessionStorage as fallback
+        const emailToUse = email || sessionStorage.getItem('synapse_otp_email');
+        
+        if (!emailToUse) {
+            setStatus({ type: 'error', message: 'Email address not found. Please go back and sign up again.' });
+            return;
+        }
+
         try {
             const apiUrl = import.meta.env.VITE_API_URL || "https://synapse-backend.mrpralay2005.workers.dev";
             const response = await fetch(`${apiUrl}/api/auth/resend-otp`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email })
+                body: JSON.stringify({ email: emailToUse })
             });
 
             const data = await response.json();
