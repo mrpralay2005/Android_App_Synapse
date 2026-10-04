@@ -1,4 +1,4 @@
-import getPrisma from '../prisma/db.js';
+import getPrisma, { retryTransientDatabaseOperation } from '../prisma/db.js';
 
 export const getProfile = async (c) => {
     const username = c.req.param('username');
@@ -77,22 +77,38 @@ export const toggleFollow = async (c) => {
         const viewerId = c.get('user')?.userId;
         const username = c.req.param('username');
         const prisma = getPrisma(c.env.DATABASE_URL);
-        const target = await prisma.user.findUnique({ where: { username }, select: { id: true, username: true } });
+        
+        const target = await retryTransientDatabaseOperation(() =>
+            prisma.user.findUnique({ where: { username }, select: { id: true, username: true } })
+        );
+        
         if (!target) return c.json({ success: false, error: 'Identity not found' }, 404);
         if (target.id === viewerId) return c.json({ success: false, error: 'You cannot follow your own profile' }, 400);
-        const existing = await prisma.follow.findUnique({ where: { followerId_followingId: { followerId: viewerId, followingId: target.id } } });
+        
+        const existing = await retryTransientDatabaseOperation(() =>
+            prisma.follow.findUnique({ where: { followerId_followingId: { followerId: viewerId, followingId: target.id } } })
+        );
+        
         let following;
         if (existing) {
-            await prisma.follow.delete({ where: { id: existing.id } });
+            await retryTransientDatabaseOperation(() =>
+                prisma.follow.delete({ where: { id: existing.id } })
+            );
             following = false;
         } else {
-            await prisma.follow.create({ data: { followerId: viewerId, followingId: target.id } });
+            await retryTransientDatabaseOperation(() =>
+                prisma.follow.create({ data: { followerId: viewerId, followingId: target.id } })
+            );
             following = true;
         }
-        const [targetFollowers, viewerFollowing] = await prisma.$transaction([
-            prisma.follow.count({ where: { followingId: target.id } }),
-            prisma.follow.count({ where: { followerId: viewerId } })
-        ]);
+        
+        const [targetFollowers, viewerFollowing] = await retryTransientDatabaseOperation(() =>
+            prisma.$transaction([
+                prisma.follow.count({ where: { followingId: target.id } }),
+                prisma.follow.count({ where: { followerId: viewerId } })
+            ])
+        );
+        
         return c.json({
             success: true,
             following,
@@ -234,66 +250,68 @@ export const updateProfile = async (c) => {
         const user = c.get('user');
         const prisma = getPrisma(c.env.DATABASE_URL);
 
-        const updatedUser = await prisma.user.update({
-            where: { id: user.userId },
-            data: {
-                ...(name && { name }),
-                ...(bio && { bio }),
-                ...(profileImage && { profileImage }),
-                ...(username && { username }),
-                ...(typeof isPrivate === 'boolean' && { isPrivate }),
-                ...(typeof showActivityStatus === 'boolean' && { showActivityStatus }),
-                ...(typeof readReceipts === 'boolean' && { readReceipts }),
-                ...(typeof ghostViewer === 'boolean' && { ghostViewer }),
-                ...(typeof protectedStories === 'boolean' && { protectedStories }),
-                ...(typeof profileVisitAlerts === 'boolean' && { profileVisitAlerts }),
-                ...(typeof notificationPostAlerts === 'boolean' && { notificationPostAlerts }),
-                ...(typeof notificationStoryAlerts === 'boolean' && { notificationStoryAlerts }),
-                ...(typeof notificationSecurityAlerts === 'boolean' && { notificationSecurityAlerts }),
-                ...(typeof quantumDecayEnabled === 'boolean' && { quantumDecayEnabled }),
-                ...(Number.isInteger(quantumDecayDays) && [7, 30, 90].includes(quantumDecayDays) && { quantumDecayDays }),
-                ...(typeof neuralGuardianEnabled === 'boolean' && { neuralGuardianEnabled, ...(neuralGuardianEnabled ? { isPrivate: true } : {}) }),
-                ...(Array.isArray(links) && { links: links.filter(link => typeof link === 'string').map(link => link.trim()).filter(Boolean) }),
-                ...(typeof creatorModeEnabled === 'boolean' && { creatorModeEnabled }),
-                ...(typeof creatorHighResUploads === 'boolean' && { creatorHighResUploads }),
-                ...(typeof creatorAnonymousShield === 'boolean' && { creatorAnonymousShield }),
-                ...(typeof creatorDeepAnalytics === 'boolean' && { creatorDeepAnalytics }),
-                ...(requestCreatorVerification === true && {
-                    creatorVerificationRequestedAt: new Date(),
-                    creatorVerificationStatus: 'PENDING',
-                    creatorVerifiedAt: null,
-                    creatorVerificationReviewedById: null
-                })
-            },
-            select: {
-                id: true,
-                username: true,
-                name: true,
-                bio: true,
-                profileImage: true,
-                riskScore: true,
-                isPrivate: true,
-                showActivityStatus: true,
-                readReceipts: true,
-                ghostViewer: true,
-                protectedStories: true,
-                profileVisitAlerts: true,
-                notificationPostAlerts: true,
-                notificationStoryAlerts: true,
-                notificationSecurityAlerts: true,
-                quantumDecayEnabled: true,
-                quantumDecayDays: true,
-                neuralGuardianEnabled: true,
-                creatorModeEnabled: true,
-                creatorVerificationRequestedAt: true,
-                creatorVerificationStatus: true,
-                creatorVerifiedAt: true,
-                creatorHighResUploads: true,
-                creatorAnonymousShield: true,
-                creatorDeepAnalytics: true,
-                links: true
-            }
-        });
+        const updatedUser = await retryTransientDatabaseOperation(() =>
+            prisma.user.update({
+                where: { id: user.userId },
+                data: {
+                    ...(name && { name }),
+                    ...(bio && { bio }),
+                    ...(profileImage && { profileImage }),
+                    ...(username && { username }),
+                    ...(typeof isPrivate === 'boolean' && { isPrivate }),
+                    ...(typeof showActivityStatus === 'boolean' && { showActivityStatus }),
+                    ...(typeof readReceipts === 'boolean' && { readReceipts }),
+                    ...(typeof ghostViewer === 'boolean' && { ghostViewer }),
+                    ...(typeof protectedStories === 'boolean' && { protectedStories }),
+                    ...(typeof profileVisitAlerts === 'boolean' && { profileVisitAlerts }),
+                    ...(typeof notificationPostAlerts === 'boolean' && { notificationPostAlerts }),
+                    ...(typeof notificationStoryAlerts === 'boolean' && { notificationStoryAlerts }),
+                    ...(typeof notificationSecurityAlerts === 'boolean' && { notificationSecurityAlerts }),
+                    ...(typeof quantumDecayEnabled === 'boolean' && { quantumDecayEnabled }),
+                    ...(Number.isInteger(quantumDecayDays) && [7, 30, 90].includes(quantumDecayDays) && { quantumDecayDays }),
+                    ...(typeof neuralGuardianEnabled === 'boolean' && { neuralGuardianEnabled, ...(neuralGuardianEnabled ? { isPrivate: true } : {}) }),
+                    ...(Array.isArray(links) && { links: links.filter(link => typeof link === 'string').map(link => link.trim()).filter(Boolean) }),
+                    ...(typeof creatorModeEnabled === 'boolean' && { creatorModeEnabled }),
+                    ...(typeof creatorHighResUploads === 'boolean' && { creatorHighResUploads }),
+                    ...(typeof creatorAnonymousShield === 'boolean' && { creatorAnonymousShield }),
+                    ...(typeof creatorDeepAnalytics === 'boolean' && { creatorDeepAnalytics }),
+                    ...(requestCreatorVerification === true && {
+                        creatorVerificationRequestedAt: new Date(),
+                        creatorVerificationStatus: 'PENDING',
+                        creatorVerifiedAt: null,
+                        creatorVerificationReviewedById: null
+                    })
+                },
+                select: {
+                    id: true,
+                    username: true,
+                    name: true,
+                    bio: true,
+                    profileImage: true,
+                    riskScore: true,
+                    isPrivate: true,
+                    showActivityStatus: true,
+                    readReceipts: true,
+                    ghostViewer: true,
+                    protectedStories: true,
+                    profileVisitAlerts: true,
+                    notificationPostAlerts: true,
+                    notificationStoryAlerts: true,
+                    notificationSecurityAlerts: true,
+                    quantumDecayEnabled: true,
+                    quantumDecayDays: true,
+                    neuralGuardianEnabled: true,
+                    creatorModeEnabled: true,
+                    creatorVerificationRequestedAt: true,
+                    creatorVerificationStatus: true,
+                    creatorVerifiedAt: true,
+                    creatorHighResUploads: true,
+                    creatorAnonymousShield: true,
+                    creatorDeepAnalytics: true,
+                    links: true
+                }
+            })
+        );
 
         return c.json({
             success: true,
