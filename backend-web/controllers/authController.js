@@ -264,7 +264,7 @@ export const login = async (c) => {
                 creatorHighResUploads: user.creatorHighResUploads,
                 creatorAnonymousShield: user.creatorAnonymousShield,
                 creatorDeepAnalytics: user.creatorDeepAnalytics,
-                links: user.links,
+                links: user.links ? JSON.parse(user.links) : [],
                 riskScore
             }
         });
@@ -494,7 +494,7 @@ export const getMe = async (c) => {
                 creatorHighResUploads: user.creatorHighResUploads,
                 creatorAnonymousShield: user.creatorAnonymousShield,
                 creatorDeepAnalytics: user.creatorDeepAnalytics,
-                links: user.links
+                links: user.links ? JSON.parse(user.links) : []
             }
         });
     } catch (error) {

@@ -164,7 +164,23 @@ export const exportArchive = async (c) => {
             prisma.follow.findMany({ where: { followingId: userId }, select: { follower: { select: { username: true, name: true } }, createdAt: true } }),
             prisma.follow.findMany({ where: { followerId: userId }, select: { following: { select: { username: true, name: true } }, createdAt: true } })
         ]);
-        return c.json({ success: true, data: { exportedAt: new Date().toISOString(), profile, posts, stories, comments, likes, savedPosts, followers, following } });
+        return c.json({ 
+            success: true, 
+            data: { 
+                exportedAt: new Date().toISOString(), 
+                profile: {
+                    ...profile,
+                    links: profile?.links ? JSON.parse(profile.links) : []
+                }, 
+                posts, 
+                stories, 
+                comments, 
+                likes, 
+                savedPosts, 
+                followers, 
+                following 
+            } 
+        });
     } catch (error) {
         console.error('Archive export error:', error);
         return c.json({ success: false, error: 'Archive could not be prepared' }, 500);
@@ -270,7 +286,7 @@ export const updateProfile = async (c) => {
                     ...(typeof quantumDecayEnabled === 'boolean' && { quantumDecayEnabled }),
                     ...(Number.isInteger(quantumDecayDays) && [7, 30, 90].includes(quantumDecayDays) && { quantumDecayDays }),
                     ...(typeof neuralGuardianEnabled === 'boolean' && { neuralGuardianEnabled, ...(neuralGuardianEnabled ? { isPrivate: true } : {}) }),
-                    ...(Array.isArray(links) && { links: links.filter(link => typeof link === 'string').map(link => link.trim()).filter(Boolean) }),
+                    ...(Array.isArray(links) && { links: JSON.stringify(links.filter(link => typeof link === 'string').map(link => link.trim()).filter(Boolean)) }),
                     ...(typeof creatorModeEnabled === 'boolean' && { creatorModeEnabled }),
                     ...(typeof creatorHighResUploads === 'boolean' && { creatorHighResUploads }),
                     ...(typeof creatorAnonymousShield === 'boolean' && { creatorAnonymousShield }),
@@ -317,7 +333,10 @@ export const updateProfile = async (c) => {
             success: true,
             // Older accounts predate professional links and therefore have null here.
             // The client always receives a usable collection.
-            data: { ...updatedUser, links: Array.isArray(updatedUser.links) ? updatedUser.links : [] }
+            data: { 
+                ...updatedUser, 
+                links: updatedUser.links ? JSON.parse(updatedUser.links) : [] 
+            }
         });
     } catch (error) {
         console.error("Profile Update Error:", error);
