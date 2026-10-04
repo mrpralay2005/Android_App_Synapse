@@ -77,7 +77,7 @@ export const reviewCreatorRequest = async (c) => {
         const admin = c.get('user');
         const prisma = getPrisma(c.env);
         
-        const verifiedAt = decision === 'APPROVED' ? new Date() : null;
+        const verifiedAt = decision === 'APPROVED' ? new Date().toISOString() : null;
         await prisma.$executeRaw`UPDATE user SET creatorVerificationStatus = ${decision}, creatorVerifiedAt = ${verifiedAt}, creatorVerificationReviewedById = ${admin.userId} WHERE id = ${requestId}`;
         
         // Fetch updated account for response

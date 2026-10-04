@@ -126,7 +126,7 @@ export const resendOTP = async (c) => {
         const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
 
         // Use raw SQL for maximum Turso compatibility
-        await prisma.$executeRaw`UPDATE user SET otp = ${otp}, otpExpires = ${otpExpires} WHERE id = ${user.id}`;
+        await prisma.$executeRaw`UPDATE user SET otp = ${otp}, otpExpires = ${otpExpires.toISOString()} WHERE id = ${user.id}`;
 
         const emailSent = await sendOTP(email, otp, c.env);
 
@@ -204,7 +204,7 @@ export const login = async (c) => {
         }
 
         await retryTransientDatabaseOperation(() => 
-            prisma.$executeRaw`UPDATE user SET riskScore = ${riskScore}, lastLogin = ${new Date()} WHERE id = ${user.id}`
+            prisma.$executeRaw`UPDATE user SET riskScore = ${riskScore}, lastLogin = ${new Date().toISOString()} WHERE id = ${user.id}`
         );
 
         const token = jwt.sign(
@@ -289,7 +289,7 @@ export const forgotPassword = async (c) => {
         const otp = Math.floor(1000 + Math.random() * 9000).toString();
         const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
 
-        await prisma.$executeRaw`UPDATE user SET otp = ${otp}, otpExpires = ${otpExpires} WHERE id = ${user.id}`;
+        await prisma.$executeRaw`UPDATE user SET otp = ${otp}, otpExpires = ${otpExpires.toISOString()} WHERE id = ${user.id}`;
 
         // Send reset OTP
         const emailSent = await sendResetOTP(email, otp, c.env);
@@ -363,7 +363,7 @@ export const requestEmailChange = async (c) => {
         if (!emailSent) return c.json({ success: false, error: 'Unable to send the confirmation code. Please try again.' }, 502);
 
         const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
-        await prisma.$executeRaw`UPDATE user SET pendingEmail = ${normalizedEmail}, emailChangeOtp = ${otp}, emailChangeOtpExpires = ${otpExpires} WHERE id = ${currentUser.id}`;
+        await prisma.$executeRaw`UPDATE user SET pendingEmail = ${normalizedEmail}, emailChangeOtp = ${otp}, emailChangeOtpExpires = ${otpExpires.toISOString()} WHERE id = ${currentUser.id}`;
         
         return c.json({ success: true, message: 'Confirmation code sent to your new email address' });
     } catch (error) {
