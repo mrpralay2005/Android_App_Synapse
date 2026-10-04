@@ -2,31 +2,31 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaNeon } from '@prisma/adapter-neon';
 import { Pool, neonConfig } from '@neondatabase/serverless';
 
-// Configure Neon for Cloudflare Workers with optimized settings
+// Configure Neon for Cloudflare Workers with aggressive connection management
 neonConfig.fetchConnectionCache = true;
 neonConfig.useSecureWebSocket = true;
 neonConfig.pipelineConnect = "password";
 
-// Connection pool cache per Worker instance to avoid recreating pools
-const poolCache = new Map();
+// Single pool instance - reuse across all requests in this Worker
+let globalPool = null;
 
 const getChatPrisma = (databaseUrl) => {
     if (!databaseUrl) throw new Error('CHAT DATABASE_URL is missing.');
     
-    // Reuse pool if already created for this connection string
-    if (!poolCache.has(databaseUrl)) {
-        const pool = new Pool({ 
+    // Create pool only once per Worker instance
+    if (!globalPool) {
+        globalPool = new Pool({ 
             connectionString: databaseUrl,
-            // Session pooler settings optimized for Cloudflare Workers
-            max: 1, // One connection per request in Workers
-            idleTimeoutMillis: 10000, // Close idle connections after 10s
-            connectionTimeoutMillis: 5000, // Fail fast if can't connect
+            // Aggressive limits for Supabase free tier
+            max: 1, // Absolute minimum - one connection per Worker
+            min: 0, // No minimum connections
+            idleTimeoutMillis: 3000, // Close idle very fast (3s)
+            connectionTimeoutMillis: 3000, // Fail fast
+            maxUses: 1000, // Recycle connection after 1000 queries
         });
-        poolCache.set(databaseUrl, pool);
     }
     
-    const pool = poolCache.get(databaseUrl);
-    const adapter = new PrismaNeon(pool);
+    const adapter = new PrismaNeon(globalPool);
     return new PrismaClient({ 
         adapter, 
         log: ['error']
