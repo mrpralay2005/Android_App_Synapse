@@ -131,7 +131,7 @@ export const clearNotifications = async (c) => {
         const viewerId = c.get('user')?.userId;
         if (!viewerId) return c.json({ success: false, error: 'Neural authorization missing' }, 401);
         const prisma = getPrisma(c.env);
-        await prisma.user.update({ where: { id: viewerId }, data: { notificationClearedAt: new Date() } });
+        await prisma.user.updateMany({ where: { id: viewerId }, data: { notificationClearedAt: new Date() } });
         return c.json({ success: true, message: 'Activity cleared' });
     } catch (error) {
         console.error('Notification clear error:', error);

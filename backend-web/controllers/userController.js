@@ -196,7 +196,7 @@ export const purgeActivity = async (c) => {
         const [storyViews, profileVisits] = await prisma.$transaction([
             prisma.storyView.deleteMany({ where: { userId } }),
             prisma.profileVisit.deleteMany({ where: { visitorId: userId } }),
-            prisma.user.update({ where: { id: userId }, data: { notificationClearedAt: new Date() } })
+            prisma.user.updateMany({ where: { id: userId }, data: { notificationClearedAt: new Date() } })
         ]);
         return c.json({ success: true, data: { storyViewsCleared: storyViews.count, profileVisitsCleared: profileVisits.count } });
     } catch (error) {
@@ -266,8 +266,8 @@ export const updateProfile = async (c) => {
         const user = c.get('user');
         const prisma = getPrisma(c.env);
 
-        const updatedUser = await retryTransientDatabaseOperation(() =>
-            prisma.user.update({
+        const updatedUser = await retryTransientDatabaseOperation(async () => {
+            await prisma.user.updateMany({
                 where: { id: user.userId },
                 data: {
                     ...(name && { name }),
@@ -297,7 +297,12 @@ export const updateProfile = async (c) => {
                         creatorVerifiedAt: null,
                         creatorVerificationReviewedById: null
                     })
-                },
+                }
+            });
+            
+            // Fetch updated user for response
+            return await prisma.user.findUnique({
+                where: { id: user.userId },
                 select: {
                     id: true,
                     username: true,
@@ -326,8 +331,8 @@ export const updateProfile = async (c) => {
                     creatorDeepAnalytics: true,
                     links: true
                 }
-            })
-        );
+            });
+        });
 
         return c.json({
             success: true,

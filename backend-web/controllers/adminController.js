@@ -76,8 +76,21 @@ export const reviewCreatorRequest = async (c) => {
         if (!Number.isInteger(requestId) || !['APPROVED', 'REJECTED'].includes(decision)) return c.json({ success: false, error: 'A valid approval decision is required' }, 400);
         const admin = c.get('user');
         const prisma = getPrisma(c.env);
-        const account = await prisma.user.update({ where: { id: requestId }, data: { creatorVerificationStatus: decision, creatorVerifiedAt: decision === 'APPROVED' ? new Date() : null, creatorVerificationReviewedById: admin.userId }, select: { id: true, username: true, creatorVerificationStatus: true, creatorVerifiedAt: true } });
-        return c.json({ success: true, data: account });
+        const account = await prisma.user.updateMany({ 
+            where: { id: requestId }, 
+            data: { 
+                creatorVerificationStatus: decision, 
+                creatorVerifiedAt: decision === 'APPROVED' ? new Date() : null, 
+                creatorVerificationReviewedById: admin.userId 
+            } 
+        });
+        
+        // Fetch updated account for response
+        const updatedAccount = await prisma.user.findUnique({
+            where: { id: requestId },
+            select: { id: true, username: true, creatorVerificationStatus: true, creatorVerifiedAt: true }
+        });
+        return c.json({ success: true, data: updatedAccount });
     } catch (error) {
         return c.json({ success: false, error: 'Creator review could not be completed' }, 500);
     }

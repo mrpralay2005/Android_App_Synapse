@@ -132,7 +132,8 @@ export const resendOTP = async (c) => {
         const otp = Math.floor(1000 + Math.random() * 9000).toString();
         const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
 
-        await prisma.user.update({
+        // Use updateMany for Turso compatibility
+        await prisma.user.updateMany({
             where: { id: user.id },
             data: {
                 otp,
@@ -184,7 +185,7 @@ export const login = async (c) => {
 
         // AUTO-VERIFY EXISTING USERS (FIX FOR OLD ACCOUNTS)
         if (user.isVerified === false && !user.otp) {
-            await retryTransientDatabaseOperation(() => prisma.user.update({
+            await retryTransientDatabaseOperation(() => prisma.user.updateMany({
                 where: { id: user.id },
                 data: { isVerified: true }
             }));
@@ -216,7 +217,7 @@ export const login = async (c) => {
             }
         }
 
-        await retryTransientDatabaseOperation(() => prisma.user.update({
+        await retryTransientDatabaseOperation(() => prisma.user.updateMany({
             where: { id: user.id },
             data: { riskScore, lastLogin: new Date() }
         }));
@@ -303,7 +304,7 @@ export const forgotPassword = async (c) => {
         const otp = Math.floor(1000 + Math.random() * 9000).toString();
         const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
 
-        await prisma.user.update({
+        await prisma.user.updateMany({
             where: { id: user.id },
             data: { otp, otpExpires }
         });
@@ -341,7 +342,7 @@ export const resetPassword = async (c) => {
 
         const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-        await prisma.user.update({
+        await prisma.user.updateMany({
             where: { id: user.id },
             data: {
                 password: hashedPassword,
@@ -387,7 +388,7 @@ export const requestEmailChange = async (c) => {
         const emailSent = await sendEmailChangeOTP(normalizedEmail, otp, c.env);
         if (!emailSent) return c.json({ success: false, error: 'Unable to send the confirmation code. Please try again.' }, 502);
 
-        await prisma.user.update({
+        await prisma.user.updateMany({
             where: { id: currentUser.id },
             data: {
                 pendingEmail: normalizedEmail,
@@ -419,14 +420,19 @@ export const confirmEmailChange = async (c) => {
             return c.json({ success: false, error: 'Invalid confirmation code' }, 400);
         }
 
-        const updatedUser = await prisma.user.update({
+        await prisma.user.updateMany({
             where: { id: currentUser.id },
             data: {
                 email: currentUser.pendingEmail,
                 pendingEmail: null,
                 emailChangeOtp: null,
                 emailChangeOtpExpires: null
-            },
+            }
+        });
+        
+        // Fetch updated user for response
+        const updatedUser = await prisma.user.findUnique({
+            where: { id: currentUser.id },
             select: { id: true, username: true, name: true, email: true, profileImage: true, isPrivate: true }
         });
         return c.json({ success: true, data: updatedUser, message: 'Email address updated successfully' });
