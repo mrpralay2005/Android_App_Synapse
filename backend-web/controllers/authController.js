@@ -92,15 +92,8 @@ export const verifyOTP = async (c) => {
         if (user.otp !== otp) return c.json({ success: false, error: "Invalid neural access code" }, 400);
         if (new Date() > user.otpExpires) return c.json({ success: false, error: "Neural code expired" }, 400);
 
-        // Use updateMany for Turso compatibility (avoids cross-database reference issues)
-        await prisma.user.updateMany({
-            where: { id: user.id },
-            data: {
-                isVerified: true,
-                otp: null,
-                otpExpires: null
-            }
-        });
+        // Use raw SQL for maximum Turso compatibility
+        await prisma.$executeRaw`UPDATE user SET isVerified = 1, otp = NULL, otpExpires = NULL WHERE id = ${user.id}`;
 
         return c.json({ success: true, message: "Neural link established successfully" });
     } catch (error) {
@@ -132,14 +125,8 @@ export const resendOTP = async (c) => {
         const otp = Math.floor(1000 + Math.random() * 9000).toString();
         const otpExpires = new Date(Date.now() + 10 * 60 * 1000);
 
-        // Use updateMany for Turso compatibility
-        await prisma.user.updateMany({
-            where: { id: user.id },
-            data: {
-                otp,
-                otpExpires
-            }
-        });
+        // Use raw SQL for maximum Turso compatibility
+        await prisma.$executeRaw`UPDATE user SET otp = ${otp}, otpExpires = ${otpExpires} WHERE id = ${user.id}`;
 
         const emailSent = await sendOTP(email, otp, c.env);
 
