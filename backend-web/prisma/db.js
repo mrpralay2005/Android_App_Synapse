@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { PrismaLibSQL } from '@prisma/adapter-libsql';
+import { PrismaLibSql } from '@prisma/adapter-libsql';
 import { createClient } from '@libsql/client';
 
 // Single libSQL client instance - reuse across all requests in this Worker
@@ -29,7 +29,7 @@ const getPrisma = (envOrUrl) => {
         });
     }
     
-    const adapter = new PrismaLibSQL(globalClient);
+    const adapter = new PrismaLibSql(globalClient);
     return new PrismaClient({ 
         adapter, 
         log: ['error']
