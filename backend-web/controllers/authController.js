@@ -158,7 +158,7 @@ export const login = async (c) => {
             ]);
         } catch { /* ignore — retry below handles it */ }
 
-        const user = await retryTransientDatabaseOperation(() => prisma.user.findUnique({ where: { username } }));
+        const user = await prisma.user.findUnique({ where: { username } });
         if (!user) {
             return c.json({ success: false, error: "Access Denied: Neural mismatch" }, 401);
         }
@@ -172,9 +172,7 @@ export const login = async (c) => {
 
         // AUTO-VERIFY EXISTING USERS (FIX FOR OLD ACCOUNTS)
         if (user.isVerified === false && !user.otp) {
-            await retryTransientDatabaseOperation(() => 
-                prisma.$executeRaw`UPDATE user SET isVerified = 1 WHERE id = ${user.id}`
-            );
+            await prisma.$executeRaw`UPDATE user SET isVerified = 1 WHERE id = ${user.id}`;
         } else if (!user.isVerified) {
             return c.json({ success: false, error: "Neural link not verified. Please check your email." }, 403);
         }
@@ -203,9 +201,7 @@ export const login = async (c) => {
             }
         }
 
-        await retryTransientDatabaseOperation(() => 
-            prisma.$executeRaw`UPDATE user SET riskScore = ${riskScore}, lastLogin = ${new Date().toISOString()} WHERE id = ${user.id}`
-        );
+        await prisma.$executeRaw`UPDATE user SET riskScore = ${riskScore}, lastLogin = ${new Date().toISOString()} WHERE id = ${user.id}`;
 
         const token = jwt.sign(
             { userId: user.id, username: user.username, role: user.role },
@@ -218,14 +214,14 @@ export const login = async (c) => {
         const ipAddress = c.req.header('cf-connecting-ip') || c.req.header('x-forwarded-for') || 'local';
         const sessionExpires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-        const session = await retryTransientDatabaseOperation(() => prisma.session.create({
+        const session = await prisma.session.create({
             data: {
                 userId: user.id,
                 userAgent,
                 ipAddress,
                 expiresAt: sessionExpires
             }
-        }));
+        });
 
         // Return session data (Frontend can handle it if needed)
         c.header('X-Synapse-Debug', 'v3-no-cookies');
