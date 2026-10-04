@@ -24,7 +24,7 @@ const getPrisma = (envOrUrl) => {
     });
     
     return new PrismaClient({ 
-        driverAdapters: adapter, 
+        adapter, 
         log: ['error']
     });
 };
