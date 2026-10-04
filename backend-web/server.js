@@ -16,6 +16,8 @@ const app = new Hono();
 // 1. UNIVERSAL CORS
 app.use('*', cors({
     origin: (origin) => {
+        // Always reflect the incoming origin for credentials support
+        // If no origin (same-origin or tools like curl), allow all
         return origin || '*';
     },
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
