@@ -13,6 +13,6 @@ auth.post('/reset-password', resetPassword);
 auth.post('/request-email-change', authenticateToken, requestEmailChange);
 auth.post('/confirm-email-change', authenticateToken, confirmEmailChange);
 auth.post('/logout', logout);
-auth.get('/me', getMe);
+auth.get('/me', authenticateToken, getMe);
 
 export default auth;
