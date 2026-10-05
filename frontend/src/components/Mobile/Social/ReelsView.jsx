@@ -115,9 +115,8 @@ const ReelItem = ({ post }) => {
     };
 
     return (
-        <div className="relative w-full h-screen snap-center flex items-center justify-center">
-            {/* The Floating Neural Tablet - Width Synced to Feed (Max-2xl minus padding) */}
-            <div className="relative w-full max-w-[640px] h-[92vh] flex items-center justify-center bg-[#050505] rounded-[3.5rem] overflow-hidden shadow-[20px_40px_100px_rgba(0,0,0,0.8)] border border-white/10 group">
+        <article className="relative h-full min-h-full w-full snap-start py-1">
+            <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-[2rem] border border-white/10 bg-[#050505] shadow-[0_18px_45px_rgba(0,0,0,0.48)] group">
                 <video
                     ref={videoRef}
                     src={post.mediaUrl}
@@ -130,73 +129,72 @@ const ReelItem = ({ post }) => {
                 />
 
                 {/* Left Side Overlay (Bottom Aligned HUD) */}
-                <div className="absolute bottom-12 left-10 right-20 z-20">
-                    <div className="flex items-center gap-3 mb-5">
+                <div className="absolute bottom-5 left-5 right-[4.5rem] z-20">
+                    <div className="mb-3 flex items-center gap-2.5">
                         <div className="story-ring p-[2px] cursor-pointer shadow-lg">
                             <img
                                 src={post.user?.profileImage || "https://www.svgrepo.com/show/508699/landscape-placeholder.svg"}
-                                className="w-11 h-11 rounded-full object-cover border-2 border-black"
+                                className="h-9 w-9 rounded-full border-2 border-black object-cover"
                                 alt={post.user?.username}
                             />
                         </div>
-                        <h4 className="text-white font-bold text-sm tracking-tight hover:text-emerald-400 transition-colors cursor-pointer text-shadow-lg">{post.user?.username}</h4>
-                        <button className="px-5 py-2 bg-emerald-500 text-black font-bold text-[10px] uppercase tracking-wider rounded-xl hover:bg-emerald-400 transition-all ml-2 shadow-lg shadow-emerald-500/20">
+                        <h4 className="max-w-[7.5rem] truncate text-xs font-bold tracking-tight text-white transition-colors hover:text-emerald-300">{post.user?.username}</h4>
+                        <button className="ml-auto rounded-xl bg-emerald-400 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider text-black shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-300">
                             Follow
                         </button>
                     </div>
-                    <p className="text-white text-[15px] font-medium pr-12 line-clamp-2 leading-relaxed mb-5 drop-shadow-2xl">{post.caption}</p>
-                    <div className="flex items-center gap-4 text-emerald-400 font-mono text-[9px] uppercase tracking-[0.2em]">
-                        <div className="flex items-center gap-2 px-4 py-1.5 bg-black/40 backdrop-blur-xl rounded-full border border-emerald-500/20 shadow-2xl">
-                            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]" />
-                            Neural Phase Locked
+                    {post.caption && <p className="mb-3 line-clamp-2 pr-1 text-xs font-medium leading-relaxed text-white drop-shadow-2xl">{post.caption}</p>}
+                    <div className="flex items-center gap-2 font-mono text-[8px] uppercase tracking-[0.16em] text-emerald-300">
+                        <div className="flex items-center gap-1.5 rounded-full border border-emerald-400/20 bg-black/40 px-2.5 py-1 backdrop-blur-xl">
+                            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981]" />
+                            Live reel
                         </div>
                     </div>
                 </div>
 
-                {/* Right Side Interaction HUD (Vertical Floating HUD) */}
-                <div className="absolute bottom-14 right-8 z-20 flex flex-col items-center gap-7">
+                <div className="absolute bottom-5 right-3 z-20 flex flex-col items-center gap-3.5">
                     {/* Like Action */}
                     <div className="flex flex-col items-center gap-2 group cursor-pointer" onClick={handleLike}>
                         <motion.div
                             whileTap={{ scale: 0.7 }}
-                            className={`p-4 rounded-2xl backdrop-blur-xl border border-white/5 transition-all ${isLiked ? 'text-red-500 bg-red-500/10' : 'text-white bg-white/5 hover:bg-white/10'}`}
+                            className={`rounded-xl border border-white/10 p-2.5 backdrop-blur-xl transition-all ${isLiked ? 'bg-red-500/15 text-red-400' : 'bg-black/35 text-white hover:bg-white/10'}`}
                         >
-                            <Heart size={28} fill={isLiked ? "currentColor" : "none"} className="drop-shadow-2xl" />
+                            <Heart size={20} fill={isLiked ? "currentColor" : "none"} className="drop-shadow-2xl" />
                         </motion.div>
-                        <span className="text-[11px] text-white font-extrabold drop-shadow-lg">{likesCount}</span>
+                        <span className="text-[9px] font-extrabold text-white drop-shadow-lg">{likesCount}</span>
                     </div>
 
                     {/* Comment Action */}
                     <div className="flex flex-col items-center gap-2 group cursor-pointer">
-                        <div className="p-4 rounded-2xl backdrop-blur-xl bg-white/5 border border-white/5 text-white transition-all hover:bg-white/10">
-                            <MessageCircle size={28} className="drop-shadow-2xl" />
+                        <div className="rounded-xl border border-white/10 bg-black/35 p-2.5 text-white backdrop-blur-xl transition-all hover:bg-white/10">
+                            <MessageCircle size={20} className="drop-shadow-2xl" />
                         </div>
-                        <span className="text-[11px] text-white font-extrabold drop-shadow-lg">{post._count?.comments || 0}</span>
+                        <span className="text-[9px] font-extrabold text-white drop-shadow-lg">{post._count?.comments || 0}</span>
                     </div>
 
                     {/* Share Action */}
                     <div className="flex flex-col items-center gap-2 group cursor-pointer" onClick={handleShare}>
-                        <div className="p-4 rounded-2xl backdrop-blur-xl bg-white/5 border border-white/5 text-white transition-all hover:bg-white/10">
-                            <Share2 size={28} className="drop-shadow-2xl" />
+                        <div className="rounded-xl border border-white/10 bg-black/35 p-2.5 text-white backdrop-blur-xl transition-all hover:bg-white/10">
+                            <Share2 size={20} className="drop-shadow-2xl" />
                         </div>
-                        <span className="text-[11px] text-white font-extrabold drop-shadow-lg">Share</span>
+                        <span className="text-[9px] font-extrabold text-white drop-shadow-lg">Share</span>
                     </div>
 
                     {/* Bookmark Action */}
                     <div className="flex flex-col items-center gap-2 group cursor-pointer" onClick={handleSave}>
-                        <div className={`p-4 rounded-2xl backdrop-blur-xl border border-white/5 transition-all ${isSaved ? 'text-amber-500 bg-amber-500/10' : 'text-white bg-white/5 hover:bg-white/10'}`}>
-                            <Bookmark size={28} fill={isSaved ? "currentColor" : "none"} className="drop-shadow-2xl" />
+                        <div className={`rounded-xl border border-white/10 p-2.5 backdrop-blur-xl transition-all ${isSaved ? 'bg-amber-500/15 text-amber-300' : 'bg-black/35 text-white hover:bg-white/10'}`}>
+                            <Bookmark size={20} fill={isSaved ? "currentColor" : "none"} className="drop-shadow-2xl" />
                         </div>
-                        <span className="text-[11px] text-white font-extrabold drop-shadow-lg">Vault</span>
+                        <span className="text-[9px] font-extrabold text-white drop-shadow-lg">Save</span>
                     </div>
 
                     {/* More Menu */}
                     <div className="relative">
                         <div
                             onClick={() => setShowMenu(!showMenu)}
-                            className={`p-4 rounded-2xl backdrop-blur-xl border border-white/5 text-white cursor-pointer transition-all ${showMenu ? 'bg-emerald-500 text-black rotate-90' : 'bg-white/5 hover:bg-white/10'}`}
+                            className={`rounded-xl border border-white/10 p-2.5 text-white backdrop-blur-xl transition-all ${showMenu ? 'rotate-90 bg-emerald-400 text-black' : 'bg-black/35 hover:bg-white/10'}`}
                         >
-                            <MoreHorizontal size={24} />
+                            <MoreHorizontal size={20} />
                         </div>
 
                         {/* Professional Context Menu */}
@@ -206,18 +204,18 @@ const ReelItem = ({ post }) => {
                                     initial={{ opacity: 0, scale: 0.9, x: 20 }}
                                     animate={{ opacity: 1, scale: 1, x: 0 }}
                                     exit={{ opacity: 0, scale: 0.9, x: 20 }}
-                                    className="absolute bottom-0 right-20 w-48 bg-black/80 backdrop-blur-2xl border border-white/10 rounded-3xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50"
+                                    className="absolute bottom-0 right-14 z-50 w-44 overflow-hidden rounded-2xl border border-white/10 bg-black/85 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-2xl"
                                 >
-                                    <button onClick={handleCopyLink} className="w-full flex items-center gap-3 px-6 py-4 text-white hover:bg-white/10 transition-all text-xs font-bold uppercase tracking-widest">
+                                    <button onClick={handleCopyLink} className="flex w-full items-center gap-3 px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-white transition-all hover:bg-white/10">
                                         <Link size={16} /> Copy Link
                                     </button>
-                                    <button className="w-full flex items-center gap-3 px-6 py-4 text-white hover:bg-white/10 transition-all text-xs font-bold uppercase tracking-widest border-t border-white/5">
+                                    <button className="flex w-full items-center gap-3 border-t border-white/5 px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-white transition-all hover:bg-white/10">
                                         <Info size={16} /> About Account
                                     </button>
-                                    <button onClick={handleDownload} className="w-full flex items-center gap-3 px-6 py-4 text-emerald-500 hover:bg-emerald-500/10 transition-all text-xs font-bold uppercase tracking-widest border-t border-white/5">
+                                    <button onClick={handleDownload} className="flex w-full items-center gap-3 border-t border-white/5 px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-emerald-400 transition-all hover:bg-emerald-500/10">
                                         <Download size={16} /> Download
                                     </button>
-                                    <button onClick={() => setShowMenu(false)} className="w-full flex items-center gap-3 px-6 py-4 text-red-400 hover:bg-red-400/10 transition-all text-xs font-bold uppercase tracking-widest border-t border-white/5">
+                                    <button onClick={() => setShowMenu(false)} className="flex w-full items-center gap-3 border-t border-white/5 px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-red-400 transition-all hover:bg-red-400/10">
                                         <X size={16} /> Close
                                     </button>
                                 </motion.div>
@@ -235,22 +233,22 @@ const ReelItem = ({ post }) => {
                             exit={{ scale: 2, opacity: 0, y: -40 }}
                             className="absolute pointer-events-none z-40 text-red-500 drop-shadow-[0_0_80px_rgba(239,68,68,0.8)]"
                         >
-                            <Heart size={160} fill="currentColor" />
+                            <Heart size={112} fill="currentColor" />
                         </motion.div>
                     )}
                 </AnimatePresence>
 
                 {/* Top Interaction Layer (Ambient HUD) */}
-                <div className="absolute top-10 left-10 right-10 z-20 flex justify-between items-center">
-                    <div className="flex items-center gap-3">
-                        <div className="bg-emerald-500 w-2 h-2 rounded-full animate-pulse shadow-[0_0_10px_#10b981]" />
-                        <h2 className="text-white text-xl font-black uppercase tracking-widest drop-shadow-2xl opacity-90">TV Matrix</h2>
+                <div className="absolute left-4 right-4 top-4 z-20 flex items-center justify-between">
+                    <div className="flex items-center gap-2 rounded-full border border-white/10 bg-black/35 px-2.5 py-1.5 backdrop-blur-xl">
+                        <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400 shadow-[0_0_10px_#10b981]" />
+                        <h2 className="text-[9px] font-black uppercase tracking-[0.18em] text-white">Reels</h2>
                     </div>
                     <button
                         onClick={() => setIsMuted(!isMuted)}
-                        className="p-4 rounded-2xl bg-black/40 backdrop-blur-xl text-white border border-white/10 hover:bg-emerald-500 hover:text-black transition-all shadow-2xl"
+                        className="rounded-xl border border-white/10 bg-black/35 p-2.5 text-white shadow-xl backdrop-blur-xl transition hover:bg-emerald-400 hover:text-black"
                     >
-                        {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
+                        {isMuted ? <VolumeX size={17} /> : <Volume2 size={17} />}
                     </button>
                 </div>
 
@@ -261,20 +259,20 @@ const ReelItem = ({ post }) => {
                             initial={{ scale: 0.8, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 1.2, opacity: 0 }}
-                            className="absolute pointer-events-none z-30 bg-black/60 backdrop-blur-3xl p-12 rounded-[2.5rem] border border-white/5"
+                            className="absolute z-30 rounded-3xl border border-white/10 bg-black/60 p-6 backdrop-blur-3xl pointer-events-none"
                         >
-                            <Play size={64} className="text-white ml-2" fill="white" />
+                            <Play size={36} className="ml-1 text-white" fill="white" />
                         </motion.div>
                     )}
                 </AnimatePresence>
             </div>
-        </div>
+        </article>
     );
 };
 
 const ReelsSkeleton = () => (
-    <div className="relative w-full h-screen flex items-center justify-center">
-        <div className="relative w-full max-w-[640px] h-[92vh] bg-[#080808] rounded-[3.5rem] overflow-hidden border border-white/10">
+    <div className="relative h-full min-h-full w-full snap-start py-1">
+        <div className="relative h-full w-full overflow-hidden rounded-[2rem] border border-white/10 bg-[#080808]">
             <motion.div
                 initial={{ x: '-100%' }}
                 animate={{ x: '100%' }}
@@ -283,19 +281,19 @@ const ReelsSkeleton = () => (
             />
 
             {/* HUD Skeleton */}
-            <div className="absolute bottom-12 left-10 right-20 space-y-4">
+            <div className="absolute bottom-5 left-5 right-16 space-y-3">
                 <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-full bg-white/5 animate-pulse" />
-                    <div className="w-32 h-4 bg-white/5 rounded-lg animate-pulse" />
+                    <div className="h-9 w-9 animate-pulse rounded-full bg-white/5" />
+                    <div className="h-3 w-24 animate-pulse rounded-lg bg-white/5" />
                 </div>
-                <div className="w-64 h-3 bg-white/5 rounded-lg animate-pulse" />
-                <div className="w-40 h-8 bg-white/5 rounded-2xl animate-pulse" />
+                <div className="h-3 w-40 animate-pulse rounded-lg bg-white/5" />
+                <div className="h-6 w-24 animate-pulse rounded-2xl bg-white/5" />
             </div>
 
             {/* Interaction HUD Skeleton */}
-            <div className="absolute bottom-14 right-8 flex flex-col gap-8">
+            <div className="absolute bottom-5 right-3 flex flex-col gap-4">
                 {[1, 2, 3, 4].map(i => (
-                    <div key={i} className="w-12 h-12 rounded-2xl bg-white/5 animate-pulse" />
+                    <div key={i} className="h-10 w-10 animate-pulse rounded-xl bg-white/5" />
                 ))}
             </div>
         </div>
@@ -307,12 +305,9 @@ const ReelsView = ({ posts, loading }) => {
     const reels = posts.filter(post => post.type === 'VIDEO');
 
     return (
-        <div className="relative w-full h-screen overflow-y-scroll snap-y snap-mandatory hide-scrollbar bg-transparent">
+        <div className="relative h-full w-full overflow-y-auto overscroll-contain snap-y snap-mandatory hide-scrollbar bg-transparent">
             {loading ? (
-                <>
-                    <ReelsSkeleton />
-                    <ReelsSkeleton />
-                </>
+                <ReelsSkeleton />
             ) : reels.length > 0 ? (
                 reels.map((post) => (
                     <ReelItem key={post.id} post={post} />

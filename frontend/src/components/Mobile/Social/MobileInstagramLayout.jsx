@@ -6,6 +6,7 @@ import FeedView from './FeedView';
 import ProfileView from './ProfileView';
 import SettingsView from './SettingsView';
 import ReelsView from './ReelsView';
+import SearchView from './SearchView';
 import CreatePostModal from './CreatePostModal';
 import CreateStoryModal from './CreateStoryModal';
 
@@ -381,6 +382,17 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
 
         if (view === 'reels') {
             return <ReelsView posts={posts} loading={loading} />;
+        }
+
+        if (view === 'search') {
+            return (
+                <SearchView
+                    onUserSelect={(user) => {
+                        setUserProfile(user);
+                        handleNavigation('profile');
+                    }}
+                />
+            );
         }
 
         if (view === 'direct') {

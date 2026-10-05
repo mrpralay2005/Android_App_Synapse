@@ -7,6 +7,21 @@ import { sendOTP, sendResetOTP, sendEmailChangeOTP } from '../utils/email.js';
 const isPreviewMode = (c) => c.env.PREVIEW_MODE === 'true';
 const previewAccessDenied = (c) => c.json({ success: false, error: 'This private preview accepts only approved test accounts.' }, 403);
 
+const parseLinks = (links) => {
+    if (Array.isArray(links)) return links.filter((link) => typeof link === 'string');
+    if (typeof links !== 'string' || !links.trim()) return [];
+
+    try {
+        const parsed = JSON.parse(links);
+        return Array.isArray(parsed) ? parsed.filter((link) => typeof link === 'string') : [];
+    } catch (error) {
+        // A malformed legacy value must not turn a valid signed-in session into
+        // a misleading "Session expired" response.
+        console.warn('Ignoring malformed profile links:', error.message);
+        return [];
+    }
+};
+
 const canUsePreview = (c, user) => {
     if (!isPreviewMode(c)) return true;
     const testUsers = (c.env.PREVIEW_TEST_USERS || '')
@@ -247,7 +262,7 @@ export const login = async (c) => {
                 creatorHighResUploads: user.creatorHighResUploads,
                 creatorAnonymousShield: user.creatorAnonymousShield,
                 creatorDeepAnalytics: user.creatorDeepAnalytics,
-                links: user.links ? JSON.parse(user.links) : [],
+                links: parseLinks(user.links),
                 riskScore
             }
         });
@@ -449,10 +464,13 @@ export const getMe = async (c) => {
                 creatorHighResUploads: user.creatorHighResUploads,
                 creatorAnonymousShield: user.creatorAnonymousShield,
                 creatorDeepAnalytics: user.creatorDeepAnalytics,
-                links: user.links ? JSON.parse(user.links) : []
+                links: parseLinks(user.links)
             }
         });
     } catch (error) {
-        return c.json({ success: false, error: "Session expired" }, 401);
+        console.error('Unable to load authenticated profile:', error);
+        // Authentication already happened in authenticateToken. A database or
+        // profile-read failure is a server problem, not an expired JWT.
+        return c.json({ success: false, error: 'Unable to load your profile. Please retry.' }, 500);
     }
 };

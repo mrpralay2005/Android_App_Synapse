@@ -1,5 +1,17 @@
 import getPrisma from '../prisma/db.js';
 
+const scoreSearchMatch = (user, query) => {
+    const username = user.username.toLocaleLowerCase();
+    const name = (user.name || '').toLocaleLowerCase();
+
+    if (username === query) return 0;
+    if (name === query) return 1;
+    if (username.startsWith(query)) return 2;
+    if (name.startsWith(query)) return 3;
+    if (username.includes(query)) return 4;
+    return 5;
+};
+
 export const getProfile = async (c) => {
     const username = c.req.param('username');
     try {
@@ -401,5 +413,63 @@ export const getSuggestedUsers = async (c) => {
     } catch (error) {
         console.error("Suggested Users Error:", error);
         return c.json({ success: false, error: "Failed to fetch user signatures" }, 500);
+    }
+};
+
+// Search returns only the public profile card fields. Private profiles remain
+// discoverable, but their protected posts are still enforced by getProfile.
+export const searchUsers = async (c) => {
+    try {
+        const viewerId = c.get('user')?.userId;
+        const requestedQuery = (c.req.query('q') || '').normalize('NFKC').trim().replace(/^@+/, '');
+        const query = requestedQuery.slice(0, 64);
+        const requestedLimit = Number.parseInt(c.req.query('limit'), 10);
+        const limit = Number.isInteger(requestedLimit) ? Math.min(Math.max(requestedLimit, 1), 20) : 10;
+
+        if (!query) return c.json({ success: true, data: [] });
+
+        const candidates = await getPrisma(c.env).user.findMany({
+            where: {
+                AND: [
+                    // Operational admin accounts are not searchable. An admin can
+                    // still find their own profile without exposing it to others.
+                    {
+                        OR: [
+                            { role: { not: 'ADMIN' } },
+                            ...(viewerId ? [{ id: viewerId }] : [])
+                        ]
+                    },
+                    {
+                        OR: [
+                            { username: { contains: query } },
+                            { name: { contains: query } }
+                        ]
+                    }
+                ]
+            },
+            select: {
+                id: true,
+                username: true,
+                name: true,
+                profileImage: true,
+                isPrivate: true
+            },
+            // Fetch a small candidate set, then rank exact and prefix matches
+            // ahead of partial matches for an Instagram-style result order.
+            take: 40
+        });
+
+        const normalizedQuery = query.toLocaleLowerCase();
+        const users = candidates
+            .sort((left, right) => (
+                scoreSearchMatch(left, normalizedQuery) - scoreSearchMatch(right, normalizedQuery)
+                || left.username.localeCompare(right.username)
+            ))
+            .slice(0, limit);
+
+        return c.json({ success: true, data: users });
+    } catch (error) {
+        console.error('User search failed:', error);
+        return c.json({ success: false, error: 'Could not search profiles right now.' }, 500);
     }
 };

@@ -339,15 +339,26 @@ export const getStories = async (c) => {
         // Fetch stories that haven't expired
         const stories = await prisma.story.findMany({
             where: {
-                expiresAt: { gt: now },
-                // Admin accounts should never be surfaced in the public story rail.
-                user: { role: { not: 'ADMIN' } },
-                OR: [
-                    { isProtected: false },
-                    ...(viewerId ? [
-                        { userId: viewerId },
-                        { user: { followers: { some: { followerId: viewerId } } } }
-                    ] : [])
+                AND: [
+                    { expiresAt: { gt: now } },
+                    // Admin stories remain private to their owner. This preserves
+                    // the public-rail exclusion while allowing an administrator to
+                    // see and manage the stories they have personally published.
+                    {
+                        OR: [
+                            { user: { role: { not: 'ADMIN' } } },
+                            ...(viewerId ? [{ userId: viewerId }] : [])
+                        ]
+                    },
+                    {
+                        OR: [
+                            { isProtected: false },
+                            ...(viewerId ? [
+                                { userId: viewerId },
+                                { user: { followers: { some: { followerId: viewerId } } } }
+                            ] : [])
+                        ]
+                    }
                 ]
             },
             include: {
