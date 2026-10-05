@@ -180,7 +180,7 @@ const CreateStoryModal = ({ isOpen, onClose, onSubmit, user }) => {
                             </motion.div>
 
                             {/* Glass Preview Badge */}
-                            <div className="absolute bottom-12 left-0 right-0 flex justify-center z-30">
+                            <div className="absolute bottom-24 left-0 right-0 flex justify-center z-30">
                                 <motion.div
                                     initial={{ y: 20, opacity: 0 }}
                                     animate={{ y: 0, opacity: 1 }}

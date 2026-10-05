@@ -155,12 +155,12 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit, user }) => {
                 initial={{ opacity: 0, scale: 0.95, y: 30 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 30 }}
-                className="relative w-full max-w-4xl bg-[#050505] border border-white/10 rounded-[2rem] overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.8)] flex flex-col md:flex-row min-h-[500px] pointer-events-auto"
+                className="relative w-full max-w-4xl h-[90vh] max-h-[800px] bg-[#050505] border border-white/10 rounded-[2rem] overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.8)] flex flex-col md:flex-row pointer-events-auto"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Step 1: Select Media View */}
                 {step === 1 && (
-                    <div className="flex-1 flex flex-col min-h-[600px]">
+                    <div className="flex-1 flex flex-col h-full">
                         <div className="flex items-center justify-between p-6 border-b border-white/5">
                             <h2 className="text-white text-sm font-bold uppercase tracking-[0.3em]">Create New Post</h2>
                             <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors"><X size={24} /></button>
@@ -198,7 +198,7 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit, user }) => {
                 {step === 2 && (
                     <>
                         {/* Left: Professional Preview Section */}
-                        <div className="flex-[1.5] bg-black flex items-center justify-center relative border-r border-white/5">
+                        <div className="flex-[1.5] bg-black flex items-center justify-center relative border-r border-white/5 h-full overflow-hidden">
                             <button
                                 onClick={() => setStep(1)}
                                 className="absolute top-6 left-6 z-10 p-3 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-black/70 transition-all"
@@ -206,14 +206,14 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit, user }) => {
                                 <ArrowLeft size={20} />
                             </button>
                             {type === 'VIDEO' ? (
-                                <video src={uploadPreview} className="max-h-[700px] w-full object-contain" controls />
+                                <video src={uploadPreview} className="max-h-full w-full object-contain" controls />
                             ) : (
-                                <img src={uploadPreview} className="max-h-[700px] w-full object-contain" alt="Preview" />
+                                <img src={uploadPreview} className="max-h-full w-full object-contain" alt="Preview" />
                             )}
                         </div>
 
                         {/* Right: Details & Encryption Pane */}
-                        <div className="flex-1 flex flex-col bg-[#050505] p-8 max-h-[80vh] md:max-h-none overflow-y-auto">
+                        <div className="flex-1 flex flex-col bg-[#050505] p-6 overflow-y-auto">
                             <div className="flex items-center justify-between mb-8">
                                 <div className="flex items-center gap-3">
                                     <img src={user?.image} className="w-8 h-8 rounded-full border border-white/10" alt="me" />
