@@ -67,7 +67,7 @@ function App() {
     // The hostname check is a fail-safe: the protected staging URL remains a
     // preview even if a Pages environment variable is stale for one build.
     const isPreviewMode = import.meta.env.VITE_PREVIEW_MODE === 'true' || window.location.hostname.startsWith('staging.');
-    const previewTestUsername = import.meta.env.VITE_PREVIEW_TEST_USERNAME || '';
+    const previewTestUsername = import.meta.env.VITE_PREVIEW_TEST_USERNAME || 'TEST,ADMIN4';
 
     useEffect(() => {
         if (isPreviewMode && ['signup', 'otp', 'forgot'].includes(view)) setView('landing');
