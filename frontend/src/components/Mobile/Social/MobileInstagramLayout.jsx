@@ -496,7 +496,13 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                     {renderMainContent()}
                 </div>
 
-                <nav
+                <motion.nav
+                    initial={false}
+                    animate={{ 
+                        y: (view === 'direct' || view === 'reels' || view === 'profile') ? 120 : 0,
+                        opacity: (view === 'direct' || view === 'reels' || view === 'profile') ? 0 : 1
+                    }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                     className="synapse-bottom-nav absolute bottom-12 left-3 right-3 z-50 overflow-hidden rounded-[22px] border border-white/[0.07] bg-[#101111]/95 shadow-[0_-8px_24px_rgba(0,0,0,0.32)]"
                 >
                     <div className="grid grid-cols-6 gap-1 px-2 py-1.5" style={{ width: '100%', maxWidth: '100vw' }}>
@@ -533,7 +539,7 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                             );
                         })}
                     </div>
-                </nav>
+                </motion.nav>
             </div>
 
             <AnimatePresence>
