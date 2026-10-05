@@ -74,7 +74,7 @@ const CreateStoryModal = ({ isOpen, onClose, onSubmit, user }) => {
     };
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-0 md:p-8 perspective-[2000px] pointer-events-none">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 perspective-[2000px] pointer-events-none">
             {/* Backdrop - High-End Obsidian Void */}
             <motion.div
                 initial={{ opacity: 0 }}
@@ -95,7 +95,7 @@ const CreateStoryModal = ({ isOpen, onClose, onSubmit, user }) => {
                     backfaceVisibility: 'hidden',
                     WebkitBackfaceVisibility: 'hidden'
                 }}
-                className="relative w-full md:max-w-md h-full md:h-[90vh] flex flex-col group z-10 pointer-events-auto"
+                className="relative w-full max-w-md h-[90vh] flex flex-col group z-10 pointer-events-auto"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Glass Prism Frame - Pulse Protocol */}
@@ -110,7 +110,7 @@ const CreateStoryModal = ({ isOpen, onClose, onSubmit, user }) => {
 
                 {/* Main Modal Content */}
                 <div
-                    className="relative flex-1 bg-[#050505] md:rounded-[2rem] border border-white/10 overflow-hidden shadow-2xl flex flex-col z-10"
+                    className="relative flex-1 bg-[#050505] rounded-[2rem] border border-white/10 overflow-hidden shadow-2xl flex flex-col z-10"
                     style={{ isolation: 'isolate' }}
                 >
                     {/* Header overlay - Softened Gradient */}

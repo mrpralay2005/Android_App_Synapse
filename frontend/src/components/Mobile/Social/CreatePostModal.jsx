@@ -7,6 +7,7 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit, user }) => {
     const [caption, setCaption] = useState('');
     const [mediaUrl, setMediaUrl] = useState('');
     const [type, setType] = useState('IMAGE');
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
     const [postPassword, setPostPassword] = useState('');
     const [isProtected, setIsProtected] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -155,7 +156,7 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit, user }) => {
                 initial={{ opacity: 0, scale: 0.95, y: 30 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 30 }}
-                className="relative w-full max-w-4xl h-[90vh] max-h-[800px] bg-[#050505] border border-white/10 rounded-[2rem] overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.8)] flex flex-col md:flex-row pointer-events-auto"
+                className="relative w-full max-w-4xl h-[85vh] max-h-[700px] bg-[#050505] border border-white/10 rounded-[2rem] overflow-hidden shadow-[0_30px_60px_rgba(0,0,0,0.8)] flex flex-col md:flex-row pointer-events-auto"
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Step 1: Select Media View */}
@@ -213,8 +214,8 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit, user }) => {
                         </div>
 
                         {/* Right: Details & Encryption Pane */}
-                        <div className="flex-1 flex flex-col bg-[#050505] p-6 overflow-y-auto">
-                            <div className="flex items-center justify-between mb-8">
+                        <div className="flex-1 flex flex-col bg-[#050505] p-4 justify-between">
+                            <div className="flex items-center justify-between mb-4">
                                 <div className="flex items-center gap-3">
                                     <img src={user?.image} className="w-8 h-8 rounded-full border border-white/10" alt="me" />
                                     <span className="text-white font-bold text-sm tracking-tight">{user?.username}</span>
@@ -233,12 +234,12 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit, user }) => {
                                 value={caption}
                                 onChange={(e) => setCaption(e.target.value)}
                                 placeholder="Write a caption..."
-                                className="w-full bg-transparent border-none text-white placeholder-gray-600 focus:ring-0 resize-none h-40 text-sm leading-relaxed mb-8"
+                                className="w-full bg-transparent border-none text-white placeholder-gray-600 focus:ring-0 resize-none flex-1 text-sm leading-relaxed"
                             />
 
-                            <div className="mt-auto space-y-6 pt-6 border-t border-white/5">
+                            <div className="space-y-3">
                                 {/* Password Encryption Core (Your Setup) */}
-                                <div className="space-y-4">
+                                <div>
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
                                             <div className={`p-2 rounded-xl ${isProtected ? 'bg-emerald-500/10 text-emerald-500' : 'bg-white/5 text-gray-500'}`}>
@@ -251,30 +252,23 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit, user }) => {
                                         </div>
                                         <button
                                             type="button"
-                                            onClick={() => setIsProtected(!isProtected)}
+                                            onClick={() => {
+                                                if (!isProtected) {
+                                                    setShowPasswordModal(true);
+                                                } else {
+                                                    setIsProtected(false);
+                                                    setPostPassword('');
+                                                }
+                                            }}
                                             className={`w-10 h-5 rounded-full relative transition-colors ${isProtected ? 'bg-emerald-500' : 'bg-white/10'}`}
                                         >
                                             <motion.div animate={{ x: isProtected ? 22 : 4 }} className="w-3 h-3 bg-white rounded-full absolute top-1" />
                                         </button>
                                     </div>
-
-                                    <AnimatePresence>
-                                        {isProtected && (
-                                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                                                <input
-                                                    type="text"
-                                                    value={postPassword}
-                                                    onChange={(e) => setPostPassword(e.target.value)}
-                                                    placeholder="Enter Neural Key..."
-                                                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white placeholder-gray-700 outline-none focus:border-emerald-500/30 transition-all font-mono tracking-widest text-xs"
-                                                />
-                                            </motion.div>
-                                        )}
-                                    </AnimatePresence>
                                 </div>
 
                                 {/* Security Verification */}
-                                <div className="flex items-center justify-between py-4 px-5 bg-white/[0.02] border border-white/5 rounded-2xl">
+                                <div className="flex items-center justify-between py-3 px-4 bg-white/[0.02] border border-white/5 rounded-2xl">
                                     <div className="flex items-center gap-3">
                                         <ShieldCheck className="text-emerald-500" size={16} />
                                         <span className="text-gray-500 text-[9px] font-bold uppercase tracking-widest">Secure Link Active</span>
@@ -286,7 +280,7 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit, user }) => {
                                 <button
                                     onClick={handleSubmit}
                                     disabled={isSubmitting}
-                                    className={`w-full py-4 rounded-xl font-bold text-[10px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 transition-all ${isSubmitting ? 'bg-gray-900 text-gray-700' : 'bg-emerald-500 text-black shadow-[0_15px_30px_rgba(16,185,129,0.2)] hover:scale-[1.02] active:scale-95'}`}
+                                    className={`w-full py-3 rounded-xl font-bold text-[10px] uppercase tracking-[0.3em] flex items-center justify-center gap-3 transition-all ${isSubmitting ? 'bg-gray-900 text-gray-700' : 'bg-emerald-500 text-black shadow-[0_15px_30px_rgba(16,185,129,0.2)] hover:scale-[1.02] active:scale-95'}`}
                                 >
                                     {isSubmitting ? <Loader2 className="animate-spin" size={16} /> : <Send size={16} />}
                                     Initiate Broadcast
@@ -296,6 +290,67 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit, user }) => {
                     </>
                 )}
             </motion.div>
+
+            {/* Password Popup Modal */}
+            <AnimatePresence>
+                {showPasswordModal && (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-auto">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                            onClick={() => setShowPasswordModal(false)}
+                        />
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            className="relative bg-[#0a0a0a] border border-white/10 rounded-2xl p-6 w-full max-w-md z-10"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500">
+                                    <Lock size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="text-white font-bold text-sm">Set Neural Key</h3>
+                                    <p className="text-gray-500 text-xs">Protect your content with encryption</p>
+                                </div>
+                            </div>
+                            <input
+                                type="text"
+                                value={postPassword}
+                                onChange={(e) => setPostPassword(e.target.value)}
+                                placeholder="Enter Neural Key..."
+                                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white placeholder-gray-700 outline-none focus:border-emerald-500/30 transition-all font-mono tracking-widest text-sm mb-4"
+                            />
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => {
+                                        setShowPasswordModal(false);
+                                        setIsProtected(false);
+                                        setPostPassword('');
+                                    }}
+                                    className="flex-1 py-3 bg-white/5 text-white rounded-xl font-bold text-xs"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setShowPasswordModal(false);
+                                        setIsProtected(true);
+                                    }}
+                                    disabled={!postPassword}
+                                    className="flex-1 py-3 bg-emerald-500 text-black rounded-xl font-bold text-xs disabled:opacity-50"
+                                >
+                                    Confirm
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };
