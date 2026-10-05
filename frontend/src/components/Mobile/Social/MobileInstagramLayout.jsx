@@ -455,6 +455,22 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                                 <Settings size={20} />
                             </button>
                         </div>
+                    ) : (view === 'search' || view === 'reels') ? (
+                        <div className="flex items-center justify-between">
+                            <button
+                                onClick={() => handleNavigation('feed')}
+                                className="flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-xl text-white"
+                                aria-label="Back to feed"
+                            >
+                                <ArrowLeft size={18} />
+                            </button>
+
+                            <div className="flex-1 text-center text-[1.85rem] font-black leading-none tracking-[-0.08em] text-white">
+                                {view === 'search' ? 'Search' : 'Reels'}
+                            </div>
+
+                            <div className="w-9" />
+                        </div>
                     ) : (
                         <div className="flex items-center justify-between gap-4">
                             <div
@@ -499,8 +515,8 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                 <motion.nav
                     initial={false}
                     animate={{ 
-                        y: (view === 'direct' || view === 'reels' || view === 'profile') ? 120 : 0,
-                        opacity: (view === 'direct' || view === 'reels' || view === 'profile') ? 0 : 1
+                        y: (view === 'direct' || view === 'reels' || view === 'profile' || view === 'search') ? 120 : 0,
+                        opacity: (view === 'direct' || view === 'reels' || view === 'profile' || view === 'search') ? 0 : 1
                     }}
                     transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                     className="synapse-bottom-nav absolute bottom-12 left-3 right-3 z-50 overflow-hidden rounded-[22px] border border-white/[0.07] bg-[#101111]/95 shadow-[0_-8px_24px_rgba(0,0,0,0.32)]"
