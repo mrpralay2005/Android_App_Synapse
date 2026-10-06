@@ -336,6 +336,8 @@ export const getStories = async (c) => {
         const now = new Date();
         const viewerId = c.get('user')?.userId;
 
+        console.log('[getStories] ViewerId:', viewerId, 'Now:', now.toISOString());
+
         // Fetch stories that haven't expired
         const stories = await prisma.story.findMany({
             where: {
@@ -375,6 +377,16 @@ export const getStories = async (c) => {
             },
             orderBy: { createdAt: 'desc' }
         });
+
+        console.log('[getStories] Found stories:', stories.length);
+        if (stories.length > 0) {
+            console.log('[getStories] First story sample:', {
+                id: stories[0].id,
+                userId: stories[0].userId,
+                isProtected: stories[0].isProtected,
+                expiresAt: stories[0].expiresAt
+            });
+        }
 
         return c.json({ success: true, data: stories });
     } catch (error) {
