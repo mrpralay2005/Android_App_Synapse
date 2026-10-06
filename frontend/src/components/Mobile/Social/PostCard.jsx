@@ -543,7 +543,7 @@ const PostCard = ({ post, onInteraction, onCinemaMode, index = 0 }) => {
                 </div>
             )}
 
-            {isMobileView && (
+            {isMobileView && isUnlocked && (
                 <AnimatePresence>
                     {showMobileChrome && (
                         <motion.div
