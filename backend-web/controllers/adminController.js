@@ -7,12 +7,17 @@ const requireAdmin = (c) => {
 
 const getLatestMainCommit = async (c) => {
     const repository = c.env.GITHUB_REPOSITORY || 'mrpralay2005/Android_App_Synapse';
-    const response = await fetch(`https://api.github.com/repos/${repository}/commits/main`, {
-        headers: {
-            Accept: 'application/vnd.github+json',
-            'User-Agent': 'SynapseX-Release-Readiness'
-        }
-    });
+    const headers = {
+        Accept: 'application/vnd.github+json',
+        'User-Agent': 'SynapseX-Release-Readiness'
+    };
+    
+    // Add GitHub token if available to avoid rate limits
+    if (c.env.GITHUB_TOKEN) {
+        headers.Authorization = `Bearer ${c.env.GITHUB_TOKEN}`;
+    }
+    
+    const response = await fetch(`https://api.github.com/repos/${repository}/commits/main`, { headers });
     if (!response.ok) throw new Error(`GitHub commit check failed (${response.status})`);
     const commit = await response.json();
     return {
