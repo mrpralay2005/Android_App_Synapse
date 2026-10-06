@@ -421,61 +421,47 @@ export const createStory = async (c) => {
 };
 
 export const deleteStory = async (c) => {
-    let prisma;
     try {
         const storyId = parseInt(c.req.param('id'));
         const user = c.get('user');
-        
-        console.log('[deleteStory] Attempting to delete story:', storyId, 'by user:', user.userId);
+        const prisma = getPrisma(c.env);
 
-        prisma = getPrisma(c.env);
-
+        // Check if story exists and user owns it
         const story = await prisma.story.findUnique({
             where: { id: storyId },
             select: { id: true, userId: true }
         });
 
         if (!story) {
-            console.log('[deleteStory] Story not found:', storyId);
             return c.json({ success: false, error: "Story not found" }, 404);
         }
         
         if (story.userId !== user.userId) {
-            console.log('[deleteStory] Unauthorized deletion attempt. Story owner:', story.userId, 'Request by:', user.userId);
-            return c.json({ success: false, error: "Unauthorized" }, 412);
+            return c.json({ success: false, error: "Unauthorized" }, 403);
         }
 
-        console.log('[deleteStory] Deleting story and related records:', storyId);
+        // Delete related records first (explicit cleanup, cascade should handle but being safe)
+        await prisma.storyView.deleteMany({
+            where: { storyId: storyId }
+        });
         
-        // Use transaction to ensure all related records are deleted
-        await prisma.$transaction(async (tx) => {
-            // Cascade should handle these, but being explicit helps debug
-            await tx.storyView.deleteMany({
-                where: { storyId: storyId }
-            });
-            
-            await tx.storyMessage.deleteMany({
-                where: { storyId: storyId }
-            });
-            
-            await tx.story.delete({
-                where: { id: storyId }
-            });
+        await prisma.storyMessage.deleteMany({
+            where: { storyId: storyId }
+        });
+        
+        // Finally delete the story
+        await prisma.story.delete({
+            where: { id: storyId }
         });
 
-        console.log('[deleteStory] Story deleted successfully:', storyId);
-        return c.json({ success: true, message: "Story terminated" });
+        return c.json({ success: true, message: "Story deleted successfully" });
     } catch (error) {
-        console.error('[deleteStory] Error deleting story:', {
-            message: error.message,
-            name: error.name,
-            code: error.code,
-            stack: error.stack
-        });
+        // Return error details for debugging
         return c.json({ 
             success: false, 
-            error: "Termination failed", 
-            details: error.message 
+            error: "Failed to delete story", 
+            details: error.message,
+            code: error.code || 'UNKNOWN'
         }, 500);
     }
 };
