@@ -40,6 +40,8 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
     const [suggestedUsers, setSuggestedUsers] = useState([]);
     const [myStories, setMyStories] = useState([]);
     const [cinemaPost, setCinemaPost] = useState(null);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [postToDelete, setPostToDelete] = useState(null);
     const [notificationsOpen, setNotificationsOpen] = useState(false);
     const [feedSort, setFeedSort] = useState('popular');
     const [chatUnread, setChatUnread] = useState(0);
@@ -326,6 +328,27 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
             console.error('Delete story failed:', err);
         }
         return false;
+    };
+
+    const handleDeletePost = async () => {
+        if (!postToDelete) return;
+        
+        try {
+            const token = Cookies.get('synapse_token');
+            const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://synapse-backend.mrpralay2005.workers.dev'}/api/social/posts/${postToDelete.id}`, {
+                method: 'DELETE',
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            
+            if (res.ok) {
+                setShowDeleteConfirm(false);
+                setPostToDelete(null);
+                setCinemaPost(null);
+                setRefreshTrigger(prev => prev + 1);
+            }
+        } catch (err) {
+            console.error('Delete post failed:', err);
+        }
     };
 
     const handleAddStoryClick = () => setIsStoryModalOpen(true);
@@ -630,22 +653,9 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                             <div className="absolute top-4 right-4 z-20 flex gap-2">
                                 {cinemaPost.userId === currentUserState?.id && (
                                     <button 
-                                        onClick={async () => {
-                                            if (confirm('Delete this post permanently?')) {
-                                                try {
-                                                    const token = Cookies.get('synapse_token');
-                                                    const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://synapse-backend.mrpralay2005.workers.dev'}/api/social/posts/${cinemaPost.id}`, {
-                                                        method: 'DELETE',
-                                                        headers: { Authorization: `Bearer ${token}` }
-                                                    });
-                                                    if (res.ok) {
-                                                        setCinemaPost(null);
-                                                        setRefreshTrigger(prev => prev + 1);
-                                                    }
-                                                } catch (err) {
-                                                    console.error('Delete post failed:', err);
-                                                }
-                                            }
+                                        onClick={() => {
+                                            setPostToDelete(cinemaPost);
+                                            setShowDeleteConfirm(true);
                                         }} 
                                         className="p-2 rounded-full bg-red-500/20 border border-red-500/30 hover:bg-red-500 hover:border-red-500 transition-all"
                                     >
@@ -665,6 +675,62 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                     </motion.div>
                 )}
             </AnimatePresence>
+            
+            {/* Delete Confirmation Modal */}
+            <AnimatePresence>
+                {showDeleteConfirm && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[1100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
+                        onClick={() => setShowDeleteConfirm(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                            className="relative w-full max-w-sm bg-[#1a1a1a] border border-red-500/30 rounded-3xl p-8 shadow-2xl"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Warning Icon */}
+                            <div className="flex justify-center mb-6">
+                                <div className="p-4 bg-red-500/10 rounded-full border-2 border-red-500/30">
+                                    <Trash2 size={32} className="text-red-500" />
+                                </div>
+                            </div>
+
+                            {/* Title */}
+                            <h3 className="text-white text-xl font-bold text-center mb-3">
+                                Delete Post?
+                            </h3>
+
+                            {/* Message */}
+                            <p className="text-gray-400 text-sm text-center mb-8">
+                                This action cannot be undone. Your post will be permanently removed from the Neural Network.
+                            </p>
+
+                            {/* Buttons */}
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setShowDeleteConfirm(false)}
+                                    className="flex-1 py-3 bg-white/5 border border-white/10 rounded-2xl text-white font-bold text-sm uppercase tracking-wider hover:bg-white/10 transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleDeletePost}
+                                    className="flex-1 py-3 bg-red-500 rounded-2xl text-black font-bold text-sm uppercase tracking-wider hover:bg-red-400 transition-all shadow-lg shadow-red-500/20"
+                                >
+                                    Delete
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             <ReleaseUpdateNotice />
             <NotificationCenter open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
             {/* Priya AI assistant — only in Direct/chat view, above nav bar */}
