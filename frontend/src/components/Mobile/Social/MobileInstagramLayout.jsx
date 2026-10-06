@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Home, Search, PlusSquare, Video, User, Settings, Bell, ArrowLeft, MessageCircle, Heart, Camera, X } from 'lucide-react';
+import { Home, Search, PlusSquare, Video, User, Settings, Bell, ArrowLeft, MessageCircle, Heart, Camera, X, Trash2 } from 'lucide-react';
 import Cookies from 'js-cookie';
 import FeedView from './FeedView';
 import ProfileView from './ProfileView';
@@ -627,7 +627,31 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                             className="relative w-full max-w-md overflow-hidden rounded-[2rem] border border-white/10 bg-black"
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <div className="absolute top-4 right-4 z-20">
+                            <div className="absolute top-4 right-4 z-20 flex gap-2">
+                                {cinemaPost.userId === currentUserState?.id && (
+                                    <button 
+                                        onClick={async () => {
+                                            if (confirm('Delete this post permanently?')) {
+                                                try {
+                                                    const token = Cookies.get('synapse_token');
+                                                    const res = await fetch(`${import.meta.env.VITE_API_URL || 'https://synapse-backend.mrpralay2005.workers.dev'}/api/social/posts/${cinemaPost.id}`, {
+                                                        method: 'DELETE',
+                                                        headers: { Authorization: `Bearer ${token}` }
+                                                    });
+                                                    if (res.ok) {
+                                                        setCinemaPost(null);
+                                                        setRefreshTrigger(prev => prev + 1);
+                                                    }
+                                                } catch (err) {
+                                                    console.error('Delete post failed:', err);
+                                                }
+                                            }
+                                        }} 
+                                        className="p-2 rounded-full bg-red-500/20 border border-red-500/30 hover:bg-red-500 hover:border-red-500 transition-all"
+                                    >
+                                        <Trash2 size={18} className="text-red-500 hover:text-black" />
+                                    </button>
+                                )}
                                 <button onClick={() => setCinemaPost(null)} className="p-2 rounded-full bg-black/60 border border-white/10">
                                     <X size={18} />
                                 </button>
