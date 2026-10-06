@@ -2,6 +2,9 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaLibSQL } from '@prisma/adapter-libsql';
 import { createClient } from '@libsql/client';
 
+// Cache Prisma clients per worker instance to avoid recreation on every request
+const prismaCache = new Map();
+
 const getPrisma = (envOrUrl) => {
     let databaseUrl, authToken;
     
@@ -18,15 +21,32 @@ const getPrisma = (envOrUrl) => {
     if (!databaseUrl) throw new Error('DATABASE_URL is missing.');
     if (!authToken) throw new Error('TURSO_AUTH_TOKEN is missing.');
     
-    // v5.22 pattern: manually create libsql client, then pass to adapter
-    const libsql = createClient({
-        url: databaseUrl,
-        authToken
-    });
+    // Use cached client if available for this URL
+    const cacheKey = `${databaseUrl}-${authToken.slice(0, 10)}`;
+    if (prismaCache.has(cacheKey)) {
+        return prismaCache.get(cacheKey);
+    }
     
-    const adapter = new PrismaLibSQL(libsql);
-    const prisma = new PrismaClient({ adapter });
-    return prisma;
+    try {
+        // v5.22 pattern: manually create libsql client, then pass to adapter
+        const libsql = createClient({
+            url: databaseUrl,
+            authToken
+        });
+        
+        const adapter = new PrismaLibSQL(libsql);
+        const prisma = new PrismaClient({ 
+            adapter,
+            log: ['error', 'warn'] // Only log errors/warnings in production
+        });
+        
+        // Cache for reuse
+        prismaCache.set(cacheKey, prisma);
+        return prisma;
+    } catch (error) {
+        console.error('Prisma initialization error:', error);
+        throw error;
+    }
 };
 
 export const getAuthPrisma = getPrisma;
@@ -42,6 +62,7 @@ export const retryTransientDatabaseOperation = async (operation, attempts = 3) =
                               error.code === 'P2024' || 
                               error.message?.includes('timeout') ||
                               error.message?.includes('Connection') ||
+                              error.message?.includes('array buffer') || // ADD THIS
                               error.message?.includes('ECONNREFUSED');
             
             // Only retry transient errors
