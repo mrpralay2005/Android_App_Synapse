@@ -107,9 +107,11 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                 const storyRes = await fetchWithRetry(`${apiUrl}/api/social/stories`, fetchOptions);
                 const storyData = await storyRes.json();
                 if (active && storyData.success) {
+                    console.log('[Story Debug] All stories fetched:', storyData.data.length);
                     setAllStories(storyData.data);
                     saveToCache('synapse_stories', storyData.data);
                     const mine = storyData.data.filter(s => s.userId === currentUserState.id || s.userId === currentUserState.userId);
+                    console.log('[Story Debug] My stories filtered:', mine.length, 'Current user ID:', currentUserState.id || currentUserState.userId);
                     setMyStories(mine);
                 }
 
@@ -250,12 +252,14 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
     };
 
     const handleStoryUpload = async (storyData) => {
+        console.log('[Story Upload] Starting upload...', { hasRawFile: !!storyData.rawFile, type: storyData.type });
         try {
             const apiUrl = import.meta.env.VITE_API_URL || 'https://synapse-backend.mrpralay2005.workers.dev';
             const token = Cookies.get('synapse_token');
             let finalMediaUrl = storyData.mediaUrl;
 
             if (storyData.rawFile) {
+                console.log('[Story Upload] Getting upload URL...');
                 const uploadUrlRes = await fetch(`${apiUrl}/api/social/upload-url`, {
                     method: 'POST',
                     headers: {
@@ -267,15 +271,20 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
 
                 if (uploadUrlRes.ok) {
                     const { uploadUrl, publicUrl } = await uploadUrlRes.json();
+                    console.log('[Story Upload] Uploading to cloud storage...');
                     const storageRes = await fetch(uploadUrl, {
                         method: 'PUT',
                         body: storyData.rawFile,
                         headers: { 'Content-Type': storyData.rawFile.type }
                     });
-                    if (storageRes.ok) finalMediaUrl = publicUrl;
+                    if (storageRes.ok) {
+                        finalMediaUrl = publicUrl;
+                        console.log('[Story Upload] Cloud upload successful');
+                    }
                 }
             }
 
+            console.log('[Story Upload] Creating story in database...');
             const res = await fetch(`${apiUrl}/api/social/stories`, {
                 method: 'POST',
                 headers: {
@@ -285,13 +294,18 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                 body: JSON.stringify({ mediaUrl: finalMediaUrl, type: storyData.type })
             });
 
+            const result = await res.json();
+            console.log('[Story Upload] Server response:', result);
+
             if (res.ok) {
+                console.log('[Story Upload] Success! Triggering refresh...');
                 setRefreshTrigger(prev => prev + 1);
                 return true;
             }
+            console.error('[Story Upload] Failed:', result);
             return false;
         } catch (err) {
-            console.error('Mobile story upload failed:', err);
+            console.error('[Story Upload] Error:', err);
             return false;
         }
     };
