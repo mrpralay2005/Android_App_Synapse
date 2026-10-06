@@ -36,7 +36,17 @@ social.post('/posts/:id/save', authenticateToken, toggleSave);
 // Story System
 social.get('/stories', authenticateToken, getStories);
 social.post('/stories', authenticateToken, createStory);
-social.delete('/stories/:id', authenticateToken, deleteStory);
+social.delete('/stories/:id', authenticateToken, async (c) => {
+    try {
+        console.log('[ROUTE] DELETE /stories/:id called, storyId:', c.req.param('id'));
+        const result = await deleteStory(c);
+        console.log('[ROUTE] deleteStory returned:', result?.status, 'success:', result);
+        return result;
+    } catch (error) {
+        console.error('[ROUTE] deleteStory threw error:', error.message, error.stack);
+        return c.json({ success: false, error: 'Route handler error', details: error.message }, 500);
+    }
+});
 social.post('/stories/:id/view', authenticateToken, viewStory);
 social.post('/stories/:id/reply', authenticateToken, replyToStory);
 social.get('/stories/:id/details', authenticateToken, getStoryDetails);
