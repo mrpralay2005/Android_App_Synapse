@@ -321,7 +321,7 @@ const PostCard = ({ post, onInteraction, onCinemaMode, index = 0 }) => {
             }}
             className="synapse-post-card group relative bg-[#0f0f0f] border border-white/5 rounded-[2rem] overflow-hidden mb-6 last:mb-0 hover:border-emerald-500/20 transition-[border-color,box-shadow] duration-500 mobile-card"
         >
-            {!isMobileView && (
+            {!isMobileView && isUnlocked && (
                 <div className="flex items-center justify-between p-6 px-8">
                     <div className="flex items-center gap-4">
                         <div className="relative">
@@ -485,7 +485,7 @@ const PostCard = ({ post, onInteraction, onCinemaMode, index = 0 }) => {
                 )}
             </div>
 
-            {!isMobileView && (
+            {!isMobileView && isUnlocked && (
                 <div className="p-8 px-10">
                     <div className="flex items-center justify-between mb-8">
                         <div className="flex items-center gap-8">
@@ -602,7 +602,7 @@ const PostCard = ({ post, onInteraction, onCinemaMode, index = 0 }) => {
                 </div>
             )}
 
-            {isMobileView && (
+            {isMobileView && isUnlocked && (
                 <AnimatePresence>
                     {showMobileChrome && (
                         <motion.div

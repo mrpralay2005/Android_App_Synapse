@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal, Download, Lock, Unlock, Play, Pause, Volume2, VolumeX, ShieldCheck, Share2, Maximize2, Expand } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Cookies from 'js-cookie';
@@ -16,6 +17,11 @@ const PostCard = ({ post, onInteraction, onCinemaMode, index = 0 }) => {
     const [inputPassword, setInputPassword] = useState('');
     const [showComments, setShowComments] = useState(false);
     const [commentText, setCommentText] = useState('');
+    const [comments, setComments] = useState([]);
+    const [commentsCount, setCommentsCount] = useState(post._count?.comments || 0);
+    const [isLoadingComments, setIsLoadingComments] = useState(false);
+    const [isPostingComment, setIsPostingComment] = useState(false);
+    const [commentError, setCommentError] = useState('');
     const [isPlaying, setIsPlaying] = useState(true);
     const [isMuted, setIsMuted] = useState(true);
     const [isInView, setIsInView] = useState(false);
@@ -152,8 +158,76 @@ const PostCard = ({ post, onInteraction, onCinemaMode, index = 0 }) => {
         }
     };
 
-    const apiUrl = "https://synapse-backend.mrpralay2005.workers.dev";
+    const apiUrl = import.meta.env.VITE_API_URL || "https://synapse-backend.mrpralay2005.workers.dev";
     const token = Cookies.get('synapse_token');
+
+    useEffect(() => {
+        setCommentsCount(post._count?.comments || 0);
+    }, [post.id, post._count?.comments]);
+
+    useEffect(() => {
+        if (!showComments) return undefined;
+
+        let isCurrent = true;
+        const loadComments = async () => {
+            setIsLoadingComments(true);
+            setCommentError('');
+            try {
+                const response = await fetch(`${apiUrl}/api/social/posts/${post.id}/comments`);
+                const data = await response.json();
+                if (!response.ok || !Array.isArray(data)) {
+                    throw new Error(data?.error || 'Could not load comments.');
+                }
+                if (isCurrent) {
+                    setComments(data);
+                    setCommentsCount(data.length);
+                }
+            } catch (error) {
+                if (isCurrent) setCommentError(error.message || 'Could not load comments.');
+            } finally {
+                if (isCurrent) setIsLoadingComments(false);
+            }
+        };
+
+        loadComments();
+        return () => { isCurrent = false; };
+    }, [apiUrl, post.id, showComments]);
+
+    const handleCommentSubmit = async (event) => {
+        event?.preventDefault();
+        const content = commentText.trim();
+        if (!content || isPostingComment) return;
+
+        if (!token) {
+            setCommentError('Your session has ended. Please sign in again before posting.');
+            return;
+        }
+
+        setIsPostingComment(true);
+        setCommentError('');
+        try {
+            const response = await fetch(`${apiUrl}/api/social/posts/${post.id}/comment`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ content })
+            });
+            const data = await response.json();
+            if (!response.ok || !data.success || !data.data) {
+                throw new Error(data?.error || (response.status === 401 || response.status === 403 ? 'Your session has ended. Please sign in again.' : 'Could not post your comment.'));
+            }
+
+            setComments((current) => [...current, data.data]);
+            setCommentsCount((current) => current + 1);
+            setCommentText('');
+        } catch (error) {
+            setCommentError(error.message || 'Could not post your comment.');
+        } finally {
+            setIsPostingComment(false);
+        }
+    };
 
     const handleLike = async () => {
         setIsLiked(!isLiked);
@@ -245,9 +319,9 @@ const PostCard = ({ post, onInteraction, onCinemaMode, index = 0 }) => {
                 WebkitBackfaceVisibility: 'hidden',
                 transformStyle: 'preserve-3d',
             }}
-            className="group relative bg-[#0f0f0f] border border-white/5 rounded-[2.5rem] overflow-hidden mb-12 last:mb-0 hover:border-emerald-500/20 transition-[border-color,box-shadow] duration-500 mobile-card"
+            className="synapse-post-card group relative bg-[#0f0f0f] border border-white/5 rounded-[2rem] overflow-hidden mb-6 last:mb-0 hover:border-emerald-500/20 transition-[border-color,box-shadow] duration-500 mobile-card"
         >
-            {!isMobileView && (
+            {!isMobileView && isUnlocked && (
                 <div className="flex items-center justify-between p-6 px-8">
                     <div className="flex items-center gap-4">
                         <div className="relative">
@@ -411,7 +485,7 @@ const PostCard = ({ post, onInteraction, onCinemaMode, index = 0 }) => {
                 )}
             </div>
 
-            {!isMobileView && (
+            {!isMobileView && isUnlocked && (
                 <div className="p-8 px-10">
                     <div className="flex items-center justify-between mb-8">
                         <div className="flex items-center gap-8">
@@ -432,7 +506,7 @@ const PostCard = ({ post, onInteraction, onCinemaMode, index = 0 }) => {
                                 <div className={`p-4 rounded-[1.2rem] transition-all flex items-center justify-center ${showComments ? 'bg-emerald-500/10 text-emerald-500' : 'bg-white/5 text-gray-400 group-hover/btn:bg-white/10 group-hover/btn:text-emerald-400'}`}>
                                     <MessageCircle size={20} />
                                 </div>
-                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{post._count?.comments || 0} Synapse</span>
+                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">{commentsCount} Synapse</span>
                             </button>
 
                             <button
@@ -477,19 +551,19 @@ const PostCard = ({ post, onInteraction, onCinemaMode, index = 0 }) => {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             transition={{ duration: 0.2, ease: 'easeOut' }}
-                            className="absolute inset-x-0 top-0 z-30 pointer-events-none"
+                            className="synapse-post-mobile-top absolute inset-x-0 top-0 z-30 pointer-events-none"
                         >
                             <div className="flex items-center justify-between p-4 pointer-events-auto">
                                 <div className="flex items-center gap-3">
                                     <div className="relative">
-                                        <div className="w-10 h-10 rounded-full border-2 border-emerald-500/30 p-[2px] bg-black overflow-hidden">
+                                        <div className="synapse-post-mobile-avatar w-10 h-10 rounded-full border-2 border-emerald-500/30 p-[2px] bg-black overflow-hidden">
                                             {isVideo(post.user?.profileImage) ? (
                                                 <video src={post.user?.profileImage} className="w-full h-full rounded-full object-cover border border-black" autoPlay muted loop playsInline />
                                             ) : (
                                                 <img src={post.user?.profileImage || "https://www.svgrepo.com/show/508699/landscape-placeholder.svg"} className="w-full h-full rounded-full object-cover border border-black" alt={post.user?.username} />
                                             )}
                                         </div>
-                                        <div className="absolute -bottom-0.5 -right-0.5 bg-emerald-500 w-3.5 h-3.5 rounded-full border border-black" />
+                                        <div className="synapse-post-mobile-presence absolute -bottom-0.5 -right-0.5 z-10 bg-emerald-500 w-3.5 h-3.5 rounded-full border border-black" style={{ backgroundColor: 'var(--synapse-theme-accent, #10b981)', opacity: 1 }} />
                                     </div>
                                     <div className="flex items-center gap-2 text-white">
                                         <span className="text-sm font-bold tracking-tight">{post.user?.username || 'user'}</span>
@@ -498,7 +572,7 @@ const PostCard = ({ post, onInteraction, onCinemaMode, index = 0 }) => {
                                 </div>
                                 <button
                                     onClick={toggleMobileMenu}
-                                    className="w-9 h-9 rounded-full bg-black/50 border border-white/10 text-white flex items-center justify-center active:scale-95"
+                                    className="synapse-post-mobile-menu-trigger w-9 h-9 rounded-full bg-black/50 border border-white/10 text-white flex items-center justify-center active:scale-95"
                                     aria-label="Open post actions"
                                 >
                                     <MoreHorizontal size={16} />
@@ -511,7 +585,7 @@ const PostCard = ({ post, onInteraction, onCinemaMode, index = 0 }) => {
 
             {isMobileView && showMobileMenu && (
                 <div className="absolute top-4 right-4 z-40">
-                    <div className="rounded-[1.2rem] border border-white/10 bg-black/80 p-2 shadow-2xl backdrop-blur-md">
+                    <div className="synapse-post-mobile-menu rounded-[1.2rem] border border-white/10 bg-black/80 p-2 shadow-2xl backdrop-blur-md">
                         <button
                             onClick={(e) => {
                                 e.stopPropagation();
@@ -528,7 +602,7 @@ const PostCard = ({ post, onInteraction, onCinemaMode, index = 0 }) => {
                 </div>
             )}
 
-            {isMobileView && (
+            {isMobileView && isUnlocked && (
                 <AnimatePresence>
                     {showMobileChrome && (
                         <motion.div
@@ -540,22 +614,28 @@ const PostCard = ({ post, onInteraction, onCinemaMode, index = 0 }) => {
                         >
                             <div className="px-4 pb-4 pointer-events-auto">
                                 <div className="flex items-end justify-between gap-2">
-                                    <button onClick={handleLike} className="flex flex-1 flex-col items-center gap-1.5 rounded-[1.25rem] bg-black/45 backdrop-blur-sm border border-white/10 p-2 text-gray-200">
+                                    <button onClick={handleLike} className="synapse-post-mobile-action flex flex-1 flex-col items-center gap-1.5 rounded-[1.25rem] bg-black/45 backdrop-blur-sm border border-white/10 p-2 text-gray-200">
                                         <Heart size={20} fill={isLiked ? 'currentColor' : 'none'} className={isLiked ? 'text-red-500' : 'text-white'} />
                                         <span className="text-[10px] font-bold uppercase tracking-[0.18em]">{likesCount}</span>
                                     </button>
 
-                                    <button onClick={() => setShowComments(!showComments)} className="flex flex-1 flex-col items-center gap-1.5 rounded-[1.25rem] bg-black/45 backdrop-blur-sm border border-white/10 p-2 text-gray-200">
+                                    <button
+                                        onClick={(event) => {
+                                            event.stopPropagation();
+                                            setShowComments(true);
+                                        }}
+                                        className="synapse-post-mobile-action flex flex-1 flex-col items-center gap-1.5 rounded-[1.25rem] bg-black/45 backdrop-blur-sm border border-white/10 p-2 text-gray-200"
+                                    >
                                         <MessageCircle size={20} className={showComments ? 'text-emerald-500' : 'text-white'} />
-                                        <span className="text-[10px] font-bold uppercase tracking-[0.18em]">{post._count?.comments || 0}</span>
+                                        <span className="text-[10px] font-bold uppercase tracking-[0.18em]">{commentsCount}</span>
                                     </button>
 
-                                    <button onClick={handleShare} className="flex flex-1 flex-col items-center gap-1.5 rounded-[1.25rem] bg-black/45 backdrop-blur-sm border border-white/10 p-2 text-gray-200">
+                                    <button onClick={handleShare} className="synapse-post-mobile-action flex flex-1 flex-col items-center gap-1.5 rounded-[1.25rem] bg-black/45 backdrop-blur-sm border border-white/10 p-2 text-gray-200">
                                         <Share2 size={20} className="text-white" />
                                         <span className="text-[10px] font-bold uppercase tracking-[0.18em]">Share</span>
                                     </button>
 
-                                    <button onClick={handleSave} className="flex flex-1 flex-col items-center gap-1.5 rounded-[1.25rem] bg-black/45 backdrop-blur-sm border border-white/10 p-2 text-gray-200">
+                                    <button onClick={handleSave} className="synapse-post-mobile-action flex flex-1 flex-col items-center gap-1.5 rounded-[1.25rem] bg-black/45 backdrop-blur-sm border border-white/10 p-2 text-gray-200">
                                         <Bookmark size={20} fill={isSaved ? 'currentColor' : 'none'} className={isSaved ? 'text-amber-400' : 'text-white'} />
                                         <span className="text-[10px] font-bold uppercase tracking-[0.18em]">{isSaved ? 'Saved' : 'Save'}</span>
                                     </button>
@@ -566,9 +646,9 @@ const PostCard = ({ post, onInteraction, onCinemaMode, index = 0 }) => {
                 </AnimatePresence>
             )}
 
-            {/* Expansion: Comments Section (Mini-interface) */}
+            {/* Keep the existing desktop comments expansion unchanged. */}
             <AnimatePresence>
-                {showComments && (
+                {showComments && !isMobileView && (
                     <motion.div
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: 'auto', opacity: 1 }}
@@ -613,6 +693,160 @@ const PostCard = ({ post, onInteraction, onCinemaMode, index = 0 }) => {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/*
+                Mobile comments live in a portal so this sheet is never clipped by the
+                post card's overflow/animation container.
+            */}
+            {isMobileView && typeof document !== 'undefined' && createPortal(
+                <AnimatePresence>
+                    {showComments && (
+                        <motion.div
+                            className="fixed inset-0 z-[1000] flex items-center justify-center p-4"
+                            role="dialog"
+                            aria-modal="true"
+                            aria-label="Comments"
+                            initial="hidden"
+                            animate="visible"
+                            exit="hidden"
+                        >
+                            <motion.button
+                                type="button"
+                                aria-label="Close comments"
+                                className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+                                variants={{ hidden: { opacity: 0 }, visible: { opacity: 1 } }}
+                                transition={{ duration: 0.2 }}
+                                onClick={() => setShowComments(false)}
+                            />
+
+                            <motion.section
+                                variants={{ hidden: { opacity: 0, scale: 0.94, y: 16 }, visible: { opacity: 1, scale: 1, y: 0 } }}
+                                transition={{ type: 'spring', stiffness: 360, damping: 28 }}
+                                className="relative z-10 flex max-h-[min(34rem,calc(100dvh-2rem))] w-full max-w-sm flex-col overflow-hidden rounded-[1.75rem] border border-white/10 bg-[#101112] shadow-[0_20px_60px_rgba(0,0,0,0.55)]"
+                                onClick={(event) => event.stopPropagation()}
+                            >
+                                <div className="relative overflow-hidden border-b border-white/[0.08] px-5 pb-4 pt-5">
+                                    <div className="pointer-events-none absolute -right-16 -top-20 h-44 w-44 rounded-full bg-emerald-400/15 blur-3xl" />
+                                    <div className="pointer-events-none absolute -left-14 bottom-0 h-28 w-28 rounded-full bg-violet-500/10 blur-3xl" />
+                                    <div className="relative flex items-center justify-between gap-3">
+                                        <div className="flex items-center gap-3">
+                                            <div className="grid h-10 w-10 place-items-center rounded-2xl border border-emerald-300/20 bg-emerald-400/10 text-emerald-300 shadow-[0_8px_24px_rgba(52,211,153,0.12)]">
+                                                <MessageCircle size={18} />
+                                            </div>
+                                            <div>
+                                                <h2 className="text-sm font-bold text-white">Neural thread</h2>
+                                                <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-500">
+                                                    {commentsCount} {commentsCount === 1 ? 'comment' : 'comments'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowComments(false)}
+                                            className="rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-[11px] font-semibold text-gray-400 transition-colors hover:bg-white/10 hover:text-white"
+                                    >
+                                        Close
+                                    </button>
+                                    </div>
+
+                                    <div className="relative mt-4 flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-black/20 p-3">
+                                        {isVideo(post.user?.profileImage) ? (
+                                            <video src={post.user.profileImage} className="h-9 w-9 shrink-0 rounded-xl object-cover" autoPlay muted loop playsInline />
+                                        ) : (
+                                            <img src={post.user?.profileImage || "https://www.svgrepo.com/show/508699/landscape-placeholder.svg"} className="h-9 w-9 shrink-0 rounded-xl object-cover" alt={post.user?.username || 'Post author'} />
+                                        )}
+                                        <div className="min-w-0">
+                                            <p className="truncate text-xs font-bold text-white">{post.user?.username || 'Synapse member'}</p>
+                                            <p className="mt-0.5 line-clamp-1 text-[11px] text-gray-500">{post.caption || 'Share your thought on this post.'}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
+                                    {isLoadingComments ? (
+                                        <div className="flex min-h-[11rem] flex-col items-center justify-center gap-3 text-center">
+                                            <span className="h-7 w-7 animate-spin rounded-full border-2 border-emerald-300/20 border-t-emerald-300" />
+                                            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-gray-500">Loading conversation</p>
+                                        </div>
+                                    ) : comments.length > 0 ? (
+                                        <div className="space-y-4">
+                                            {comments.map((comment) => (
+                                                <article key={comment.id} className="flex gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.025] p-3">
+                                                    {isVideo(comment.user?.profileImage) ? (
+                                                        <video src={comment.user.profileImage} className="h-9 w-9 shrink-0 rounded-xl object-cover" autoPlay muted loop playsInline />
+                                                    ) : (
+                                                        <img src={comment.user?.profileImage || "https://www.svgrepo.com/show/508699/landscape-placeholder.svg"} className="h-9 w-9 shrink-0 rounded-xl object-cover" alt={comment.user?.username || 'Comment author'} />
+                                                    )}
+                                                    <div className="min-w-0 flex-1">
+                                                        <div className="flex items-baseline justify-between gap-3">
+                                                            <p className="truncate text-xs font-bold text-white">{comment.user?.username || 'Synapse member'}</p>
+                                                            {comment.createdAt && <time className="shrink-0 text-[9px] font-medium text-gray-600">{new Date(comment.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</time>}
+                                                        </div>
+                                                        <p className="mt-1 break-words text-xs leading-relaxed text-gray-300">{comment.content}</p>
+                                                    </div>
+                                                </article>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="flex min-h-[11rem] flex-col items-center justify-center rounded-3xl border border-dashed border-white/10 bg-white/[0.025] px-6 py-8 text-center">
+                                            <div className="relative mb-4 grid h-14 w-14 place-items-center rounded-2xl border border-emerald-300/20 bg-emerald-400/[0.08] text-emerald-300">
+                                                <MessageCircle size={23} />
+                                                <span className="absolute inset-[-5px] rounded-[1.1rem] border border-emerald-300/10" />
+                                            </div>
+                                            <p className="text-sm font-bold text-white">Start the conversation</p>
+                                            <p className="mt-2 max-w-[15rem] text-xs leading-relaxed text-gray-500">No messages are showing here yet. Share the first thought on this post.</p>
+                                            <div className="mt-5 rounded-full border border-emerald-300/15 bg-emerald-400/[0.06] px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.16em] text-emerald-200/80">Live discussion</div>
+                                        </div>
+                                    )}
+                                    {commentError && <p role="alert" className="mt-3 rounded-xl border border-red-400/20 bg-red-400/[0.08] px-3 py-2 text-center text-[11px] leading-relaxed text-red-200">{commentError}</p>}
+                                </div>
+
+                                <form onSubmit={handleCommentSubmit} className="border-t border-white/[0.08] bg-gradient-to-b from-white/[0.025] to-transparent px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3">
+                                    <div className="flex items-center gap-3">
+                                        {isVideo(Cookies.get('synapse_user_image')) ? (
+                                            <video
+                                                src={Cookies.get('synapse_user_image')}
+                                                className="h-10 w-10 shrink-0 rounded-2xl border border-white/10 object-cover"
+                                                autoPlay
+                                                muted
+                                                loop
+                                                playsInline
+                                            />
+                                        ) : (
+                                            <img
+                                                src={Cookies.get('synapse_user_image') || "https://www.svgrepo.com/show/508699/landscape-placeholder.svg"}
+                                                className="h-10 w-10 shrink-0 rounded-2xl border border-white/10 object-cover"
+                                                alt="Your profile"
+                                            />
+                                        )}
+                                        <div className="relative flex-1">
+                                            <input
+                                                type="text"
+                                                value={commentText}
+                                                onChange={(event) => setCommentText(event.target.value)}
+                                                onKeyDown={(event) => {
+                                                    if (event.key === 'Enter' && !event.shiftKey) handleCommentSubmit(event);
+                                                }}
+                                                placeholder="Add to the neural thread..."
+                                                className="w-full rounded-2xl border border-white/10 bg-black/40 py-3 pl-4 pr-12 text-sm text-white placeholder:text-gray-600 transition focus:border-emerald-400/50 focus:bg-black/55 focus:outline-none"
+                                            />
+                                            <button
+                                                type="submit"
+                                                aria-label="Post comment"
+                                                disabled={!commentText.trim() || isPostingComment}
+                                                className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-xl bg-emerald-400 text-black transition hover:bg-emerald-300 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+                                            >
+                                                {isPostingComment ? <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-black/25 border-t-black" /> : <Send size={15} />}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </form>
+                            </motion.section>
+                        </motion.div>
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
         </motion.div>
     );
 };
