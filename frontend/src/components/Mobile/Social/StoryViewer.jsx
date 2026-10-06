@@ -577,7 +577,16 @@ const StoryViewer = ({ stories, initialStoryIndex = 0, onClose, onDelete, onUser
                                         </button>
                                         <div className="h-[1px] bg-white/5" />
                                         {isOwner && (
-                                            <button onClick={() => { setIsMenuOpen(false); if (onDelete) onDelete(currentStory.id); }}
+                                            <button onClick={async () => { 
+                                                setIsMenuOpen(false); 
+                                                if (onDelete) {
+                                                    const success = await onDelete(currentStory.id);
+                                                    if (success) {
+                                                        // Close viewer after successful delete
+                                                        onClose();
+                                                    }
+                                                }
+                                            }}
                                                 className="flex items-center gap-3 px-4 py-3 text-red-500 hover:bg-red-500/10 text-xs font-bold uppercase tracking-wider text-left transition-colors"
                                             >
                                                 <Trash2 size={14} /> Delete
