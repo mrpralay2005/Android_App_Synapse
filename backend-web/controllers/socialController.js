@@ -338,30 +338,15 @@ export const getStories = async (c) => {
 
         console.log('[getStories] ViewerId:', viewerId, 'Now:', now.toISOString());
 
+        // DEBUG: Check total stories in database
+        const totalStories = await prisma.story.count();
+        const unexpiredStories = await prisma.story.count({ where: { expiresAt: { gt: now } } });
+        console.log('[getStories DEBUG] Total stories in DB:', totalStories, 'Unexpired:', unexpiredStories);
+
         // Fetch stories that haven't expired
         const stories = await prisma.story.findMany({
             where: {
-                AND: [
-                    { expiresAt: { gt: now } },
-                    // Admin stories remain private to their owner. This preserves
-                    // the public-rail exclusion while allowing an administrator to
-                    // see and manage the stories they have personally published.
-                    {
-                        OR: [
-                            { user: { role: { not: 'ADMIN' } } },
-                            ...(viewerId ? [{ userId: viewerId }] : [])
-                        ]
-                    },
-                    {
-                        OR: [
-                            { isProtected: false },
-                            ...(viewerId ? [
-                                { userId: viewerId },
-                                { user: { followers: { some: { followerId: viewerId } } } }
-                            ] : [])
-                        ]
-                    }
-                ]
+                expiresAt: { gt: now }
             },
             include: {
                 user: {
