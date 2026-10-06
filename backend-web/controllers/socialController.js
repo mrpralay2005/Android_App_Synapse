@@ -457,6 +457,44 @@ export const deleteStory = async (c) => {
     }
 };
 
+export const deletePost = async (c) => {
+    try {
+        const postId = parseInt(c.req.param('id'));
+        const user = c.get('user');
+        const prisma = getPrisma(c.env);
+
+        // Check if post exists and user owns it
+        const post = await prisma.post.findUnique({
+            where: { id: postId },
+            select: { id: true, userId: true }
+        });
+
+        if (!post) {
+            return c.json({ success: false, error: "Post not found" }, 404);
+        }
+        
+        if (post.userId !== user.userId) {
+            return c.json({ success: false, error: "Unauthorized" }, 403);
+        }
+
+        // Use raw SQL to delete - Turso doesn't support deleteMany properly
+        // Delete related records first, then the post
+        await prisma.$executeRaw`DELETE FROM Like WHERE postId = ${postId}`;
+        await prisma.$executeRaw`DELETE FROM Comment WHERE postId = ${postId}`;
+        await prisma.$executeRaw`DELETE FROM SavedPost WHERE postId = ${postId}`;
+        await prisma.$executeRaw`DELETE FROM Post WHERE id = ${postId}`;
+
+        return c.json({ success: true, message: "Post deleted successfully" });
+    } catch (error) {
+        console.error('[deletePost] Error:', error.message);
+        return c.json({ 
+            success: false, 
+            error: "Failed to delete post", 
+            details: error.message
+        }, 500);
+    }
+};
+
 export const viewStory = async (c) => {
     try {
         const storyId = parseInt(c.req.param('id'));

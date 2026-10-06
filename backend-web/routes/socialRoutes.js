@@ -12,6 +12,7 @@ import {
     getStories,
     createStory,
     deleteStory,
+    deletePost,
     viewStory,
     replyToStory,
     getStoryDetails
@@ -32,6 +33,7 @@ social.post('/posts/:id/like', authenticateToken, toggleLike);
 social.post('/posts/:id/comment', authenticateToken, addComment);
 social.get('/posts/:id/comments', getComments);
 social.post('/posts/:id/save', authenticateToken, toggleSave);
+social.delete('/posts/:id', authenticateToken, deletePost);
 
 // Story System
 social.get('/stories', authenticateToken, getStories);
