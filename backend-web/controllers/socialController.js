@@ -421,25 +421,62 @@ export const createStory = async (c) => {
 };
 
 export const deleteStory = async (c) => {
+    let prisma;
     try {
         const storyId = parseInt(c.req.param('id'));
         const user = c.get('user');
-        const prisma = getPrisma(c.env);
+        
+        console.log('[deleteStory] Attempting to delete story:', storyId, 'by user:', user.userId);
+
+        prisma = getPrisma(c.env);
 
         const story = await prisma.story.findUnique({
-            where: { id: storyId }
+            where: { id: storyId },
+            select: { id: true, userId: true }
         });
 
-        if (!story) return c.json({ success: false, error: "Story not found" }, 404);
-        if (story.userId !== user.userId) return c.json({ success: false, error: "Unauthorized" }, 412);
+        if (!story) {
+            console.log('[deleteStory] Story not found:', storyId);
+            return c.json({ success: false, error: "Story not found" }, 404);
+        }
+        
+        if (story.userId !== user.userId) {
+            console.log('[deleteStory] Unauthorized deletion attempt. Story owner:', story.userId, 'Request by:', user.userId);
+            return c.json({ success: false, error: "Unauthorized" }, 412);
+        }
 
-        await prisma.story.delete({
-            where: { id: storyId }
+        console.log('[deleteStory] Deleting story and related records:', storyId);
+        
+        // Use transaction to ensure all related records are deleted
+        await prisma.$transaction(async (tx) => {
+            // Cascade should handle these, but being explicit helps debug
+            await tx.storyView.deleteMany({
+                where: { storyId: storyId }
+            });
+            
+            await tx.storyMessage.deleteMany({
+                where: { storyId: storyId }
+            });
+            
+            await tx.story.delete({
+                where: { id: storyId }
+            });
         });
 
+        console.log('[deleteStory] Story deleted successfully:', storyId);
         return c.json({ success: true, message: "Story terminated" });
     } catch (error) {
-        return c.json({ success: false, error: "Termination failed" }, 500);
+        console.error('[deleteStory] Error deleting story:', {
+            message: error.message,
+            name: error.name,
+            code: error.code,
+            stack: error.stack
+        });
+        return c.json({ 
+            success: false, 
+            error: "Termination failed", 
+            details: error.message 
+        }, 500);
     }
 };
 
