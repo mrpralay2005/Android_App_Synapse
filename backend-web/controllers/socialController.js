@@ -177,16 +177,41 @@ export const getUploadUrl = async (c) => {
 };
 
 export const createPost = async (c) => {
+    const requestId = `BACKEND_POST_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+    console.log(`\n[${requestId}] ========== BACKEND: CREATE POST REQUEST ==========`);
+    console.log(`[${requestId}] Timestamp:`, new Date().toISOString());
+    
     try {
         const { caption, mediaUrl, type, postPassword, thumbnailUrl } = await c.req.json();
         const user = c.get('user');
         const prisma = getPrisma(c.env);
 
-        if (!user) return c.json({ success: false, error: "Identity missing" }, 401);
-        if (!mediaUrl) return c.json({ success: false, error: "Media resource required" }, 400);
+        console.log(`[${requestId}] Request Data:`, {
+            userId: user?.userId || user?.id,
+            captionLength: caption?.length || 0,
+            mediaUrlLength: mediaUrl?.length || 0,
+            type,
+            hasPassword: !!postPassword,
+            hasThumbnail: !!thumbnailUrl
+        });
 
+        if (!user) {
+            console.error(`[${requestId}] ❌ No user in request`);
+            return c.json({ success: false, error: "Identity missing" }, 401);
+        }
+        
+        if (!mediaUrl) {
+            console.error(`[${requestId}] ❌ No mediaUrl provided`);
+            return c.json({ success: false, error: "Media resource required" }, 400);
+        }
+
+        console.log(`[${requestId}] Fetching user quantum settings...`);
         const owner = await prisma.user.findUnique({ where: { id: user.userId }, select: { quantumDecayEnabled: true, quantumDecayDays: true } });
         const expiresAt = owner?.quantumDecayEnabled ? new Date(Date.now() + owner.quantumDecayDays * 24 * 60 * 60 * 1000) : null;
+        
+        console.log(`[${requestId}] Creating post in database...`);
+        const dbStartTime = Date.now();
+        
         const post = await prisma.post.create({
             data: {
                 caption: caption || "",
@@ -204,9 +229,19 @@ export const createPost = async (c) => {
             }
         });
 
+        const dbDuration = Date.now() - dbStartTime;
+        console.log(`[${requestId}] ✅ Post created successfully`);
+        console.log(`[${requestId}] Post ID:`, post.id);
+        console.log(`[${requestId}] DB Duration:`, `${dbDuration}ms`);
+        console.log(`[${requestId}] ========== REQUEST COMPLETE ==========\n`);
+
         return c.json({ success: true, data: post }, 201);
     } catch (error) {
-        console.error("Neural Post Broadcast Error:", error);
+        console.error(`[${requestId}] ❌ EXCEPTION:`, error);
+        console.error(`[${requestId}] Error Message:`, error.message);
+        console.error(`[${requestId}] Error Stack:`, error.stack);
+        console.error(`[${requestId}] ========== REQUEST FAILED ==========\n`);
+        
         return c.json({
             success: false,
             error: "Post transmission failed",

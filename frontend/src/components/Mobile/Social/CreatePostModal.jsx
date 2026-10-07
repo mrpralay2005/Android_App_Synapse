@@ -109,29 +109,62 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit, user }) => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!mediaUrl) return;
+        
+        const submitId = `MODAL_SUBMIT_${Date.now()}`;
+        console.log(`\n[${submitId}] ========== MODAL SUBMIT TRIGGERED ==========`);
+        console.log(`[${submitId}] isSubmitting:`, isSubmitting);
+        console.log(`[${submitId}] Has mediaUrl:`, !!mediaUrl);
+        console.log(`[${submitId}] Has rawMedia:`, !!rawMedia);
+        
+        if (!mediaUrl) {
+            console.log(`[${submitId}] ❌ ABORT: No media URL`);
+            return;
+        }
+
+        if (isSubmitting) {
+            console.warn(`[${submitId}] ⚠️ DUPLICATE SUBMIT DETECTED - Already submitting!`);
+            return;
+        }
 
         setIsSubmitting(true);
+        console.log(`[${submitId}] Set isSubmitting = true`);
+        
         try {
-            const success = await onSubmit({
+            const postData = {
                 caption,
                 mediaUrl,
                 type,
                 postPassword: isProtected ? postPassword : null,
-                rawFile: rawMedia // Pass raw file for cloud storage processing
+                rawFile: rawMedia
+            };
+            console.log(`[${submitId}] Calling onSubmit with data:`, {
+                captionLength: caption?.length,
+                type,
+                hasPassword: isProtected,
+                hasRawFile: !!rawMedia,
+                rawFileSize: rawMedia?.size,
+                rawFileName: rawMedia?.name
             });
+            
+            const success = await onSubmit(postData);
+            console.log(`[${submitId}] onSubmit returned:`, success);
 
             if (success) {
+                console.log(`[${submitId}] ✅ Success! Resetting form and closing modal`);
                 setStep(1);
                 resetForm();
                 onClose();
             } else {
+                console.error(`[${submitId}] ❌ Upload failed`);
                 alert("Neural Network Saturated. The file is still too large for the Cloudflare Gateway (1MB). Please try a smaller file.");
             }
         } catch (err) {
+            console.error(`[${submitId}] ❌ Exception:`, err);
             alert("Connection Severed. Deployment failed.");
         } finally {
             setIsSubmitting(false);
+            console.log(`[${submitId}] Set isSubmitting = false`);
+            console.log(`[${submitId}] ========== MODAL SUBMIT COMPLETE ==========\n`);
         }
     };
 

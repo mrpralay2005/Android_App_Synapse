@@ -195,15 +195,36 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
     };
 
     const handleCreatePost = async (postData) => {
+        const uploadId = `POST_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        console.log(`\n[${uploadId}] ========== POST UPLOAD STARTED ==========`);
+        console.log(`[${uploadId}] Timestamp:`, new Date().toISOString());
+        console.log(`[${uploadId}] Post Data:`, {
+            hasRawFile: !!postData.rawFile,
+            fileSize: postData.rawFile?.size,
+            fileName: postData.rawFile?.name,
+            fileType: postData.rawFile?.type,
+            type: postData.type,
+            captionLength: postData.caption?.length,
+            hasPassword: !!postData.postPassword
+        });
+
         try {
             const apiUrl = import.meta.env.VITE_API_URL || 'https://synapse-backend.mrpralay2005.workers.dev';
             const token = Cookies.get('synapse_token');
             let finalMediaUrl = postData.mediaUrl;
 
+            console.log(`[${uploadId}] API URL:`, apiUrl);
+            console.log(`[${uploadId}] Has Token:`, !!token);
+
             if (postData.rawFile) {
                 const isVideo = postData.type === 'VIDEO';
                 const isLarge = postData.rawFile.size > 800000;
+                console.log(`[${uploadId}] File Check:`, { isVideo, isLarge, needsCloudUpload: isVideo || isLarge });
+
                 if (isVideo || isLarge) {
+                    console.log(`[${uploadId}] STEP 1: Requesting upload URL from backend...`);
+                    const uploadUrlStartTime = Date.now();
+                    
                     const uploadUrlRes = await fetch(`${apiUrl}/api/social/upload-url`, {
                         method: 'POST',
                         headers: {
@@ -216,17 +237,66 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                         })
                     });
 
-                    if (!uploadUrlRes.ok) return false;
+                    const uploadUrlDuration = Date.now() - uploadUrlStartTime;
+                    console.log(`[${uploadId}] STEP 1 Response:`, { 
+                        status: uploadUrlRes.status, 
+                        ok: uploadUrlRes.ok,
+                        duration: `${uploadUrlDuration}ms`
+                    });
+
+                    if (!uploadUrlRes.ok) {
+                        console.error(`[${uploadId}] ❌ FAILED: Could not get upload URL`);
+                        return false;
+                    }
+
                     const { uploadUrl, publicUrl } = await uploadUrlRes.json();
+                    console.log(`[${uploadId}] ✅ Got upload URL, Public URL:`, publicUrl);
+
+                    console.log(`[${uploadId}] STEP 2: Uploading file to cloud storage...`);
+                    const storageStartTime = Date.now();
+
                     const storageRes = await fetch(uploadUrl, {
                         method: 'PUT',
                         body: postData.rawFile,
                         headers: { 'Content-Type': postData.rawFile.type }
                     });
-                    if (!storageRes.ok) return false;
+
+                    const storageDuration = Date.now() - storageStartTime;
+                    console.log(`[${uploadId}] STEP 2 Response:`, { 
+                        status: storageRes.status, 
+                        ok: storageRes.ok,
+                        duration: `${storageDuration}ms`
+                    });
+
+                    if (!storageRes.ok) {
+                        console.error(`[${uploadId}] ❌ FAILED: Cloud storage upload failed`);
+                        return false;
+                    }
+
                     finalMediaUrl = publicUrl;
+                    console.log(`[${uploadId}] ✅ Cloud upload successful`);
+                } else {
+                    console.log(`[${uploadId}] Skipping cloud upload (small image < 800KB), using base64`);
                 }
+            } else {
+                console.log(`[${uploadId}] No raw file provided, using provided mediaUrl`);
             }
+
+            console.log(`[${uploadId}] STEP 3: Creating post in database...`);
+            const dbStartTime = Date.now();
+
+            const postPayload = {
+                caption: postData.caption,
+                mediaUrl: finalMediaUrl,
+                type: postData.type,
+                postPassword: postData.postPassword
+            };
+            console.log(`[${uploadId}] Post Payload:`, {
+                captionLength: postPayload.caption?.length,
+                mediaUrlLength: postPayload.mediaUrl?.length,
+                type: postPayload.type,
+                hasPassword: !!postPayload.postPassword
+            });
 
             const res = await fetch(`${apiUrl}/api/social/posts`, {
                 method: 'POST',
@@ -234,21 +304,36 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                     'Content-Type': 'application/json',
                     ...(token && { Authorization: `Bearer ${token}` })
                 },
-                body: JSON.stringify({
-                    caption: postData.caption,
-                    mediaUrl: finalMediaUrl,
-                    type: postData.type,
-                    postPassword: postData.postPassword
-                })
+                body: JSON.stringify(postPayload)
+            });
+
+            const dbDuration = Date.now() - dbStartTime;
+            console.log(`[${uploadId}] STEP 3 Response:`, { 
+                status: res.status, 
+                ok: res.ok,
+                duration: `${dbDuration}ms`
             });
 
             if (res.ok) {
+                const responseData = await res.json();
+                console.log(`[${uploadId}] ✅ POST CREATED SUCCESSFULLY`);
+                console.log(`[${uploadId}] Response Data:`, responseData);
+                console.log(`[${uploadId}] Total Upload Duration:`, Date.now() - parseInt(uploadId.split('_')[1]), 'ms');
+                console.log(`[${uploadId}] ========== POST UPLOAD COMPLETE ==========\n`);
+                
                 setRefreshTrigger(prev => prev + 1);
                 return true;
+            } else {
+                const errorText = await res.text();
+                console.error(`[${uploadId}] ❌ FAILED: Post creation failed`);
+                console.error(`[${uploadId}] Error Response:`, errorText);
+                return false;
             }
-            return false;
         } catch (err) {
-            console.error('Mobile create post failed:', err);
+            console.error(`[${uploadId}] ❌ EXCEPTION CAUGHT:`, err);
+            console.error(`[${uploadId}] Error Message:`, err.message);
+            console.error(`[${uploadId}] Error Stack:`, err.stack);
+            console.error(`[${uploadId}] ========== POST UPLOAD FAILED ==========\n`);
             return false;
         }
     };
