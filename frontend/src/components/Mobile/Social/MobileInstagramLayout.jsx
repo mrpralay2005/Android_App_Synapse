@@ -221,7 +221,8 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                 const isLarge = postData.rawFile.size > 800000;
                 console.log(`[${uploadId}] File Check:`, { isVideo, isLarge, needsCloudUpload: isVideo || isLarge });
 
-                if (isVideo || isLarge) {
+                // ALWAYS use cloud upload for better reliability (base64 can exceed 1MB)
+                if (postData.rawFile) {
                     console.log(`[${uploadId}] STEP 1: Requesting upload URL from backend...`);
                     const uploadUrlStartTime = Date.now();
                     
@@ -275,8 +276,6 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
 
                     finalMediaUrl = publicUrl;
                     console.log(`[${uploadId}] ✅ Cloud upload successful`);
-                } else {
-                    console.log(`[${uploadId}] Skipping cloud upload (small image < 800KB), using base64`);
                 }
             } else {
                 console.log(`[${uploadId}] No raw file provided, using provided mediaUrl`);
