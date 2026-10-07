@@ -286,12 +286,14 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
             const dbStartTime = Date.now();
 
             const postPayload = {
+                uploadId,  // ← Instagram-style idempotency key
                 caption: postData.caption,
                 mediaUrl: finalMediaUrl,
                 type: postData.type,
                 postPassword: postData.postPassword
             };
             console.log(`[${uploadId}] Post Payload:`, {
+                uploadId,
                 captionLength: postPayload.caption?.length,
                 mediaUrlLength: postPayload.mediaUrl?.length,
                 type: postPayload.type,

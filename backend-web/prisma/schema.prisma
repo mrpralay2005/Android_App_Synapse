@@ -80,6 +80,7 @@ model PlatformUpdate {
 
 model Post {
   id           Int         @id @default(autoincrement())
+  uploadId     String?     @unique // Instagram-style idempotency key
   caption      String?
   mediaUrl     String // Generic URL for both image and video
   thumbnailUrl String? // For video previews

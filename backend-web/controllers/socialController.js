@@ -182,11 +182,12 @@ export const createPost = async (c) => {
     console.log(`[${requestId}] Timestamp:`, new Date().toISOString());
     
     try {
-        const { caption, mediaUrl, type, postPassword, thumbnailUrl } = await c.req.json();
+        const { uploadId, caption, mediaUrl, type, postPassword, thumbnailUrl } = await c.req.json();
         const user = c.get('user');
         const prisma = getPrisma(c.env);
 
         console.log(`[${requestId}] Request Data:`, {
+            uploadId,
             userId: user?.userId || user?.id,
             captionLength: caption?.length || 0,
             mediaUrlLength: mediaUrl?.length || 0,
@@ -205,18 +206,42 @@ export const createPost = async (c) => {
             return c.json({ success: false, error: "Media resource required" }, 400);
         }
 
+        // INSTAGRAM-STYLE IDEMPOTENCY: Check if uploadId already exists
+        if (uploadId) {
+            console.log(`[${requestId}] Checking for existing post with uploadId:`, uploadId);
+            const existingPost = await prisma.post.findUnique({
+                where: { uploadId },
+                include: {
+                    user: {
+                        select: { username: true, name: true, profileImage: true }
+                    }
+                }
+            });
+
+            if (existingPost) {
+                console.log(`[${requestId}] ✅ DUPLICATE DETECTED - Returning existing post (id: ${existingPost.id})`);
+                console.log(`[${requestId}] ========== REQUEST COMPLETE (IDEMPOTENT) ==========\n`);
+                return c.json({ 
+                    success: true, 
+                    data: existingPost,
+                    duplicate: true  // Flag to indicate this was a duplicate
+                }, 200);
+            }
+        }
+
         console.log(`[${requestId}] Fetching user quantum settings...`);
         const owner = await prisma.user.findUnique({ where: { id: user.userId }, select: { quantumDecayEnabled: true, quantumDecayDays: true } });
         const expiresAt = owner?.quantumDecayEnabled ? new Date(Date.now() + owner.quantumDecayDays * 24 * 60 * 60 * 1000) : null;
         
-        console.log(`[${requestId}] Creating post in database...`);
+        console.log(`[${requestId}] Creating new post in database...`);
         const dbStartTime = Date.now();
         
         const post = await prisma.post.create({
             data: {
+                uploadId: uploadId || null,  // Store uploadId for deduplication
                 caption: caption || "",
                 mediaUrl,
-                type: type || 'IMAGE', // IMAGE or VIDEO
+                type: type || 'IMAGE',
                 postPassword: postPassword || null,
                 thumbnailUrl: thumbnailUrl || null,
                 userId: user.id || user.userId,
@@ -232,6 +257,7 @@ export const createPost = async (c) => {
         const dbDuration = Date.now() - dbStartTime;
         console.log(`[${requestId}] ✅ Post created successfully`);
         console.log(`[${requestId}] Post ID:`, post.id);
+        console.log(`[${requestId}] Upload ID:`, post.uploadId);
         console.log(`[${requestId}] DB Duration:`, `${dbDuration}ms`);
         console.log(`[${requestId}] ========== REQUEST COMPLETE ==========\n`);
 
