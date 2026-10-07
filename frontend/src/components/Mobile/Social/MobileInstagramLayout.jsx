@@ -68,7 +68,6 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
 
         const fetchData = async () => {
             if (!active) return;
-            setLoading(true);
 
             try {
                 const cachedStories = loadFromCache('synapse_stories');
@@ -85,10 +84,13 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                     ));
                 }
 
+                // Only show loading spinner if no cached data exists
+                let hasCachedData = false;
                 if (view === 'feed' || view === 'reels') {
                     const cachedFeed = loadFromCache('synapse_feed_posts');
                     if (cachedFeed && Array.isArray(cachedFeed) && active) {
                         setPosts(cachedFeed);
+                        hasCachedData = true;
                     }
                 } else if (view === 'profile') {
                     const profileId = userProfile?.username || currentUser.username;
@@ -96,8 +98,11 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                     if (cachedProfile && active) {
                         setUserProfile(cachedProfile);
                         setPosts(cachedProfile.posts || []);
+                        hasCachedData = true;
                     }
                 }
+
+                if (!hasCachedData) setLoading(true);
 
                 const apiUrl = import.meta.env.VITE_API_URL || 'https://synapse-backend.mrpralay2005.workers.dev';
                 const token = Cookies.get('synapse_token');
