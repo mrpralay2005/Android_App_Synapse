@@ -196,7 +196,7 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
 
     const handleCreatePost = async (postData) => {
         const uploadId = `POST_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        console.log(`\n[${uploadId}] ========== POST UPLOAD STARTED ==========`);
+        console.log(`\n[${uploadId}] ========== POST UPLOAD STARTED (v2.0 - R2_ALWAYS) ==========`);
         console.log(`[${uploadId}] Timestamp:`, new Date().toISOString());
         console.log(`[${uploadId}] Post Data:`, {
             hasRawFile: !!postData.rawFile,
@@ -215,6 +215,8 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
 
             console.log(`[${uploadId}] API URL:`, apiUrl);
             console.log(`[${uploadId}] Has Token:`, !!token);
+            console.log(`[${uploadId}] 🔍 CHECKING rawFile:`, postData.rawFile);
+            console.log(`[${uploadId}] 🔍 rawFile is truthy?`, !!postData.rawFile);
 
             if (postData.rawFile) {
                 const isVideo = postData.type === 'VIDEO';

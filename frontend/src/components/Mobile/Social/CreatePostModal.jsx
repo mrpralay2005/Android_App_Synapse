@@ -196,6 +196,7 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit, user }) => {
 
     const resetForm = () => {
         setCaption(''); setMediaUrl(''); setUploadPreview(null);
+        setRawMedia(null); // ← Fix: Clear raw file
         setIsProtected(false); setPostPassword(''); setType('IMAGE');
     };
 
