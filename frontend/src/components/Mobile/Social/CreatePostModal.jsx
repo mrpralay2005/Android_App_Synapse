@@ -116,37 +116,29 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit, user }) => {
         
         const submitId = `MODAL_SUBMIT_${Date.now()}`;
         console.log(`\n[${submitId}] ========== MODAL SUBMIT TRIGGERED ==========`);
-        console.log(`[${submitId}] globalSubmissionLock:`, globalSubmissionLock);
-        console.log(`[${submitId}] submissionLockRef.current:`, submissionLockRef.current);
+        console.log(`[${submitId}] globalSubmissionLock BEFORE:`, globalSubmissionLock);
+        console.log(`[${submitId}] submissionLockRef.current BEFORE:`, submissionLockRef.current);
         
         if (!mediaUrl) {
             console.log(`[${submitId}] ❌ ABORT: No media URL`);
             return;
         }
 
-        // Check GLOBAL lock first
-        if (globalSubmissionLock === true) {
-            console.warn(`[${submitId}] 🚫 BLOCKED: Global lock active`);
-            return;
-        }
-
-        // Check instance lock
-        if (submissionLockRef.current === true) {
-            console.warn(`[${submitId}] 🚫 BLOCKED: Instance lock active`);
+        // ATOMIC CHECK-AND-SET: If lock is already true, exit immediately
+        if (globalSubmissionLock === true || submissionLockRef.current === true) {
+            console.warn(`[${submitId}] 🚫 BLOCKED: Lock already active (global=${globalSubmissionLock}, instance=${submissionLockRef.current})`);
             return;
         }
         
-        // ACQUIRE BOTH LOCKS IMMEDIATELY
-        globalSubmissionLock = true;
-        submissionLockRef.current = true;
+        // ACQUIRE BOTH LOCKS IN SINGLE STATEMENT (atomic operation)
+        globalSubmissionLock = submissionLockRef.current = true;
         
         console.log(`[${submitId}] ✅ LOCKS ACQUIRED (global + instance)`);
         console.log(`[${submitId}] Has rawMedia:`, !!rawMedia);
         
         if (isSubmitting) {
             console.warn(`[${submitId}] 🚫 Secondary check: isSubmitting is true, releasing locks`);
-            globalSubmissionLock = false;
-            submissionLockRef.current = false;
+            globalSubmissionLock = submissionLockRef.current = false;
             return;
         }
 
@@ -186,8 +178,7 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit, user }) => {
             console.error(`[${submitId}] ❌ Exception:`, err);
             alert("Connection Severed. Deployment failed.");
         } finally {
-            globalSubmissionLock = false;
-            submissionLockRef.current = false;
+            globalSubmissionLock = submissionLockRef.current = false;
             setIsSubmitting(false);
             console.log(`[${submitId}] 🔓 LOCKS RELEASED (global + instance)`);
             console.log(`[${submitId}] ========== MODAL SUBMIT COMPLETE ==========\n`);
