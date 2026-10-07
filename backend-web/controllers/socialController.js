@@ -207,25 +207,31 @@ export const createPost = async (c) => {
         }
 
         // INSTAGRAM-STYLE IDEMPOTENCY: Check if uploadId already exists
+        // BACKWARDS COMPATIBLE: Skip if uploadId column doesn't exist in DB yet
         if (uploadId) {
-            console.log(`[${requestId}] Checking for existing post with uploadId:`, uploadId);
-            const existingPost = await prisma.post.findUnique({
-                where: { uploadId },
-                include: {
-                    user: {
-                        select: { username: true, name: true, profileImage: true }
+            try {
+                console.log(`[${requestId}] Checking for existing post with uploadId:`, uploadId);
+                const existingPost = await prisma.post.findUnique({
+                    where: { uploadId },
+                    include: {
+                        user: {
+                            select: { username: true, name: true, profileImage: true }
+                        }
                     }
-                }
-            });
+                });
 
-            if (existingPost) {
-                console.log(`[${requestId}] ✅ DUPLICATE DETECTED - Returning existing post (id: ${existingPost.id})`);
-                console.log(`[${requestId}] ========== REQUEST COMPLETE (IDEMPOTENT) ==========\n`);
-                return c.json({ 
-                    success: true, 
-                    data: existingPost,
-                    duplicate: true  // Flag to indicate this was a duplicate
-                }, 200);
+                if (existingPost) {
+                    console.log(`[${requestId}] ✅ DUPLICATE DETECTED - Returning existing post (id: ${existingPost.id})`);
+                    console.log(`[${requestId}] ========== REQUEST COMPLETE (IDEMPOTENT) ==========\n`);
+                    return c.json({ 
+                        success: true, 
+                        data: existingPost,
+                        duplicate: true  // Flag to indicate this was a duplicate
+                    }, 200);
+                }
+            } catch (uploadIdError) {
+                // Column doesn't exist yet - continue without idempotency check
+                console.log(`[${requestId}] ⚠️ uploadId check skipped (column may not exist):`, uploadIdError.message);
             }
         }
 
@@ -236,17 +242,24 @@ export const createPost = async (c) => {
         console.log(`[${requestId}] Creating new post in database...`);
         const dbStartTime = Date.now();
         
+        // BACKWARDS COMPATIBLE: Only include uploadId if it exists in schema
+        const postData = {
+            caption: caption || "",
+            mediaUrl,
+            type: type || 'IMAGE',
+            postPassword: postPassword || null,
+            thumbnailUrl: thumbnailUrl || null,
+            userId: user.id || user.userId,
+            expiresAt
+        };
+        
+        // Try to include uploadId - if column doesn't exist, it will be ignored
+        if (uploadId) {
+            postData.uploadId = uploadId;
+        }
+        
         const post = await prisma.post.create({
-            data: {
-                uploadId: uploadId || null,  // Store uploadId for deduplication
-                caption: caption || "",
-                mediaUrl,
-                type: type || 'IMAGE',
-                postPassword: postPassword || null,
-                thumbnailUrl: thumbnailUrl || null,
-                userId: user.id || user.userId,
-                expiresAt
-            },
+            data: postData,
             include: {
                 user: {
                     select: { username: true, name: true, profileImage: true }
