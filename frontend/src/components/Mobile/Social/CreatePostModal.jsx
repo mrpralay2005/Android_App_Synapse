@@ -2,8 +2,11 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, Image as ImageIcon, Video, Send, ShieldCheck, Loader2, Lock, Unlock, Upload, Monitor, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// GLOBAL submission lock - prevents ALL instances from submitting simultaneously
+// ULTRA-ROBUST GLOBAL LOCKS - Multiple layers of protection
 let globalSubmissionLock = false;
+let lastSubmissionTime = 0;
+let activeSubmissionIds = new Set(); // Track all active submissions
+const SUBMISSION_COOLDOWN = 1500; // 1.5 seconds between submissions
 
 const CreatePostModal = ({ isOpen, onClose, onSubmit, user }) => {
     const [step, setStep] = useState(1); // 1: Select Media, 2: Details & Encryption
@@ -112,74 +115,86 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit, user }) => {
 
     const handleSubmit = async (e) => {
         e?.preventDefault();
+        e?.stopPropagation(); // Prevent event bubbling
         
-        // CRITICAL: Check lock BEFORE any logging or async operations
-        // This must be the FIRST thing that runs
+        const now = Date.now();
+        const submitId = `MODAL_SUBMIT_${now}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        console.log(`\n[${submitId}] ========== SUBMISSION ATTEMPT ==========`);
+        
+        // LAYER 1: Time-based cooldown (prevents rapid clicks)
+        if (now - lastSubmissionTime < SUBMISSION_COOLDOWN) {
+            console.log(`⏱️ [${submitId}] BLOCKED: Cooldown active (${now - lastSubmissionTime}ms since last)`);
+            return;
+        }
+        
+        // LAYER 2: Global lock check
         if (globalSubmissionLock === true) {
-            return; // Silent block - already submitting
-        }
-        
-        // IMMEDIATELY acquire lock (before any await or console.log)
-        globalSubmissionLock = true;
-        
-        const submitId = `MODAL_SUBMIT_${Date.now()}`;
-        console.log(`\n[${submitId}] ========== MODAL SUBMIT TRIGGERED ==========`);
-        console.log(`[${submitId}] ✅ LOCK ACQUIRED`);
-        
-        if (!mediaUrl) {
-            console.log(`[${submitId}] ❌ ABORT: No media URL`);
-            globalSubmissionLock = false;
+            console.log(`🔒 [${submitId}] BLOCKED: Global lock active`);
             return;
         }
         
-        console.log(`[${submitId}] Has rawMedia:`, !!rawMedia);
+        // LAYER 3: Active submissions tracking
+        if (activeSubmissionIds.size > 0) {
+            console.log(`🚫 [${submitId}] BLOCKED: ${activeSubmissionIds.size} submission(s) already in progress`);
+            return;
+        }
         
+        // LAYER 4: Component state check
         if (isSubmitting) {
-            console.warn(`[${submitId}] 🚫 Secondary check: isSubmitting is true, releasing lock`);
-            globalSubmissionLock = false;
+            console.log(`⚠️ [${submitId}] BLOCKED: Component already submitting`);
             return;
         }
-
+        
+        // LAYER 5: Media validation
+        if (!mediaUrl || !rawMedia) {
+            console.log(`❌ [${submitId}] BLOCKED: No media (mediaUrl: ${!!mediaUrl}, rawMedia: ${!!rawMedia})`);
+            return;
+        }
+        
+        // ✅ ALL CHECKS PASSED - ACQUIRE ALL LOCKS
+        globalSubmissionLock = true;
+        lastSubmissionTime = now;
+        activeSubmissionIds.add(submitId);
         setIsSubmitting(true);
-        console.log(`[${submitId}] Proceeding with submission`);
+        
+        console.log(`✅ [${submitId}] ALL LOCKS ACQUIRED - Proceeding with submission`);
+        console.log(`[${submitId}] Active submissions: ${Array.from(activeSubmissionIds).join(', ')}`);
+        
+        
+        console.log(`[${submitId}] Calling onSubmit with data:`, {
+            captionLength: caption?.length,
+            type,
+            hasPassword: isProtected,
+            hasRawFile: !!rawMedia,
+            rawFileSize: rawMedia?.size,
+            rawFileName: rawMedia?.name
+        });
         
         try {
-            const postData = {
-                caption,
-                mediaUrl,
-                type,
-                postPassword: isProtected ? postPassword : null,
-                rawFile: rawMedia
-            };
-            console.log(`[${submitId}] Calling onSubmit with data:`, {
-                captionLength: caption?.length,
-                type,
-                hasPassword: isProtected,
-                hasRawFile: !!rawMedia,
-                rawFileSize: rawMedia?.size,
-                rawFileName: rawMedia?.name
-            });
-            
-            const success = await onSubmit(postData);
             console.log(`[${submitId}] onSubmit returned:`, success);
 
             if (success) {
-                console.log(`[${submitId}] ✅ Success! Resetting form and closing modal`);
+                console.log(`[${submitId}] ✅ SUCCESS! Closing modal and resetting form`);
                 setStep(1);
                 resetForm();
                 onClose();
             } else {
-                console.error(`[${submitId}] ❌ Upload failed`);
-                alert("Neural Network Saturated. The file is still too large for the Cloudflare Gateway (1MB). Please try a smaller file.");
+                console.error(`[${submitId}] ❌ FAILED: Upload unsuccessful`);
+                alert("Neural Network Saturated. Upload failed. Please try again.");
             }
         } catch (err) {
-            console.error(`[${submitId}] ❌ Exception:`, err);
+            console.error(`[${submitId}] ❌ EXCEPTION:`, err);
             alert("Connection Severed. Deployment failed.");
         } finally {
+            // RELEASE ALL LOCKS
             globalSubmissionLock = false;
+            activeSubmissionIds.delete(submitId);
             setIsSubmitting(false);
-            console.log(`[${submitId}] 🔓 LOCK RELEASED`);
-            console.log(`[${submitId}] ========== MODAL SUBMIT COMPLETE ==========\n`);
+            
+            console.log(`[${submitId}] 🔓 ALL LOCKS RELEASED`);
+            console.log(`[${submitId}] Remaining active: ${activeSubmissionIds.size}`);
+            console.log(`[${submitId}] ========== SUBMISSION COMPLETE ==========\n`);
         }
     };
 
