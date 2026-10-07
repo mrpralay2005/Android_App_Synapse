@@ -2,6 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { X, Image as ImageIcon, Video, Send, ShieldCheck, Loader2, Lock, Unlock, Upload, Monitor, ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+// GLOBAL submission lock - prevents ALL instances from submitting simultaneously
+let globalSubmissionLock = false;
+
 const CreatePostModal = ({ isOpen, onClose, onSubmit, user }) => {
     const [step, setStep] = useState(1); // 1: Select Media, 2: Details & Encryption
     const [caption, setCaption] = useState('');
@@ -113,24 +116,36 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit, user }) => {
         
         const submitId = `MODAL_SUBMIT_${Date.now()}`;
         console.log(`\n[${submitId}] ========== MODAL SUBMIT TRIGGERED ==========`);
+        console.log(`[${submitId}] globalSubmissionLock:`, globalSubmissionLock);
+        console.log(`[${submitId}] submissionLockRef.current:`, submissionLockRef.current);
         
         if (!mediaUrl) {
             console.log(`[${submitId}] ❌ ABORT: No media URL`);
             return;
         }
 
-        // ATOMIC CHECK-AND-SET: Check and set in one line to prevent race condition
-        if (submissionLockRef.current === true) {
-            console.warn(`[${submitId}] 🚫 BLOCKED: Lock already acquired`);
+        // Check GLOBAL lock first
+        if (globalSubmissionLock === true) {
+            console.warn(`[${submitId}] 🚫 BLOCKED: Global lock active`);
             return;
         }
-        submissionLockRef.current = true; // IMMEDIATELY set to true
+
+        // Check instance lock
+        if (submissionLockRef.current === true) {
+            console.warn(`[${submitId}] 🚫 BLOCKED: Instance lock active`);
+            return;
+        }
         
-        console.log(`[${submitId}] ✅ LOCK ACQUIRED`);
+        // ACQUIRE BOTH LOCKS IMMEDIATELY
+        globalSubmissionLock = true;
+        submissionLockRef.current = true;
+        
+        console.log(`[${submitId}] ✅ LOCKS ACQUIRED (global + instance)`);
         console.log(`[${submitId}] Has rawMedia:`, !!rawMedia);
         
         if (isSubmitting) {
-            console.warn(`[${submitId}] 🚫 Secondary check: isSubmitting is true, releasing lock`);
+            console.warn(`[${submitId}] 🚫 Secondary check: isSubmitting is true, releasing locks`);
+            globalSubmissionLock = false;
             submissionLockRef.current = false;
             return;
         }
@@ -171,9 +186,10 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit, user }) => {
             console.error(`[${submitId}] ❌ Exception:`, err);
             alert("Connection Severed. Deployment failed.");
         } finally {
+            globalSubmissionLock = false;
             submissionLockRef.current = false;
             setIsSubmitting(false);
-            console.log(`[${submitId}] 🔓 LOCK RELEASED`);
+            console.log(`[${submitId}] 🔓 LOCKS RELEASED (global + instance)`);
             console.log(`[${submitId}] ========== MODAL SUBMIT COMPLETE ==========\n`);
         }
     };
