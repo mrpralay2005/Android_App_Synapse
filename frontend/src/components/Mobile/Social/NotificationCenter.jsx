@@ -8,14 +8,14 @@ const readKey = 'synapse_read_notification_ids';
 // Polling is intentionally used instead of an in-memory Worker socket so a
 // notification reaches users regardless of which local, staging, or production
 // Worker instance served their previous request.
-const LIVE_REFRESH_MS = 4000;
+const LIVE_REFRESH_MS = 30000; // 30s - notifications don't need to be real-time
 
-// Auto-retry on 500 (Worker cold start)
+// Auto-retry on 500 (Worker cold start) with exponential backoff
 const fetchWithRetry = async (url, options = {}, retries = 2) => {
     for (let i = 0; i <= retries; i++) {
         const res = await fetch(url, options);
         if (res.status < 500 || i === retries) return res;
-        await new Promise(r => setTimeout(r, 800 * (i + 1)));
+        await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i))); // 1s, 2s
     }
 };
 
@@ -41,13 +41,20 @@ const NotificationCenter = ({ open, onClose }) => {
     const clearingRef = useRef(false);
     const loadRequestId = useRef(0);
 
+    const failCount = useRef(0);
+
     const load = async () => {
         const requestId = ++loadRequestId.current;
         try {
             const token = Cookies.get('synapse_token');
             const response = await fetchWithRetry(`${apiUrl}/api/social/notifications`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
             const data = await response.json();
-            if (data.success && !clearingRef.current && requestId === loadRequestId.current) setItems(data.data);
+            if (data.success && !clearingRef.current && requestId === loadRequestId.current) {
+                setItems(data.data);
+                failCount.current = 0; // reset on success
+            }
+        } catch {
+            failCount.current += 1; // track failures silently
         } finally { setLoading(false); }
     };
 
@@ -96,11 +103,29 @@ export const useNotificationCount = () => {
     const [items, setItems] = useState([]);
     useEffect(() => {
         let active = true;
+        let failures = 0;
         const load = async () => {
-            try { const token = Cookies.get('synapse_token'); const response = await fetch(`${apiUrl}/api/social/notifications`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' }); const data = await response.json(); if (active && data.success) setItems(data.data); } catch { /* keep the app usable offline */ }
+            try {
+                const token = Cookies.get('synapse_token');
+                const response = await fetchWithRetry(`${apiUrl}/api/social/notifications`, { headers: { Authorization: `Bearer ${token}` }, cache: 'no-store' });
+                const data = await response.json();
+                if (active && data.success) {
+                    setItems(data.data);
+                    failures = 0;
+                }
+            } catch {
+                failures += 1; // silent - don't spam console
+            }
         };
         const clearCountImmediately = () => { if (active) setItems([]); };
-        load(); const poll = window.setInterval(load, LIVE_REFRESH_MS); window.addEventListener('synapse-notifications-cleared', clearCountImmediately); return () => { active = false; window.clearInterval(poll); window.removeEventListener('synapse-notifications-cleared', clearCountImmediately); };
+        load();
+        const poll = window.setInterval(load, LIVE_REFRESH_MS);
+        window.addEventListener('synapse-notifications-cleared', clearCountImmediately);
+        return () => {
+            active = false;
+            window.clearInterval(poll);
+            window.removeEventListener('synapse-notifications-cleared', clearCountImmediately);
+        };
     }, []);
     const readIds = useMemo(getReadIds, [items]);
     return items.filter(item => !readIds.has(item.id)).length;
