@@ -16,6 +16,7 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit, user }) => {
     const [rawMedia, setRawMedia] = useState(null); // Actual File object for cloud upload
 
     const fileInputRef = useRef(null);
+    const submissionLockRef = useRef(false); // CRITICAL: Prevent duplicate submissions
 
     // Neural Compressor: Shrinks images properly to fit Cloudflare's 1MB limit
     const compressImage = async (file) => {
@@ -110,14 +111,24 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit, user }) => {
         e.preventDefault();
         if (!mediaUrl) return;
 
+        // CRITICAL FIX: Check submission lock FIRST
+        if (submissionLockRef.current) {
+            console.warn(`🚫 BLOCKED: Submission already in progress`);
+            return;
+        }
+
+        if (isSubmitting) return;
+
+        submissionLockRef.current = true;
         setIsSubmitting(true);
+
         try {
             const success = await onSubmit({
                 caption,
                 mediaUrl,
                 type,
                 postPassword: isProtected ? postPassword : null,
-                rawFile: rawMedia // Pass raw file for cloud storage processing
+                rawFile: rawMedia
             });
 
             if (success) {
@@ -130,6 +141,7 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit, user }) => {
         } catch (err) {
             alert("Connection Severed. Deployment failed.");
         } finally {
+            submissionLockRef.current = false;
             setIsSubmitting(false);
         }
     };

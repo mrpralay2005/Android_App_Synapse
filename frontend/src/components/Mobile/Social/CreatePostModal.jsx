@@ -17,6 +17,7 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit, user }) => {
     const [rawMedia, setRawMedia] = useState(null); // Actual File object for cloud upload
 
     const fileInputRef = useRef(null);
+    const submissionLockRef = useRef(false); // CRITICAL: Prevent duplicate submissions
 
     // Neural Compressor: Shrinks images properly to fit Cloudflare's 1MB limit
     const compressImage = async (file) => {
@@ -113,6 +114,7 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit, user }) => {
         const submitId = `MODAL_SUBMIT_${Date.now()}`;
         console.log(`\n[${submitId}] ========== MODAL SUBMIT TRIGGERED ==========`);
         console.log(`[${submitId}] isSubmitting:`, isSubmitting);
+        console.log(`[${submitId}] submissionLockRef.current:`, submissionLockRef.current);
         console.log(`[${submitId}] Has mediaUrl:`, !!mediaUrl);
         console.log(`[${submitId}] Has rawMedia:`, !!rawMedia);
         
@@ -121,13 +123,21 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit, user }) => {
             return;
         }
 
-        if (isSubmitting) {
-            console.warn(`[${submitId}] ⚠️ DUPLICATE SUBMIT DETECTED - Already submitting!`);
+        // CRITICAL FIX: Check submission lock FIRST before state
+        if (submissionLockRef.current) {
+            console.warn(`[${submitId}] 🚫 BLOCKED: Submission already in progress (lock active)`);
             return;
         }
 
+        if (isSubmitting) {
+            console.warn(`[${submitId}] 🚫 BLOCKED: isSubmitting is true`);
+            return;
+        }
+
+        // Immediately lock to prevent any other clicks
+        submissionLockRef.current = true;
         setIsSubmitting(true);
-        console.log(`[${submitId}] Set isSubmitting = true`);
+        console.log(`[${submitId}] ✅ LOCK ACQUIRED - Proceeding with submission`);
         
         try {
             const postData = {
@@ -162,8 +172,9 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit, user }) => {
             console.error(`[${submitId}] ❌ Exception:`, err);
             alert("Connection Severed. Deployment failed.");
         } finally {
+            submissionLockRef.current = false;
             setIsSubmitting(false);
-            console.log(`[${submitId}] Set isSubmitting = false`);
+            console.log(`[${submitId}] 🔓 LOCK RELEASED`);
             console.log(`[${submitId}] ========== MODAL SUBMIT COMPLETE ==========\n`);
         }
     };
