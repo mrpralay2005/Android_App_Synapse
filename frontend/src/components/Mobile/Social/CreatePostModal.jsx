@@ -109,35 +109,34 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit, user }) => {
     };
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
+        e?.preventDefault();
         
         const submitId = `MODAL_SUBMIT_${Date.now()}`;
         console.log(`\n[${submitId}] ========== MODAL SUBMIT TRIGGERED ==========`);
-        console.log(`[${submitId}] isSubmitting:`, isSubmitting);
-        console.log(`[${submitId}] submissionLockRef.current:`, submissionLockRef.current);
-        console.log(`[${submitId}] Has mediaUrl:`, !!mediaUrl);
-        console.log(`[${submitId}] Has rawMedia:`, !!rawMedia);
         
         if (!mediaUrl) {
             console.log(`[${submitId}] ❌ ABORT: No media URL`);
             return;
         }
 
-        // CRITICAL FIX: Check submission lock FIRST before state
-        if (submissionLockRef.current) {
-            console.warn(`[${submitId}] 🚫 BLOCKED: Submission already in progress (lock active)`);
+        // ATOMIC CHECK-AND-SET: Check and set in one line to prevent race condition
+        if (submissionLockRef.current === true) {
+            console.warn(`[${submitId}] 🚫 BLOCKED: Lock already acquired`);
             return;
         }
-
+        submissionLockRef.current = true; // IMMEDIATELY set to true
+        
+        console.log(`[${submitId}] ✅ LOCK ACQUIRED`);
+        console.log(`[${submitId}] Has rawMedia:`, !!rawMedia);
+        
         if (isSubmitting) {
-            console.warn(`[${submitId}] 🚫 BLOCKED: isSubmitting is true`);
+            console.warn(`[${submitId}] 🚫 Secondary check: isSubmitting is true, releasing lock`);
+            submissionLockRef.current = false;
             return;
         }
 
-        // Immediately lock to prevent any other clicks
-        submissionLockRef.current = true;
         setIsSubmitting(true);
-        console.log(`[${submitId}] ✅ LOCK ACQUIRED - Proceeding with submission`);
+        console.log(`[${submitId}] Proceeding with submission`);
         
         try {
             const postData = {
@@ -264,13 +263,9 @@ const CreatePostModal = ({ isOpen, onClose, onSubmit, user }) => {
                                     <img src={user?.image} className="w-8 h-8 rounded-full border border-white/10" alt="me" />
                                     <span className="text-white font-bold text-sm tracking-tight">{user?.username}</span>
                                 </div>
-                                <button
-                                    onClick={handleSubmit}
-                                    disabled={isSubmitting}
-                                    className="text-emerald-500 font-bold text-[10px] uppercase tracking-[0.2em] hover:text-emerald-300 disabled:opacity-50"
-                                >
-                                    {isSubmitting ? "Syncing..." : "Share Post"}
-                                </button>
+                                <div className="text-emerald-500/60 font-bold text-[10px] uppercase tracking-[0.2em]">
+                                    {isSubmitting ? "Syncing..." : "New Post"}
+                                </div>
                             </div>
 
                             {/* Caption Input */}
