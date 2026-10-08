@@ -30,6 +30,8 @@ model User {
   storyViews                      StoryView[]
   storyMessages                   StoryMessage[]
   platformUpdates                 PlatformUpdate[]
+  sentFollowRequests              FollowRequest[]  @relation("SentFollowRequests")
+  receivedFollowRequests          FollowRequest[]  @relation("ReceivedFollowRequests")
   isVerified                      Boolean          @default(false)
   isPrivate                       Boolean          @default(false)
   showActivityStatus              Boolean          @default(true)
@@ -105,6 +107,18 @@ model Follow {
   createdAt   DateTime @default(now())
 
   @@unique([followerId, followingId])
+}
+
+model FollowRequest {
+  id          Int      @id @default(autoincrement())
+  fromId      Int
+  toId        Int
+  status      String   @default("PENDING") // PENDING, ACCEPTED, REJECTED
+  from        User     @relation("SentFollowRequests", fields: [fromId], references: [id])
+  to          User     @relation("ReceivedFollowRequests", fields: [toId], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@unique([fromId, toId])
 }
 
 model Like {

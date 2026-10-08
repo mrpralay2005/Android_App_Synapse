@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Grid, Play, Bookmark, User as UserIcon, Settings, ShieldCheck, Shield, Plus, Monitor, Lock, Hash, Heart, MessageCircle, Zap, ArrowLeft } from 'lucide-react';
+import { Grid, Play, Bookmark, User as UserIcon, Settings, ShieldCheck, Shield, Plus, Monitor, Lock, Hash, Heart, MessageCircle, Zap, ArrowLeft, MoreHorizontal, UserMinus, BellOff, EyeOff, Ban } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Cookies from 'js-cookie';
 import EditNeuralProfileModal from './EditNeuralProfileModal';
@@ -15,7 +15,9 @@ const ProfileView = ({ user, currentUser, posts: parentPosts = [], onOpenCreateP
     const [localLoading, setLocalLoading] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isFollowing, setIsFollowing] = useState(Boolean(user.isFollowing));
+    const [isRequested, setIsRequested] = useState(Boolean(user.isRequested));
     const [followLoading, setFollowLoading] = useState(false);
+    const [showMoreMenu, setShowMoreMenu] = useState(false);
 
     const isLoading = parentLoading || localLoading;
     const isOwnProfile = String(currentUser?.id ?? currentUser?.userId) === String(user.id ?? user.userId);
@@ -25,7 +27,10 @@ const ProfileView = ({ user, currentUser, posts: parentPosts = [], onOpenCreateP
     const token = Cookies.get('synapse_token');
 
     useEffect(() => { setActiveTab('posts'); }, [user.id]);
-    useEffect(() => { setIsFollowing(Boolean(user.isFollowing)); }, [user.id, user.isFollowing]);
+    useEffect(() => { 
+        setIsFollowing(Boolean(user.isFollowing)); 
+        setIsRequested(Boolean(user.isRequested));
+    }, [user.id, user.isFollowing, user.isRequested]);
 
     useEffect(() => {
         if (isOwnProfile || !token || !user.username) return;
@@ -36,18 +41,15 @@ const ProfileView = ({ user, currentUser, posts: parentPosts = [], onOpenCreateP
 
     const handleFollow = async () => {
         if (followLoading) return;
-        const previousFollowing = isFollowing;
-        const nextFollowing = !previousFollowing;
         setFollowLoading(true);
-        setIsFollowing(nextFollowing);
-        onFollowChange?.({ targetUserId: user.id ?? user.userId, following: nextFollowing });
         try {
             const res = await fetch(`${apiUrl}/api/user/profile/${encodeURIComponent(user.username)}/follow`, {
                 method: 'POST', headers: { Authorization: `Bearer ${token}` }
             });
             const data = await res.json();
             if (!data.success) throw new Error(data.error || 'Could not update follow status');
-            setIsFollowing(data.following);
+            setIsFollowing(Boolean(data.following));
+            setIsRequested(Boolean(data.requested));
             onFollowChange?.({
                 targetUserId: user.id ?? user.userId,
                 following: data.following,
@@ -56,8 +58,6 @@ const ProfileView = ({ user, currentUser, posts: parentPosts = [], onOpenCreateP
             });
         } catch (error) {
             console.error('Follow action failed:', error);
-            setIsFollowing(previousFollowing);
-            onFollowChange?.({ targetUserId: user.id ?? user.userId, following: previousFollowing });
         } finally {
             setFollowLoading(false);
         }
@@ -185,15 +185,71 @@ const ProfileView = ({ user, currentUser, posts: parentPosts = [], onOpenCreateP
                         </button>
                     </div>
                 ) : (
-                    <div className="flex gap-2">
-                        <button onClick={handleFollow} disabled={followLoading} className={`flex-1 rounded-xl py-2 text-[12px] font-black transition-all active:scale-95 disabled:opacity-60 ${isFollowing ? 'border border-white/[0.12] bg-white/[0.08] text-white hover:bg-white/[0.12]' : 'bg-emerald-500 text-black shadow-[0_0_20px_rgba(16,185,129,0.25)] hover:bg-emerald-400'}`}>
-                            {followLoading ? 'Updating...' : isFollowing ? 'Following' : 'Follow'}
+                    <div className="flex gap-2 relative">
+                        {/* Follow / Requested / Follow button */}
+                        <button onClick={handleFollow} disabled={followLoading} className={`flex-1 rounded-xl py-2 text-[12px] font-black transition-all active:scale-95 disabled:opacity-60 ${
+                            isFollowing 
+                                ? 'border border-white/[0.12] bg-white/[0.08] text-white hover:bg-white/[0.12]' 
+                                : isRequested
+                                    ? 'border border-amber-500/40 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20'
+                                    : 'bg-emerald-500 text-black shadow-[0_0_20px_rgba(16,185,129,0.25)] hover:bg-emerald-400'
+                        }`}>
+                            {followLoading ? 'Updating...' : isFollowing ? 'Following' : isRequested ? 'Requested' : 'Follow'}
                         </button>
+
+                        {/* Message button */}
                         <button
-                                onClick={() => onMessage?.(user)}
-                                className="flex-1 py-2 rounded-xl bg-white/[0.08] border border-white/[0.08] text-[12px] font-bold text-white transition-colors hover:bg-white/[0.12] active:scale-95">
+                            onClick={() => onMessage?.(user)}
+                            className="flex-1 py-2 rounded-xl bg-white/[0.08] border border-white/[0.08] text-[12px] font-bold text-white transition-colors hover:bg-white/[0.12] active:scale-95">
                             Message
                         </button>
+
+                        {/* Three-dot menu - only shown when following */}
+                        {isFollowing && (
+                            <div className="relative">
+                                <button
+                                    onClick={() => setShowMoreMenu(prev => !prev)}
+                                    className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/[0.08] border border-white/[0.08] text-gray-400 hover:bg-white/[0.12] hover:text-white transition-all active:scale-95"
+                                >
+                                    <MoreHorizontal size={16} />
+                                </button>
+
+                                <AnimatePresence>
+                                    {showMoreMenu && (
+                                        <>
+                                            {/* Backdrop */}
+                                            <div className="fixed inset-0 z-40" onClick={() => setShowMoreMenu(false)} />
+
+                                            {/* Dropdown */}
+                                            <motion.div
+                                                initial={{ opacity: 0, scale: 0.92, y: -8 }}
+                                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                                exit={{ opacity: 0, scale: 0.92, y: -8 }}
+                                                transition={{ duration: 0.15 }}
+                                                className="absolute right-0 top-11 z-50 w-52 bg-[#1a1a1a] border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+                                                onClick={e => e.stopPropagation()}
+                                            >
+                                                {[
+                                                    { icon: <UserMinus size={15} />, label: 'Unfollow', color: 'text-red-400', action: () => { handleFollow(); setShowMoreMenu(false); } },
+                                                    { icon: <BellOff size={15} />, label: 'Mute', color: 'text-gray-300', action: () => setShowMoreMenu(false) },
+                                                    { icon: <EyeOff size={15} />, label: 'Restrict', color: 'text-gray-300', action: () => setShowMoreMenu(false) },
+                                                    { icon: <Ban size={15} />, label: 'Block', color: 'text-red-400', action: () => setShowMoreMenu(false) },
+                                                ].map(({ icon, label, color, action }) => (
+                                                    <button
+                                                        key={label}
+                                                        onClick={action}
+                                                        className={`w-full flex items-center gap-3 px-4 py-3 text-[13px] font-semibold ${color} hover:bg-white/[0.06] transition-colors border-b border-white/[0.05] last:border-0`}
+                                                    >
+                                                        {icon}
+                                                        {label}
+                                                    </button>
+                                                ))}
+                                            </motion.div>
+                                        </>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { getProfile, updateProfile, getSavedItems, getSuggestedUsers, searchUsers, getResonance, recordProfileVisit, getAnalytics, toggleFollow, exportArchive, purgeActivity } from '../controllers/userController.js';
+import { getProfile, updateProfile, getSavedItems, getSuggestedUsers, searchUsers, getResonance, recordProfileVisit, getAnalytics, toggleFollow, exportArchive, purgeActivity, getPendingFollowRequests, acceptFollowRequest, rejectFollowRequest } from '../controllers/userController.js';
 import { getLatestPlatformUpdate } from '../controllers/adminController.js';
 import authenticateToken from '../middleware/authMiddleware.js';
 
@@ -17,5 +17,8 @@ user.get('/search', authenticateToken, searchUsers);
 user.get('/resonance/:username', authenticateToken, getResonance);
 user.get('/platform-update/latest', getLatestPlatformUpdate);
 user.put('/update', authenticateToken, updateProfile);
+user.get('/follow-requests', authenticateToken, getPendingFollowRequests);
+user.post('/follow-requests/:id/accept', authenticateToken, acceptFollowRequest);
+user.post('/follow-requests/:id/reject', authenticateToken, rejectFollowRequest);
 
 export default user;

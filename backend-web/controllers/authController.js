@@ -464,6 +464,9 @@ export const getMe = async (c) => {
                 creatorHighResUploads: user.creatorHighResUploads,
                 creatorAnonymousShield: user.creatorAnonymousShield,
                 creatorDeepAnalytics: user.creatorDeepAnalytics,
+                neuralGuardianEnabled: user.neuralGuardianEnabled,
+                quantumDecayEnabled: user.quantumDecayEnabled,
+                quantumDecayDays: user.quantumDecayDays,
                 links: parseLinks(user.links)
             }
         });
