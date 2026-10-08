@@ -59,6 +59,12 @@ export const getProfile = async (c) => {
             ? await prisma.follow.findUnique({ where: { followerId_followingId: { followerId: viewerId, followingId: user.id } } })
             : null;
         const isFollowing = Boolean(follow);
+
+        // Check if viewer has a pending follow request to this user
+        const followRequest = !isOwnProfile && viewerId && user.isPrivate
+            ? await prisma.followRequest.findFirst({ where: { fromId: viewerId, toId: user.id, status: 'PENDING' } })
+            : null;
+        const isRequested = Boolean(followRequest);
         // Privacy is enforced at the API boundary. A private profile's content
         // never reaches a non-follower's browser, even if they call the API.
         const canViewContent = !user.isPrivate || isOwnProfile || isFollowing;
@@ -75,6 +81,7 @@ export const getProfile = async (c) => {
                 ...responseUser,
                 posts: canViewContent ? user.posts : [],
                 isFollowing,
+                isRequested,
                 canViewContent
             }
         });
@@ -90,36 +97,121 @@ export const toggleFollow = async (c) => {
         const username = c.req.param('username');
         const prisma = getPrisma(c.env);
         
-        const target = await prisma.user.findUnique({ where: { username }, select: { id: true, username: true } });
+        const target = await prisma.user.findUnique({ where: { username }, select: { id: true, username: true, isPrivate: true } });
         
         if (!target) return c.json({ success: false, error: 'Identity not found' }, 404);
         if (target.id === viewerId) return c.json({ success: false, error: 'You cannot follow your own profile' }, 400);
         
         const existing = await prisma.follow.findUnique({ where: { followerId_followingId: { followerId: viewerId, followingId: target.id } } });
         
-        let following;
+        // If already following → unfollow using raw SQL (Turso rejects Prisma's delete subquery)
         if (existing) {
-            await prisma.follow.delete({ where: { id: existing.id } });
-            following = false;
-        } else {
-            await prisma.follow.create({ data: { followerId: viewerId, followingId: target.id } });
-            following = true;
+            await prisma.$executeRaw`DELETE FROM follow WHERE id = ${existing.id}`;
+            // Also clean up any followrequest row (accepted or pending) so isRequested doesn't linger
+            await prisma.$executeRaw`DELETE FROM followrequest WHERE fromId = ${viewerId} AND toId = ${target.id}`.catch(() => {});
+
+            const [targetFollowers, viewerFollowing] = await prisma.$transaction([
+                prisma.follow.count({ where: { followingId: target.id } }),
+                prisma.follow.count({ where: { followerId: viewerId } })
+            ]);
+            return c.json({ success: true, following: false, requested: false, counts: { targetFollowers, viewerFollowing } });
         }
-        
+
+        // Private account → create follow request instead of immediate follow
+        if (target.isPrivate) {
+            // Check if request already pending → cancel it (un-request)
+            const existingRequest = await prisma.followRequest.findUnique({
+                where: { fromId_toId: { fromId: viewerId, toId: target.id } }
+            });
+            if (existingRequest) {
+                await prisma.$executeRaw`DELETE FROM followrequest WHERE id = ${existingRequest.id}`;
+                const [targetFollowers, viewerFollowing] = await prisma.$transaction([
+                    prisma.follow.count({ where: { followingId: target.id } }),
+                    prisma.follow.count({ where: { followerId: viewerId } })
+                ]);
+                return c.json({ success: true, following: false, requested: false, counts: { targetFollowers, viewerFollowing } });
+            }
+            // Create new pending request
+            await prisma.followRequest.create({ data: { fromId: viewerId, toId: target.id, status: 'PENDING' } });
+            const [targetFollowers, viewerFollowing] = await prisma.$transaction([
+                prisma.follow.count({ where: { followingId: target.id } }),
+                prisma.follow.count({ where: { followerId: viewerId } })
+            ]);
+            return c.json({ success: true, following: false, requested: true, counts: { targetFollowers, viewerFollowing } });
+        }
+
+        // Public account → immediate follow
+        await prisma.follow.create({ data: { followerId: viewerId, followingId: target.id } });
         const [targetFollowers, viewerFollowing] = await prisma.$transaction([
             prisma.follow.count({ where: { followingId: target.id } }),
             prisma.follow.count({ where: { followerId: viewerId } })
         ]);
-        
-        return c.json({
-            success: true,
-            following,
-            counts: { targetFollowers, viewerFollowing },
-            message: following ? `Following @${target.username}` : `Unfollowed @${target.username}`
-        });
+        return c.json({ success: true, following: true, requested: false, counts: { targetFollowers, viewerFollowing }, message: `Following @${target.username}` });
     } catch (error) {
-        console.error('Follow toggle error:', error);
-        return c.json({ success: false, error: 'Follow status could not be updated' }, 500);
+        console.error('Follow toggle error:', error.message, error.stack);
+        return c.json({ success: false, error: 'Follow status could not be updated', detail: error.message }, 500);
+    }
+};
+
+export const getPendingFollowRequests = async (c) => {
+    try {
+        const userId = c.get('user')?.userId;
+        const prisma = getPrisma(c.env);
+
+        const requests = await prisma.followRequest.findMany({
+            where: { toId: userId, status: 'PENDING' },
+            orderBy: { createdAt: 'desc' },
+            include: {
+                from: { select: { id: true, username: true, name: true, profileImage: true } }
+            }
+        });
+
+        return c.json({ success: true, data: requests });
+    } catch (error) {
+        console.error('Get follow requests error:', error);
+        return c.json({ success: false, error: 'Could not load follow requests' }, 500);
+    }
+};
+
+export const acceptFollowRequest = async (c) => {
+    try {
+        const userId = c.get('user')?.userId;
+        const requestId = parseInt(c.req.param('id'));
+        const prisma = getPrisma(c.env);
+
+        const request = await prisma.followRequest.findUnique({ where: { id: requestId } });
+        if (!request) return c.json({ success: false, error: 'Request not found' }, 404);
+        if (request.toId !== userId) return c.json({ success: false, error: 'Not authorized' }, 403);
+
+        // Create the follow + mark request accepted using raw SQL (Turso compatibility)
+        await prisma.$executeRaw`INSERT OR IGNORE INTO follow (followerId, followingId, createdAt) VALUES (${request.fromId}, ${request.toId}, ${new Date().toISOString()})`;
+        await prisma.$executeRaw`UPDATE followrequest SET status = 'ACCEPTED' WHERE id = ${requestId}`;
+
+        return c.json({ success: true });
+    } catch (error) {
+        console.error('Accept follow request error:', error);
+        return c.json({ success: false, error: 'Could not accept request' }, 500);
+    }
+};
+
+export const rejectFollowRequest = async (c) => {
+    try {
+        const userId = c.get('user')?.userId;
+        const requestId = parseInt(c.req.param('id'));
+        const prisma = getPrisma(c.env);
+
+        const request = await prisma.followRequest.findUnique({ where: { id: requestId } });
+        if (!request) return c.json({ success: false, error: 'Request not found' }, 404);
+        if (request.toId !== userId) return c.json({ success: false, error: 'Not authorized' }, 403);
+
+        await prisma.$executeRaw`DELETE FROM followrequest WHERE id = ${requestId}`;
+        // Also remove any existing follow row so the requester can't still see content
+        await prisma.$executeRaw`DELETE FROM follow WHERE followerId = ${request.fromId} AND followingId = ${request.toId}`.catch(() => {});
+
+        return c.json({ success: true });
+    } catch (error) {
+        console.error('Reject follow request error:', error);
+        return c.json({ success: false, error: 'Could not reject request' }, 500);
     }
 };
 
@@ -290,7 +382,9 @@ export const updateProfile = async (c) => {
         if (typeof neuralGuardianEnabled === 'boolean') { 
             updates.push('neuralGuardianEnabled = ?'); 
             values.push(neuralGuardianEnabled ? 1 : 0);
-            if (neuralGuardianEnabled) { updates.push('isPrivate = ?'); values.push(1); }
+            // Turning ON forces private. Turning OFF also removes the private lock.
+            updates.push('isPrivate = ?'); 
+            values.push(neuralGuardianEnabled ? 1 : 0);
         }
         if (Array.isArray(links)) { 
             updates.push('links = ?'); 
@@ -389,14 +483,19 @@ export const getResonance = async (c) => {
 export const getSuggestedUsers = async (c) => {
     try {
         const prisma = getPrisma(c.env);
+        const viewerId = c.get('user')?.userId;
         const limit = parseInt(c.req.query('limit')) || 10;
 
-        // Fetch users for the story bar (suggested users)
+        // Get accounts I follow
+        const following = viewerId ? await prisma.follow.findMany({
+            where: { followerId: viewerId },
+            select: { followingId: true }
+        }) : [];
+        const followingIds = following.map(f => f.followingId);
+
+        // Fetch public users + private users I follow (exclude ADMIN)
         const users = await prisma.user.findMany({
-            take: limit,
-            // Administrative accounts are operational accounts, not social profiles.
-            // Keeping this rule in the API prevents them appearing in any story-bar
-            // fallback, including for clients with a fresh cache.
+            take: limit * 3, // Fetch more to filter later
             where: {
                 role: { not: 'ADMIN' }
             },
@@ -404,12 +503,20 @@ export const getSuggestedUsers = async (c) => {
                 id: true,
                 username: true,
                 profileImage: true,
-                role: true
+                role: true,
+                isPrivate: true
             },
             orderBy: { createdAt: 'desc' }
         });
 
-        return c.json({ success: true, data: users });
+        // Filter: own account + public + private accounts I follow
+        const filtered = users.filter(u => {
+            if (viewerId && u.id === viewerId) return true; // Own account
+            if (!u.isPrivate) return true; // Public
+            return viewerId && followingIds.includes(u.id); // Private but following
+        }).slice(0, limit);
+
+        return c.json({ success: true, data: filtered });
     } catch (error) {
         console.error("Suggested Users Error:", error);
         return c.json({ success: false, error: "Failed to fetch user signatures" }, 500);

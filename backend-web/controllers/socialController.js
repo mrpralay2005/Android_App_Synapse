@@ -85,7 +85,7 @@ export const getNotifications = async (c) => {
         });
         const followedIds = following.map(link => link.followingId);
 
-        const [posts, stories, sessions, profileVisits] = await Promise.all([
+        const [posts, stories, sessions, profileVisits, followRequests] = await Promise.all([
             viewer?.notificationPostAlerts !== false ? prisma.post.findMany({
                 where: { userId: { in: followedIds }, createdAt: { gte: activitySince } },
                 take: 20,
@@ -109,14 +109,22 @@ export const getNotifications = async (c) => {
                 take: 20,
                 orderBy: { createdAt: 'desc' },
                 select: { id: true, createdAt: true, visitor: { select: { username: true, name: true, profileImage: true } } }
-            }) : Promise.resolve([])
+            }) : Promise.resolve([]),
+            // Follow requests sent TO this user (pending only)
+            prisma.followRequest.findMany({
+                where: { toId: viewerId, status: 'PENDING', createdAt: { gte: activitySince } },
+                take: 20,
+                orderBy: { createdAt: 'desc' },
+                select: { id: true, createdAt: true, from: { select: { username: true, name: true, profileImage: true } } }
+            })
         ]);
 
         const activity = [
             ...posts.map(post => ({ id: `post-${post.id}`, type: 'POST', createdAt: post.createdAt, actor: post.user, title: `${post.user.name || post.user.username} shared a post`, detail: 'New post from an identity you follow.' })),
             ...stories.map(story => ({ id: `story-${story.id}`, type: 'STORY', createdAt: story.createdAt, actor: story.user, title: `${story.user.name || story.user.username} added a story`, detail: 'A fresh story is available for the next 24 hours.' })),
-            ...sessions.map(session => ({ id: `session-${session.id}`, type: 'SECURITY', createdAt: session.createdAt, actor: null, title: 'New sign-in to your account', detail: `${session.userAgent || 'Unknown device'} · ${session.ipAddress || 'Location protected'}` }))
-            , ...profileVisits.map(visit => ({ id: `profile-visit-${visit.id}`, type: 'PROFILE_VISIT', createdAt: visit.createdAt, actor: visit.visitor, title: `${visit.visitor.name || visit.visitor.username} visited your profile`, detail: 'A profile visit was recorded in your analytics.' }))
+            ...sessions.map(session => ({ id: `session-${session.id}`, type: 'SECURITY', createdAt: session.createdAt, actor: null, title: 'New sign-in to your account', detail: `${session.userAgent || 'Unknown device'} · ${session.ipAddress || 'Location protected'}` })),
+            ...profileVisits.map(visit => ({ id: `profile-visit-${visit.id}`, type: 'PROFILE_VISIT', createdAt: visit.createdAt, actor: visit.visitor, title: `${visit.visitor.name || visit.visitor.username} visited your profile`, detail: 'A profile visit was recorded in your analytics.' })),
+            ...followRequests.map(req => ({ id: `follow-req-${req.id}`, type: 'FOLLOW_REQUEST', requestId: req.id, createdAt: req.createdAt, actor: req.from, title: `${req.from.name || req.from.username} wants to follow you`, detail: 'Tap to accept or decline this follow request.' }))
         ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 30);
 
         return c.json({ success: true, data: activity });
@@ -410,18 +418,11 @@ export const getStories = async (c) => {
         const now = new Date();
         const viewerId = c.get('user')?.userId;
 
-        console.log('[getStories] ViewerId:', viewerId, 'Now:', now.toISOString());
+        console.log('[getStories] ViewerId:', viewerId);
 
-        // DEBUG: Check total stories in database
-        const totalStories = await prisma.story.count();
-        const unexpiredStories = await prisma.story.count({ where: { expiresAt: { gt: now } } });
-        console.log('[getStories DEBUG] Total stories in DB:', totalStories, 'Unexpired:', unexpiredStories);
-
-        // Fetch stories that haven't expired
-        const stories = await prisma.story.findMany({
-            where: {
-                expiresAt: { gt: now }
-            },
+        // Get ALL unexpired stories first
+        const allStories = await prisma.story.findMany({
+            where: { expiresAt: { gt: now } },
             include: {
                 user: {
                     select: {
@@ -430,24 +431,47 @@ export const getStories = async (c) => {
                         profileImage: true,
                         role: true,
                         showActivityStatus: true,
-                        lastActiveAt: true
+                        lastActiveAt: true,
+                        isPrivate: true
                     }
-                }
+                },
+                views: viewerId ? {
+                    where: { userId: viewerId },
+                    select: { id: true, viewedAt: true }
+                } : false
             },
             orderBy: { createdAt: 'desc' }
         });
 
-        console.log('[getStories] Found stories:', stories.length);
-        if (stories.length > 0) {
-            console.log('[getStories] First story sample:', {
-                id: stories[0].id,
-                userId: stories[0].userId,
-                isProtected: stories[0].isProtected,
-                expiresAt: stories[0].expiresAt
-            });
+        // If no viewer, only show public account stories
+        if (!viewerId) {
+            const publicStories = allStories.filter(s => !s.user.isPrivate).map(s => ({
+                ...s,
+                hasViewed: false
+            }));
+            console.log('[getStories] No viewer - returning', publicStories.length, 'public stories');
+            return c.json({ success: true, data: publicStories });
         }
 
-        return c.json({ success: true, data: stories });
+        // Get accounts the viewer follows
+        const following = await prisma.follow.findMany({
+            where: { followerId: viewerId },
+            select: { followingId: true }
+        });
+        const followingIds = following.map(f => f.followingId);
+
+        // Filter: own stories + public stories + stories from accounts I follow
+        const filteredStories = allStories.filter(story => {
+            if (story.userId === viewerId) return true; // Own story
+            if (!story.user.isPrivate) return true; // Public account
+            return followingIds.includes(story.userId); // Private but I follow
+        }).map(story => ({
+            ...story,
+            hasViewed: story.views && story.views.length > 0
+        }));
+
+        console.log('[getStories] Total:', allStories.length, 'Accessible:', filteredStories.length);
+        return c.json({ success: true, data: filteredStories });
     } catch (error) {
         console.error("Story Retrieval Error:", error);
         return c.json({ success: false, error: "Failed to fetch stories" }, 500);

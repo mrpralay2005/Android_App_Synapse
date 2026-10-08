@@ -351,7 +351,7 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
         try {
             const apiUrl = import.meta.env.VITE_API_URL || 'https://synapse-backend.mrpralay2005.workers.dev';
             const token = Cookies.get('synapse_token');
-            let finalMediaUrl = storyData.mediaUrl;
+            let finalMediaUrl = null;
 
             if (storyData.rawFile) {
                 console.log('[Story Upload] Getting upload URL...');
@@ -364,19 +364,30 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                     body: JSON.stringify({ fileName: storyData.rawFile.name, fileType: storyData.rawFile.type })
                 });
 
-                if (uploadUrlRes.ok) {
-                    const { uploadUrl, publicUrl } = await uploadUrlRes.json();
-                    console.log('[Story Upload] Uploading to cloud storage...');
-                    const storageRes = await fetch(uploadUrl, {
-                        method: 'PUT',
-                        body: storyData.rawFile,
-                        headers: { 'Content-Type': storyData.rawFile.type }
-                    });
-                    if (storageRes.ok) {
-                        finalMediaUrl = publicUrl;
-                        console.log('[Story Upload] Cloud upload successful');
-                    }
+                if (!uploadUrlRes.ok) {
+                    console.error('[Story Upload] Failed to get upload URL');
+                    return false;
                 }
+
+                const { uploadUrl, publicUrl } = await uploadUrlRes.json();
+                console.log('[Story Upload] Uploading to cloud storage...');
+                const storageRes = await fetch(uploadUrl, {
+                    method: 'PUT',
+                    body: storyData.rawFile,
+                    headers: { 'Content-Type': storyData.rawFile.type }
+                });
+
+                if (!storageRes.ok) {
+                    console.error('[Story Upload] Cloud storage upload failed');
+                    return false;
+                }
+
+                finalMediaUrl = publicUrl;
+                console.log('[Story Upload] Cloud upload successful:', finalMediaUrl);
+            } else {
+                // No raw file - shouldn't happen but fallback
+                console.error('[Story Upload] No raw file provided');
+                return false;
             }
 
             console.log('[Story Upload] Creating story in database...');
@@ -715,7 +726,11 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                     <StoryViewer
                         stories={viewingStory}
                         initialStoryIndex={0}
-                        onClose={() => setViewingStory(false)}
+                        onClose={() => {
+                            setViewingStory(false);
+                            // Refresh stories to update view status (ring colors)
+                            setRefreshTrigger(prev => prev + 1);
+                        }}
                         onDelete={handleDeleteStory}
                         currentUser={currentUserState}
                         onUserProfileClick={(user) => {

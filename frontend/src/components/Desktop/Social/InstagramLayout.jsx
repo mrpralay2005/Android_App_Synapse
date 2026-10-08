@@ -602,7 +602,11 @@ const InstagramLayout = ({ currentUser, onLogout }) => {
                     <StoryViewer
                         stories={viewingStory}
                         initialStoryIndex={0}
-                        onClose={() => setViewingStory(false)}
+                        onClose={() => {
+                            setViewingStory(false);
+                            // Refresh stories to update view status (ring colors)
+                            setRefreshTrigger(prev => prev + 1);
+                        }}
                         onDelete={handleDeleteStory}
                         currentUser={currentUserState}
                         onUserProfileClick={(user) => {

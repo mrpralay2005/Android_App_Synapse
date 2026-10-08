@@ -104,7 +104,11 @@ const StoriesSlider = ({ stories, onStoryClick, onUserProfileClick }) => {
                         className={`flex flex-col items-center gap-2 flex-shrink-0 cursor-pointer ${!item.hasStory ? 'opacity-70' : ''}`}
                         onClick={() => handleClick(item)}
                     >
-                        <div className={`w-[78px] h-[78px] rounded-full p-[2px] ${item.hasStory ? 'bg-gradient-to-tr from-yellow-400 to-fuchsia-600' : 'border-2 border-gray-700'} bg-black overflow-hidden`}>
+                        <div className={`w-[78px] h-[78px] rounded-full p-[2px] ${
+                            item.hasStory 
+                                ? (item.allViewed ? 'bg-gradient-to-tr from-gray-500 to-gray-600' : 'bg-gradient-to-tr from-yellow-400 to-fuchsia-600')
+                                : 'border-2 border-gray-700'
+                        } bg-black overflow-hidden`}>
                             {isVideo(item.user?.profileImage) ? (
                                 <video
                                     src={item.user?.profileImage}
@@ -151,13 +155,29 @@ const FeedView = ({ posts, stories = [], suggestedUsers = [], onCreateClick, loa
             return !isMe && !inMyStories && !isAdminAccount(s.user);
         });
 
+        // Group stories by user and check if ALL are viewed
         const userMap = new Map();
         otherStories.forEach(story => {
             if (!userMap.has(story.userId)) {
-                userMap.set(story.userId, { ...story, hasStory: true });
+                userMap.set(story.userId, {
+                    story: story,
+                    allStories: [],
+                    allViewed: true
+                });
+            }
+            const userData = userMap.get(story.userId);
+            userData.allStories.push(story);
+            // If ANY story is not viewed, set allViewed to false
+            if (!story.hasViewed) {
+                userData.allViewed = false;
             }
         });
-        const uniqueUserStories = Array.from(userMap.values());
+
+        const uniqueUserStories = Array.from(userMap.values()).map(data => ({
+            ...data.story,
+            hasStory: true,
+            allViewed: data.allViewed
+        }));
 
         // Helper to check if a suggestion is 'Me'
         const isStartUser = (u) => currentUser && (u.id === currentUser.id || u.username === currentUser.username);
@@ -169,7 +189,8 @@ const FeedView = ({ posts, stories = [], suggestedUsers = [], onCreateClick, loa
                 .map(user => ({
                     id: `user-${user.id}`,
                     user: user,
-                    hasStory: false
+                    hasStory: false,
+                    allViewed: false
                 }));
         } else if (uniqueUserStories.length >= maxVisible) {
             return uniqueUserStories;
@@ -184,7 +205,8 @@ const FeedView = ({ posts, stories = [], suggestedUsers = [], onCreateClick, loa
             const fillingProfiles = filteredSuggested.slice(0, remainingSlots).map(user => ({
                 id: `user-${user.id}`,
                 user: user,
-                hasStory: false
+                hasStory: false,
+                allViewed: false
             }));
             return [...uniqueUserStories, ...fillingProfiles];
         }
