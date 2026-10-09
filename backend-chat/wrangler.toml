@@ -15,11 +15,6 @@ required = [ "DATABASE_URL", "TURSO_AUTH_TOKEN", "WEB_DATABASE_URL", "WEB_TURSO_
 [triggers]
 crons = ["*/4 * * * *"]
 
-[env.staging]
-name = "synapse-chat-staging"
-
-[env.staging.secrets]
-required = [ "DATABASE_URL", "TURSO_AUTH_TOKEN", "WEB_DATABASE_URL", "WEB_TURSO_AUTH_TOKEN", "JWT_SECRET" ]
-
 [observability]
 enabled = true
+
