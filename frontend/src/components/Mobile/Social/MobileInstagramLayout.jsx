@@ -9,6 +9,7 @@ import ReelsView from './ReelsView';
 import SearchView from './SearchView';
 import CreatePostModal from './CreatePostModal';
 import CreateStoryModal from './CreateStoryModal';
+import BetaFeedbackWidget from '../../Social/BetaFeedbackWidget';
 
 // Auto-retry fetch on 500 (Cloudflare Worker cold starts).
 // Transparent to callers — same API as fetch().
@@ -929,6 +930,8 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
             <NotificationCenter open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
             {/* Priya AI assistant — only in Direct/chat view, above nav bar */}
             {view === 'direct' && <PriyaAssistant />}
+            {/* Beta Feedback Widget - only for beta testers */}
+            {currentUserState?.isBetaTester && <BetaFeedbackWidget />}
         </div>
     );
 };

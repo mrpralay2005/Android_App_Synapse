@@ -10,6 +10,8 @@ import userRoutes from './routes/userRoutes.js';
 import socialRoutes from './routes/socialRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import aiRoutes from './routes/aiRoutes.js';
+import betaRoutes from './routes/betaRoutes.js';
+import adminBetaRoutes from './routes/adminBetaRoutes.js';
 
 const app = new Hono();
 
@@ -80,6 +82,8 @@ app.route('/api/user', userRoutes);
 app.route('/api/social', socialRoutes);
 app.route('/api/admin', adminRoutes);
 app.route('/api/ai', aiRoutes);
+app.route('/api/beta', betaRoutes);
+app.route('/api/admin/beta', adminBetaRoutes);
 
 // ── Scheduled keep-alive: fires every 4 minutes to prevent Turso DB auto-suspend.
 const scheduled = async (event, env, ctx) => {
