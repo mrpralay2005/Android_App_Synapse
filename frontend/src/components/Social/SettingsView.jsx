@@ -9,6 +9,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import Cookies from 'js-cookie';
 import BetaProgramModal from './BetaProgramModal';
+import AdminBetaPanel from '../Admin/AdminBetaPanel';
 
 const SettingsView = ({ user, onUpdateUser, onLogout }) => {
     const [activeSection, setActiveSection] = useState('profile');
@@ -48,6 +49,7 @@ const SettingsView = ({ user, onUpdateUser, onLogout }) => {
     const [loading, setLoading] = useState(false);
     const [statusMsg, setStatusMsg] = useState({ type: '', text: '' });
     const [betaProgramModalOpen, setBetaProgramModalOpen] = useState(false);
+    const [adminBetaPanelOpen, setAdminBetaPanelOpen] = useState(false);
 
     const apiUrl = "https://synapse-backend.mrpralay2005.workers.dev";
     const token = Cookies.get('synapse_token');
@@ -84,6 +86,7 @@ const SettingsView = ({ user, onUpdateUser, onLogout }) => {
         { id: 'security', label: 'Security Core', icon: <Shield size={20} />, description: 'Passwords, OTP and Login activity' },
         { id: 'privacy', label: 'Privacy Link', icon: <Eye size={20} />, description: 'Manage account visibility and status' },
         { id: 'beta', label: 'Beta Program', icon: <Sparkles size={20} />, description: 'Early access to cutting-edge features', action: () => setBetaProgramModalOpen(true) },
+        ...(user.role === 'ADMIN' ? [{ id: 'admin-beta', label: 'Admin Beta Control', icon: <ShieldCheck size={20} />, description: 'Manage beta applications & feedback', action: () => setAdminBetaPanelOpen(true) }] : []),
         { id: 'analytics', label: 'Neural Analytics', icon: <TrendingUp size={20} />, description: 'Track resonance and visitor frequency' },
         { id: 'advanced', label: 'Advanced Protocols', icon: <Zap size={20} />, description: 'Quantum decay and neural guardian' },
         { id: 'notifications', label: 'Notification Pulse', icon: <Bell size={20} />, description: 'Configure alerts and neural pings' },
@@ -1081,6 +1084,9 @@ const SettingsView = ({ user, onUpdateUser, onLogout }) => {
                         isOpen={betaProgramModalOpen} 
                         onClose={() => setBetaProgramModalOpen(false)} 
                     />
+                    {adminBetaPanelOpen && (
+                        <AdminBetaPanel onClose={() => setAdminBetaPanelOpen(false)} />
+                    )}
                     <div className="flex h-full w-full">
                         <aside className="hidden w-[320px] border-r border-white/10 bg-[#111316] p-5 lg:block">
                             <div className="mb-6 text-[1.2rem] font-black tracking-[-0.06em] text-white">Settings</div>
