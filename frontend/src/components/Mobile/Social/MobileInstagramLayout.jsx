@@ -23,6 +23,7 @@ import StoryViewer from './StoryViewer';
 import { ReleaseUpdateNotice } from './ReleaseUpdateCenter';
 import NotificationCenter, { useNotificationCount } from './NotificationCenter';
 import DirectInbox from '../../Social/DirectInbox';
+import { updateActivityHeartbeat, markUserInactive } from '../../../utils/chatApi';
 import PriyaAssistant from '../../Priya/PriyaAssistant';
 import { saveToCache, loadFromCache } from '../../../utils/synapseCache';
 
@@ -47,6 +48,83 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
     const [chatUnread, setChatUnread] = useState(0);
     const [directUser, setDirectUser] = useState(null);
     const unreadNotifications = useNotificationCount();
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Activity Heartbeat - Tracks user online/offline status globally
+    // ═══════════════════════════════════════════════════════════════════════════
+    useEffect(() => {
+        let heartbeatInterval = null;
+        let inactivityTimeout = null;
+
+        const sendHeartbeat = async () => {
+            try {
+                await updateActivityHeartbeat();
+            } catch (err) {
+                console.debug('Heartbeat failed:', err.message);
+            }
+        };
+
+        const startHeartbeat = () => {
+            if (inactivityTimeout) {
+                clearTimeout(inactivityTimeout);
+                inactivityTimeout = null;
+            }
+            if (heartbeatInterval) return;
+            sendHeartbeat(); // Send immediately
+            heartbeatInterval = setInterval(sendHeartbeat, 20000); // Every 20 seconds
+        };
+
+        const stopHeartbeat = async () => {
+            if (heartbeatInterval) {
+                clearInterval(heartbeatInterval);
+                heartbeatInterval = null;
+            }
+            if (inactivityTimeout) {
+                clearTimeout(inactivityTimeout);
+                inactivityTimeout = null;
+            }
+            try {
+                await markUserInactive();
+            } catch (err) {
+                console.debug('Failed to mark inactive:', err.message);
+            }
+        };
+
+        const handleVisibilityChange = () => {
+            if (!document.hidden) {
+                startHeartbeat();
+            } else {
+                // Tab hidden: pause heartbeat interval and schedule inactive after 8s grace period
+                if (heartbeatInterval) {
+                    clearInterval(heartbeatInterval);
+                    heartbeatInterval = null;
+                }
+                if (inactivityTimeout) clearTimeout(inactivityTimeout);
+                inactivityTimeout = setTimeout(() => {
+                    markUserInactive().catch(() => {});
+                }, 8000);
+            }
+        };
+
+        // Start if tab is visible
+        if (!document.hidden) {
+            startHeartbeat();
+        }
+
+        // Listen to visibility changes and page exit
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('pagehide', stopHeartbeat);
+        window.addEventListener('beforeunload', stopHeartbeat);
+
+        // Cleanup on unmount — clear timers, do NOT fire markUserInactive() on simple component unmounts
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('pagehide', stopHeartbeat);
+            window.removeEventListener('beforeunload', stopHeartbeat);
+            if (heartbeatInterval) clearInterval(heartbeatInterval);
+            if (inactivityTimeout) clearTimeout(inactivityTimeout);
+        };
+    }, []); // Empty deps - runs once on mount
 
     useEffect(() => {
         localStorage.setItem('synapse_mobile_social_tab', view);
@@ -522,7 +600,15 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
         }
 
         if (view === 'reels') {
-            return <ReelsView posts={posts} loading={loading} />;
+            return <ReelsView 
+                posts={posts} 
+                loading={loading} 
+                currentUser={currentUserState}
+                onProfileClick={(user) => {
+                    setUserProfile(user);
+                    handleNavigation('profile');
+                }}
+            />;
         }
 
         if (view === 'search') {

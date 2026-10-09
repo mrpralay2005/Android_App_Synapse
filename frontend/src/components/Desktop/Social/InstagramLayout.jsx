@@ -13,6 +13,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import Cookies from 'js-cookie';
 import { saveToCache, loadFromCache } from '../../../utils/synapseCache';
+import { updateActivityHeartbeat, markUserInactive } from '../../../utils/chatApi';
 
 const InstagramLayout = ({ currentUser, onLogout }) => {
     const [view, setView] = useState(() => localStorage.getItem('synapse_social_tab') || 'feed'); // feed, profile, explore, etc.
@@ -36,6 +37,79 @@ const InstagramLayout = ({ currentUser, onLogout }) => {
     useEffect(() => {
         localStorage.setItem('synapse_social_tab', view);
     }, [view]);
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Activity Heartbeat - Tracks user online/offline status globally
+    // ═══════════════════════════════════════════════════════════════════════════
+    useEffect(() => {
+        let heartbeatInterval = null;
+        let inactivityTimeout = null;
+
+        const sendHeartbeat = async () => {
+            try {
+                await updateActivityHeartbeat();
+            } catch (err) {
+                console.debug('Heartbeat skipped:', err.message);
+            }
+        };
+
+        const startHeartbeat = () => {
+            if (inactivityTimeout) {
+                clearTimeout(inactivityTimeout);
+                inactivityTimeout = null;
+            }
+            if (heartbeatInterval) return;
+            sendHeartbeat();
+            heartbeatInterval = setInterval(sendHeartbeat, 20000);
+        };
+
+        const stopHeartbeat = async () => {
+            if (heartbeatInterval) {
+                clearInterval(heartbeatInterval);
+                heartbeatInterval = null;
+            }
+            if (inactivityTimeout) {
+                clearTimeout(inactivityTimeout);
+                inactivityTimeout = null;
+            }
+            try {
+                await markUserInactive();
+            } catch (err) {
+                console.debug('Failed to mark inactive:', err.message);
+            }
+        };
+
+        const handleVisibilityChange = () => {
+            if (!document.hidden) {
+                startHeartbeat();
+            } else {
+                if (heartbeatInterval) {
+                    clearInterval(heartbeatInterval);
+                    heartbeatInterval = null;
+                }
+                if (inactivityTimeout) clearTimeout(inactivityTimeout);
+                inactivityTimeout = setTimeout(() => {
+                    markUserInactive().catch(() => {});
+                }, 8000);
+            }
+        };
+
+        if (!document.hidden) {
+            startHeartbeat();
+        }
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('pagehide', stopHeartbeat);
+        window.addEventListener('beforeunload', stopHeartbeat);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('pagehide', stopHeartbeat);
+            window.removeEventListener('beforeunload', stopHeartbeat);
+            if (heartbeatInterval) clearInterval(heartbeatInterval);
+            if (inactivityTimeout) clearTimeout(inactivityTimeout);
+        };
+    }, []);
 
     // Enhanced Navigation Handler (Prevents view-flash glitches)
     const handleNavigation = (newView) => {

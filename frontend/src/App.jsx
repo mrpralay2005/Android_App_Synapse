@@ -289,6 +289,25 @@ function App() {
 
     const handleLogout = async () => {
         console.log('🚪 LOGOUT TRIGGERED - Stack trace:', new Error().stack);
+        
+        // Mark user as inactive in chat before logging out
+        try {
+            const CHAT_API = import.meta.env.VITE_CHAT_API_URL || 'https://synapse-chat.mrpralay2005.workers.dev';
+            const token = Cookies.get('synapse_token');
+            if (token) {
+                await fetch(`${CHAT_API}/api/chat/activity/inactive`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                console.log('✅ User marked as inactive in chat');
+            }
+        } catch (e) {
+            console.debug('Failed to mark chat inactive:', e.message);
+        }
+        
         try { await fetch(`${LIVE_API}/api/auth/logout`, { method: 'POST' }); } catch (e) { }
         setUser(null);
         // Clear ALL possible session cookies to be safe

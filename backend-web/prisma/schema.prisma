@@ -29,6 +29,7 @@ model User {
   sessions                        Session[]
   storyViews                      StoryView[]
   storyMessages                   StoryMessage[]
+  storyLikes                      StoryLike[]
   platformUpdates                 PlatformUpdate[]
   sentFollowRequests              FollowRequest[]  @relation("SentFollowRequests")
   receivedFollowRequests          FollowRequest[]  @relation("ReceivedFollowRequests")
@@ -46,6 +47,7 @@ model User {
   quantumDecayDays                Int              @default(30)
   neuralGuardianEnabled           Boolean          @default(false)
   lastActiveAt                    DateTime?
+  isOnline                        Boolean          @default(false)
   profileVisitsReceived           ProfileVisit[]   @relation("ProfileOwnerVisits")
   profileVisitsMade               ProfileVisit[]   @relation("ProfileVisitorVisits")
   creatorModeEnabled              Boolean          @default(false)
@@ -153,6 +155,7 @@ model Story {
   createdAt DateTime       @default(now())
   views     StoryView[]
   messages  StoryMessage[]
+  likes     StoryLike[]
 }
 
 model ProfileVisit {
@@ -186,6 +189,18 @@ model StoryMessage {
   story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+}
+
+model StoryLike {
+  id        Int      @id @default(autoincrement())
+  storyId   Int
+  userId    Int
+  story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([storyId, userId])
+  @@map("storylike")
 }
 
 model SavedPost {

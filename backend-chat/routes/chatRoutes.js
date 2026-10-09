@@ -8,7 +8,11 @@ import {
     unlockConversation,
     setConversationPassword,
     setTyping,
-    getUnreadCount
+    getUnreadCount,
+    markMessagesSeen,
+    updateActivityHeartbeat,
+    getUserActivity,
+    markUserInactive
 } from '../controllers/chatController.js';
 import authenticateChatToken from '../middleware/authMiddleware.js';
 
@@ -32,5 +36,13 @@ chat.post('/conversations/:id/password', authenticateChatToken, setConversationP
 
 // Typing presence heartbeat.
 chat.post('/conversations/:id/typing', authenticateChatToken, setTyping);
+
+// Seen receipts - mark messages as seen
+chat.post('/conversations/:id/seen', authenticateChatToken, markMessagesSeen);
+
+// Activity status tracking
+chat.post('/activity/heartbeat', authenticateChatToken, updateActivityHeartbeat);
+chat.post('/activity/inactive', authenticateChatToken, markUserInactive);
+chat.get('/activity/:userId', authenticateChatToken, getUserActivity);
 
 export default chat;

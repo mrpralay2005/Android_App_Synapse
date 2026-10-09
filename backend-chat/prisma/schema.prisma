@@ -48,6 +48,8 @@ model ChatParticipant {
   userId         Int
   lastReadAt     DateTime @default(now())
   typingAt       DateTime?
+  lastActiveAt   DateTime @default(now())
+  isOnline       Boolean  @default(false)
   joinedAt       DateTime @default(now())
 
   @@unique([conversationId, userId])
@@ -61,6 +63,7 @@ model ChatMessage {
   conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   senderId       Int
   content        String
+  seenAt         DateTime?
   createdAt      DateTime @default(now())
 
   @@index([conversationId, createdAt])

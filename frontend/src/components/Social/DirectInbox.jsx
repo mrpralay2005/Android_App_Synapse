@@ -9,12 +9,15 @@ import ChatWallpaper from './ChatWallpaper';
 import {
     searchChatUsers, listConversations, createConversation, getMessages,
     sendMessage, unlockConversation, setConversationPassword,
-    sendTyping, getUnlockToken, setUnlockToken, clearUnlockToken
+    sendTyping, getUnlockToken, setUnlockToken, clearUnlockToken,
+    markMessagesSeen, getUserActivity
 } from '../../utils/chatApi';
 
 // ─── Poll intervals ────────────────────────────────────────────────────────────
 const INBOX_POLL_MS  = 6000;   // inbox list refresh
 const THREAD_POLL_MS = 3000;   // open thread refresh (raised from 2.5 s)
+const ACTIVITY_POLL_MS = 5000; // activity status refresh (5s - balanced performance)
+const ACTIVITY_HEARTBEAT_MS = 30000; // send heartbeat every 30s
 
 // ─── Pure helpers (stable references, no re-render cost) ──────────────────────
 const threadTitleOf = (conv) => {
@@ -39,6 +42,15 @@ const profileFromUser = (user) => ({
     name: user?.name || user?.username || 'User',
     profileImage: user?.profileImage || user?.avatarUrl || null,
 });
+
+const parseUtcDate = (val) => {
+    if (!val) return null;
+    let str = String(val).trim();
+    if (str.includes(' ') && !str.includes('T')) str = str.replace(' ', 'T');
+    if (!str.endsWith('Z') && !str.includes('+')) str += 'Z';
+    const parsed = new Date(str);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
 
 // The create endpoint intentionally returns a compact response. This preview
 // keeps a profile-launched thread named correctly until the inbox refresh fills
@@ -105,6 +117,11 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
     const [lockBusy, setLockBusy]         = useState(false);
     const [lockError, setLockError]       = useState('');
 
+    // ── Activity status tracking ───────────────────────────────────────────────
+    const [activityStatus, setActivityStatus] = useState(null); // { isActiveNow, lastSeenText, lastActiveAt }
+    const [liveActivityText, setLiveActivityText] = useState(''); // Real-time calculated text
+    const [, forceUpdate] = useState(0); // Force re-render for chat list green dots
+
     // ── Phantom thread (deep-link: open chat without creating convo yet) ───────
     // Set when the user clicks "Message" on a profile. Cleared when they send
     // their first message (which creates the real convo) or back out.
@@ -128,10 +145,101 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
         [conversations, activeId]
     );
     const meId = currentUser?.id ?? currentUser?.userId ?? null;
+    const myShowActivity = currentUser?.showActivityStatus !== false && 
+        currentUser?.showActivityStatus !== 0 && 
+        currentUser?.showActivityStatus !== '0';
+
+    // Get other user info for activity status
+    const otherUser = useMemo(() => {
+        if (!activeConversation || activeConversation.isGroup) return null;
+        return activeConversation.others?.[0] || null;
+    }, [activeConversation]);
 
     // ─────────────────────────────────────────────────────────────────────────
-    // Scroll helpers
+    // Activity status fetcher
     // ─────────────────────────────────────────────────────────────────────────
+    const fetchActivityStatus = useCallback(async () => {
+        if (!otherUser?.userId) {
+            setActivityStatus(null);
+            return;
+        }
+        
+        try {
+            const res = await getUserActivity(otherUser.userId);
+            if (res?.success && res.data) {
+                setActivityStatus({
+                    isActiveNow: res.data.isActiveNow,
+                    lastSeenText: res.data.lastSeenText,
+                    lastActiveAt: res.data.lastActiveAt, // Store raw timestamp
+                    showActivityStatus: res.data.showActivityStatus
+                });
+            }
+        } catch (err) {
+            // Silent fail - backend might not be deployed yet
+            console.debug('Activity fetch skipped:', err.message);
+            setActivityStatus(null);
+        }
+    }, [otherUser?.userId]);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Real-time activity text updater - runs every second to show live time
+    // Also triggers immediate refresh when user crosses the 5-minute threshold
+    // ─────────────────────────────────────────────────────────────────────────
+    useEffect(() => {
+        if (!activityStatus?.lastActiveAt) {
+            setLiveActivityText('');
+            return;
+        }
+
+        // If they are currently active online, no countdown text is needed
+        if (activityStatus.isActiveNow) {
+            setLiveActivityText(null);
+            return;
+        }
+
+        const calculateText = () => {
+            const lastActive = parseUtcDate(activityStatus.lastActiveAt);
+            if (!lastActive) return '';
+            const now = new Date();
+            const diffMs = Math.max(0, now.getTime() - lastActive.getTime());
+            const diffSeconds = Math.floor(diffMs / 1000);
+            const diffMinutes = Math.floor(diffSeconds / 60);
+            const diffHours = Math.floor(diffMinutes / 60);
+            const diffDays = Math.floor(diffHours / 24);
+
+            if (diffSeconds < 60) {
+                return diffSeconds <= 5 ? 'Active just now' : `Active ${diffSeconds}s ago`;
+            } else if (diffMinutes < 60) {
+                return `Active ${diffMinutes}m ago`;
+            } else if (diffHours < 24) {
+                return `Active ${diffHours}h ago`;
+            } else {
+                return `Active ${diffDays}d ago`;
+            }
+        };
+
+        // Update immediately
+        setLiveActivityText(calculateText());
+
+        // Update every second for real-time live ticker
+        const timer = setInterval(() => {
+            setLiveActivityText(calculateText());
+        }, 1000);
+
+        return () => clearInterval(timer);
+    }, [activityStatus?.lastActiveAt, activityStatus?.isActiveNow]);
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Force re-render every 10 seconds to update chat list green dots
+    // ─────────────────────────────────────────────────────────────────────────
+    useEffect(() => {
+        const timer = setInterval(() => {
+            forceUpdate(n => n + 1);
+        }, 10000); // Update every 10 seconds
+
+        return () => clearInterval(timer);
+    }, []);
+
     const scrollToBottom = useCallback((instant = false) => {
         const node = scrollRef.current;
         if (!node) return;
@@ -296,6 +404,22 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
     useEffect(() => {
         if (activeId === null) refreshInbox();
     }, [activeId, refreshInbox]);
+
+    // Fetch activity status when opening a thread
+    useEffect(() => {
+        if (activeId && otherUser?.userId) {
+            fetchActivityStatus();
+        } else {
+            setActivityStatus(null);
+        }
+    }, [activeId, otherUser?.userId, fetchActivityStatus]);
+
+    // Poll activity status while thread is open
+    useEffect(() => {
+        if (!activeId || !otherUser?.userId) return;
+        const t = setInterval(fetchActivityStatus, ACTIVITY_POLL_MS);
+        return () => clearInterval(t);
+    }, [activeId, otherUser?.userId, fetchActivityStatus]);
 
     // Deep-link: visit profile → click Message → open their thread instantly.
     useEffect(() => {
@@ -752,10 +876,34 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
                     {filteredConversations.map((conv) => {
                         const isActive = conv.id === activeId;
                         const otherIsTyping = (conv.others || []).some((o) => o.typing);
+                        const otherUser = (conv.others || [])[0];
+                        
+                        // Check if other user is active:
+                        // Both viewer and other user must have Neural Presence (showActivityStatus) enabled
+                        const myShowActivity = currentUser?.showActivityStatus !== false && 
+                            currentUser?.showActivityStatus !== 0 && 
+                            currentUser?.showActivityStatus !== '0';
+                        const otherShowActivity = otherUser?.profile?.showActivityStatus !== false && 
+                            otherUser?.profile?.showActivityStatus !== 0 && 
+                            otherUser?.profile?.showActivityStatus !== '0' && 
+                            otherUser?.profile?.showActivityStatus !== null;
+                        const isOtherOnline = otherUser?.profile?.isOnline === 1 || 
+                            otherUser?.profile?.isOnline === true || 
+                            otherUser?.profile?.isOnline === '1';
+                        const otherLastActiveDate = otherUser?.profile?.lastActiveAt ? parseUtcDate(otherUser.profile.lastActiveAt) : null;
+                        const isRecent = otherLastActiveDate && (Date.now() - otherLastActiveDate.getTime() < 60 * 1000);
+
+                        const isOtherActive = myShowActivity && otherShowActivity && isOtherOnline && isRecent;
+                        
                         return (
                             <button key={conv.id} onClick={() => openConversation(conv.id)}
                                 className={`flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors ${isActive ? 'bg-emerald-500/10' : 'hover:bg-white/5'}`}>
-                                <ChatAvatar user={threadAvatarOf(conv)} size={48} />
+                                <div className="relative">
+                                    <ChatAvatar user={threadAvatarOf(conv)} size={48} />
+                                    {isOtherActive && (
+                                        <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-[#070707] bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.6)]" />
+                                    )}
+                                </div>
                                 <span className="min-w-0 flex-1">
                                     <span className="flex items-center gap-1.5">
                                         <span className="truncate text-[13px] font-bold text-white">{threadTitleOf(conv)}</span>
@@ -819,18 +967,30 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
                             )}
                             {messages.map((msg) => {
                                 const mine = msg.senderId === meId;
+                                const isSeen = Boolean(msg.seenAt);
                                 return (
                                     <div key={msg.id} className={`flex w-full ${mine ? 'justify-end' : 'justify-start'}`}>
-                                        <div className={`max-w-[78%] rounded-2xl px-3.5 py-2 transition-opacity ${mine ? 'rounded-br-sm bg-emerald-500 text-black' : 'rounded-bl-sm border border-white/10 bg-white/[0.06] text-gray-100'} ${msg._optimistic ? 'opacity-70' : 'opacity-100'} ${msg._failed ? '!bg-red-500/80' : ''}`}>
-                                            <p className="whitespace-pre-line break-words text-[13px] leading-relaxed">{msg.content}</p>
-                                            <div className={`mt-1 flex items-center justify-end gap-1 text-[9px] ${mine ? 'text-black/60' : 'text-gray-500'}`}>
+                                        <div className={`group max-w-[78%] rounded-2xl px-4 py-2.5 transition-all ${
+                                            mine 
+                                                ? 'rounded-br-md bg-gradient-to-br from-emerald-500 to-emerald-600 text-black shadow-lg shadow-emerald-500/20' 
+                                                : 'rounded-bl-md border border-white/[0.08] bg-gradient-to-br from-white/[0.08] to-white/[0.04] text-white backdrop-blur-sm'
+                                        } ${msg._optimistic ? 'opacity-70 scale-95' : 'opacity-100 scale-100'} ${msg._failed ? '!bg-gradient-to-br !from-red-500 !to-red-600' : ''}`}>
+                                            <p className="whitespace-pre-line break-words text-[13.5px] leading-[1.5]">{msg.content}</p>
+                                            <div className={`mt-1.5 flex items-center justify-end gap-1.5 text-[9.5px] font-medium ${mine ? 'text-black/50' : 'text-gray-400'}`}>
                                                 <span>{formatClock(msg.createdAt)}</span>
                                                 {mine && (
                                                     msg._failed
-                                                        ? <AlertCircle size={10} className="text-white" />
+                                                        ? <AlertCircle size={11} className="text-white animate-pulse" />
                                                         : msg._optimistic
-                                                            ? <Clock size={9} className="opacity-60 animate-pulse" />
-                                                            : <Check size={10} />
+                                                            ? <Clock size={10} className="opacity-60 animate-pulse" />
+                                                            : isSeen
+                                                                ? (
+                                                                    <div className="relative flex items-center">
+                                                                        <Check size={11} className="absolute -left-[3px] text-blue-400" strokeWidth={3} />
+                                                                        <Check size={11} className="text-blue-400" strokeWidth={3} />
+                                                                    </div>
+                                                                )
+                                                                : <Check size={11} strokeWidth={2.5} />
                                                 )}
                                             </div>
                                         </div>
@@ -885,10 +1045,23 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
                                     {threadTitleOf(activeConversation)}
                                     {activeConversation.locked && <Lock size={12} className="shrink-0 text-amber-300" />}
                                 </p>
-                                <p className="text-[11px] text-gray-500">
-                                    {otherTyping
-                                        ? <span className="font-bold text-emerald-400">typing...</span>
-                                        : 'Active now'}
+                                <p className="text-[11px]">
+                                    {otherTyping ? (
+                                        <span className="font-bold text-emerald-400">typing...</span>
+                                    ) : (myShowActivity && activityStatus?.showActivityStatus !== false && activityStatus?.showActivityStatus !== 0 && activityStatus?.showActivityStatus !== '0') ? (
+                                        activityStatus?.isActiveNow ? (
+                                            <span className="flex items-center gap-1.5 font-semibold text-emerald-400">
+                                                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.6)]" />
+                                                Active now
+                                            </span>
+                                        ) : liveActivityText ? (
+                                            <span className="font-medium text-gray-400">{liveActivityText}</span>
+                                        ) : (
+                                            <span className="text-gray-500">Offline</span>
+                                        )
+                                    ) : (
+                                        <span className="text-gray-500">Tap to chat</span>
+                                    )}
                                 </p>
                             </div>
                             <button onClick={() => { setLockError(''); setLockModalOpen(true); }}
@@ -919,18 +1092,34 @@ const DirectInbox = ({ currentUser, initialUser = null, onConsumed, onUnreadChan
                             )}
                             {messages.map((msg) => {
                                 const mine = msg.senderId === meId;
+                                const isSeen = Boolean(msg.seenAt);
                                 return (
                                     <div key={msg.id} className={`flex w-full ${mine ? 'justify-end' : 'justify-start'}`}>
-                                        <div className={`max-w-[78%] rounded-2xl px-3.5 py-2 transition-opacity ${mine ? 'rounded-br-sm bg-emerald-500 text-black' : 'rounded-bl-sm border border-white/10 bg-white/[0.06] text-gray-100'} ${msg._optimistic ? 'opacity-70' : 'opacity-100'} ${msg._failed ? 'bg-red-500/80' : ''}`}>
-                                            <p className="whitespace-pre-line break-words text-[13px] leading-relaxed">{msg.content}</p>
-                                            <div className={`mt-1 flex items-center justify-end gap-1 text-[9px] ${mine ? 'text-black/60' : 'text-gray-500'}`}>
+                                        <div className={`group max-w-[78%] rounded-2xl px-4 py-2.5 transition-all ${
+                                            mine 
+                                                ? 'rounded-br-md bg-gradient-to-br from-emerald-500 to-emerald-600 text-black shadow-lg shadow-emerald-500/20' 
+                                                : 'rounded-bl-md border border-white/[0.08] bg-gradient-to-br from-white/[0.08] to-white/[0.04] text-white backdrop-blur-sm'
+                                        } ${msg._optimistic ? 'opacity-70 scale-95' : 'opacity-100 scale-100'} ${msg._failed ? '!bg-gradient-to-br !from-red-500 !to-red-600' : ''}`}>
+                                            <p className="whitespace-pre-line break-words text-[13.5px] leading-[1.5]">{msg.content}</p>
+                                            <div className={`mt-1.5 flex items-center justify-end gap-1.5 text-[9.5px] font-medium ${mine ? 'text-black/50' : 'text-gray-400'}`}>
                                                 <span>{formatClock(msg.createdAt)}</span>
                                                 {mine && (
                                                     msg._failed
-                                                        ? <AlertCircle size={10} className="text-white" />
+                                                        ? <AlertCircle size={11} className="text-white animate-pulse" />
                                                         : msg._optimistic
-                                                            ? <Clock size={9} className="opacity-60 animate-pulse" />
-                                                            : <Check size={10} />
+                                                            ? <Clock size={10} className="opacity-60 animate-pulse" />
+                                                            : isSeen
+                                                                ? (
+                                                                    // Double checkmark (seen)
+                                                                    <div className="relative flex items-center">
+                                                                        <Check size={11} className="absolute -left-[3px] text-blue-400" strokeWidth={3} />
+                                                                        <Check size={11} className="text-blue-400" strokeWidth={3} />
+                                                                    </div>
+                                                                )
+                                                                : (
+                                                                    // Single checkmark (delivered)
+                                                                    <Check size={11} strokeWidth={2.5} />
+                                                                )
                                                 )}
                                             </div>
                                         </div>

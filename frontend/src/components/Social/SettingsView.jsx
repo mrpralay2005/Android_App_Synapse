@@ -94,6 +94,32 @@ const SettingsView = ({ user, onUpdateUser, onLogout }) => {
         setTimeout(() => setStatusMsg({ type: '', text: '' }), 4000);
     };
 
+    const savePrivacySetting = async (key, label) => {
+        const nextValue = !formData[key];
+        setFormData(prev => ({ ...prev, [key]: nextValue }));
+        try {
+            const res = await fetch(`${apiUrl}/api/user/update`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token && { Authorization: `Bearer ${token}` })
+                },
+                body: JSON.stringify({ [key]: nextValue })
+            });
+            const data = await res.json();
+            if (data.success) {
+                onUpdateUser(data.data);
+                showStatus('success', `${label} ${nextValue ? 'Activated' : 'Disabled'}`);
+            } else {
+                showStatus('error', data.error || `${label} update failed`);
+                setFormData(prev => ({ ...prev, [key]: !nextValue }));
+            }
+        } catch (err) {
+            showStatus('error', `${label} Sync Failed`);
+            setFormData(prev => ({ ...prev, [key]: !nextValue }));
+        }
+    };
+
     const handleUpdateProfile = async (e) => {
         if (e) e.preventDefault();
         setLoading(true);
@@ -679,27 +705,8 @@ const SettingsView = ({ user, onUpdateUser, onLogout }) => {
                                                 </div>
                                             </div>
                                             <button
-                                                onClick={async () => {
-                                                    const newStatus = !formData.isPrivate;
-                                                    setFormData(prev => ({ ...prev, isPrivate: newStatus }));
-                                                    try {
-                                                        const res = await fetch(`${apiUrl}/api/user/update`, {
-                                                            method: 'PUT',
-                                                            headers: {
-                                                                'Content-Type': 'application/json',
-                                                                'Authorization': `Bearer ${token}`
-                                                            },
-                                                            body: JSON.stringify({ ...formData, isPrivate: newStatus })
-                                                        });
-                                                        const data = await res.json();
-                                                        if (data.success) {
-                                                            onUpdateUser(data.data);
-                                                            showStatus('success', `Stealth Shield ${newStatus ? 'Activated' : 'Liquidated'}`);
-                                                        }
-                                                    } catch (err) {
-                                                        showStatus('error', 'Shield Sync Failed');
-                                                    }
-                                                }}
+                                                onClick={() => savePrivacySetting('isPrivate', 'Stealth Shield')}
+                                                disabled={loading}
                                                 className={`w-14 h-8 rounded-full relative transition-all duration-500 ${formData.isPrivate ? 'bg-emerald-500' : 'bg-gray-800'}`}
                                             >
                                                 <motion.div
@@ -721,7 +728,8 @@ const SettingsView = ({ user, onUpdateUser, onLogout }) => {
                                                 </div>
                                             </div>
                                             <button
-                                                onClick={() => setFormData(prev => ({ ...prev, showActivityStatus: !prev.showActivityStatus }))}
+                                                onClick={() => savePrivacySetting('showActivityStatus', 'Neural Presence')}
+                                                disabled={loading}
                                                 className={`w-14 h-8 rounded-full relative transition-all duration-500 ${formData.showActivityStatus ? 'bg-blue-500' : 'bg-gray-800'}`}
                                             >
                                                 <motion.div
@@ -743,7 +751,8 @@ const SettingsView = ({ user, onUpdateUser, onLogout }) => {
                                                 </div>
                                             </div>
                                             <button
-                                                onClick={() => setFormData(prev => ({ ...prev, readReceipts: !prev.readReceipts }))}
+                                                onClick={() => savePrivacySetting('readReceipts', 'Transmission Feedback')}
+                                                disabled={loading}
                                                 className={`w-14 h-8 rounded-full relative transition-all duration-500 ${formData.readReceipts ? 'bg-purple-500' : 'bg-gray-800'}`}
                                             >
                                                 <motion.div
@@ -765,7 +774,8 @@ const SettingsView = ({ user, onUpdateUser, onLogout }) => {
                                                 </div>
                                             </div>
                                             <button
-                                                onClick={() => setFormData(prev => ({ ...prev, ghostViewer: !prev.ghostViewer }))}
+                                                onClick={() => savePrivacySetting('ghostViewer', 'Wraith Mode')}
+                                                disabled={loading}
                                                 className={`w-14 h-8 rounded-full relative transition-all duration-500 ${formData.ghostViewer ? 'bg-gray-400' : 'bg-gray-800'}`}
                                             >
                                                 <motion.div
@@ -787,7 +797,8 @@ const SettingsView = ({ user, onUpdateUser, onLogout }) => {
                                                 </div>
                                             </div>
                                             <button
-                                                onClick={() => setFormData(prev => ({ ...prev, protectedStories: !prev.protectedStories }))}
+                                                onClick={() => savePrivacySetting('protectedStories', 'Neural Vault')}
+                                                disabled={loading}
                                                 className={`w-14 h-8 rounded-full relative transition-all duration-500 ${formData.protectedStories ? 'bg-amber-500' : 'bg-gray-800'}`}
                                             >
                                                 <motion.div

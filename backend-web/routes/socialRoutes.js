@@ -15,7 +15,8 @@ import {
     deletePost,
     viewStory,
     replyToStory,
-    getStoryDetails
+    getStoryDetails,
+    likeStory
 } from '../controllers/socialController.js';
 import authenticateToken from '../middleware/authMiddleware.js';
 
@@ -41,6 +42,7 @@ social.post('/stories', authenticateToken, createStory);
 social.delete('/stories/:id', authenticateToken, deleteStory);
 social.post('/stories/:id/view', authenticateToken, viewStory);
 social.post('/stories/:id/reply', authenticateToken, replyToStory);
+social.post('/stories/:id/like', authenticateToken, likeStory);
 social.get('/stories/:id/details', authenticateToken, getStoryDetails);
 
 export default social;

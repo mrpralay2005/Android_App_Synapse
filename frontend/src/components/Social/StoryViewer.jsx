@@ -554,6 +554,12 @@ const StoryViewer = ({ stories, initialStoryIndex = 0, onClose, onDelete, onUser
                             </div>
                             <div className="flex items-center gap-2">
                                 <span className="text-white font-bold text-sm tracking-wide group-hover:text-emerald-400 transition-colors">{currentStory.user?.username}</span>
+                                {currentStory.isProtected && (
+                                    <span className="flex items-center gap-1 rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-400 border border-amber-500/30">
+                                        <Lock size={10} />
+                                        <span>Vault</span>
+                                    </span>
+                                )}
                             </div>
                         </div>
                         <div className="flex items-center gap-4 relative">

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Heart, Send, MoreHorizontal, Eye, Trash2, Copy, Volume2, VolumeX, Lock, Share, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Cookies from 'js-cookie';
+import { useStoryHeartAnimation, HEART_ANIMATION_STYLES } from './useStoryHeartAnimation';
 
 // Helper Component for Profile Media (Image or Video)
 // Defined outside to prevent re-renders during progress updates
@@ -40,11 +41,16 @@ const UserAvatar = ({ user, className, staticOnly = false }) => {
 };
 
 const StoryViewer = ({ stories, initialStoryIndex = 0, onClose, onDelete, onUserProfileClick, currentUser }) => {
+    // Heart animation hook
+    const { stageRef: heartStageRef, triggerHeartBurst } = useStoryHeartAnimation();
+    const likeButtonRef = useRef(null);
+    
     const [currentIndex, setCurrentIndex] = useState(initialStoryIndex);
     const [progress, setProgress] = useState(0);
     const [isPaused, setIsPaused] = useState(false);
     const [likeCount, setLikeCount] = useState(0);
-    const [isLiked, setIsLiked] = useState(false);
+    // Change: Track likes per story ID
+    const [storyLikes, setStoryLikes] = useState({});
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isMuted, setIsMuted] = useState(false);
     const [isMediaLoading, setIsMediaLoading] = useState(true);
@@ -60,6 +66,7 @@ const StoryViewer = ({ stories, initialStoryIndex = 0, onClose, onDelete, onUser
     const [viewers, setViewers] = useState([]);
     const [floatingMessages, setFloatingMessages] = useState([]);
     const [allMessages, setAllMessages] = useState([]);
+    const [likes, setLikes] = useState([]);
     const [showViewersModal, setShowViewersModal] = useState(false);
     const [messageInput, setMessageInput] = useState("");
     const [showFloatingBatch, setShowFloatingBatch] = useState([]);
@@ -67,6 +74,18 @@ const StoryViewer = ({ stories, initialStoryIndex = 0, onClose, onDelete, onUser
     const activeStories = stories?.length > 0 ? stories : [];
     const safeIndex = Math.min(currentIndex, activeStories.length - 1);
     const currentStory = activeStories[safeIndex >= 0 ? safeIndex : 0];
+    
+    // Initialize story likes from server data
+    useEffect(() => {
+        const initialLikes = {};
+        stories.forEach(story => {
+            initialLikes[story.id] = story.isLiked || false;
+        });
+        setStoryLikes(initialLikes);
+    }, [stories]);
+    
+    // Get current story's like status
+    const isLiked = currentStory ? (storyLikes[currentStory.id] || false) : false;
 
     // Helper: Identity Check
     const isOwner = currentStory && currentUser && (
@@ -118,11 +137,13 @@ const StoryViewer = ({ stories, initialStoryIndex = 0, onClose, onDelete, onUser
 
         if (cachedData) {
             setViewers(filterSelf(cachedData.viewers));
+            setLikes(filterSelf(cachedData.likes || []));
             setAllMessages(filterSelf(cachedData.messages));
             setIsDetailsLoading(false); // Immediate Data
         } else {
             // Cold Start: Pause Story & Show Loading
             setViewers([]);
+            setLikes([]);
             setAllMessages([]);
             setIsDetailsLoading(true);
         }
@@ -165,13 +186,37 @@ const StoryViewer = ({ stories, initialStoryIndex = 0, onClose, onDelete, onUser
                     try {
                         sessionStorage.setItem(cacheKey, JSON.stringify({
                             viewers: data.viewers || [],
+                            likes: data.likes || [],
                             messages: data.messages || []
                         }));
                     } catch (e) { }
 
                     // Update State
                     setViewers(filterSelf(data.viewers));
+                    setLikes(filterSelf(data.likes || []));
                     setAllMessages(filterSelf(data.messages));
+                    
+                    // Trigger dreamy hearts burst for story owner if there are likes
+                    if (isOwner && data.likes && data.likes.length > 0 && active) {
+                        // Wait for DOM to be ready
+                        setTimeout(() => {
+                            // Create a fake button element at the correct position (right side, like button area)
+                            const container = document.querySelector('.story-heart-stage');
+                            if (container) {
+                                // Calculate position for bottom-right (where like button would be for non-owners)
+                                const fakeButton = {
+                                    getBoundingClientRect: () => ({
+                                        left: window.innerWidth * 0.72, // Adjusted from 85% to 72%
+                                        top: window.innerHeight - 140, // Bottom area
+                                        width: 40,
+                                        height: 40
+                                    })
+                                };
+                                triggerHeartBurst(fakeButton);
+                            }
+                        }, 200);
+                    }
+                    
                     setIsDetailsLoading(false); // Unpause story
                 }
             } catch (e) {
@@ -377,6 +422,63 @@ const StoryViewer = ({ stories, initialStoryIndex = 0, onClose, onDelete, onUser
         }
     };
 
+    const handleLikeStory = async () => {
+        if (!currentStory || !token) return;
+        
+        const storyId = currentStory.id;
+        const wasLiked = storyLikes[storyId];
+        
+        // Optimistic UI update for THIS story only
+        setStoryLikes(prev => ({ ...prev, [storyId]: !prev[storyId] }));
+        
+        // Trigger burst of hearts when LIKING (not unliking)
+        if (!wasLiked) {
+            // Predefined mix to ensure variety every time (no random glitches)
+            const scales = [1.0, 0.85, 1.1, 0.9, 1.05]; // Good visible sizes
+            const angles = [115, 125, 135, 120, 130]; // More varied spread
+            const distances = [180, 220, 200, 240, 190]; // Different distances
+            const rotations = [-20, 15, -10, 25, -15]; // Various tilts
+            const offsetsX = [-25, 15, -10, 30, -5]; // Better horizontal scatter
+            
+            const hearts = [];
+            for (let i = 0; i < 5; i++) {
+                hearts.push({
+                    id: Date.now() + i,
+                    angle: angles[i],
+                    distance: distances[i],
+                    rotation: rotations[i],
+                    scale: scales[i],
+                    delay: i * 0.3,
+                    offsetX: offsetsX[i]
+                });
+            }
+            setFloatingHearts(hearts);
+            
+            setTimeout(() => {
+                setFloatingHearts([]);
+            }, 4200);
+        }
+        
+        try {
+            const res = await fetch(`${LIVE_API}/api/social/stories/${storyId}/like`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            const data = await res.json();
+            if (data.success) {
+                setStoryLikes(prev => ({ ...prev, [storyId]: data.liked }));
+            } else {
+                setStoryLikes(prev => ({ ...prev, [storyId]: !prev[storyId] }));
+            }
+        } catch (e) {
+            console.error("Failed to like story", e);
+            setStoryLikes(prev => ({ ...prev, [storyId]: !prev[storyId] }));
+        }
+    };
+
 
 
     return (
@@ -554,6 +656,12 @@ const StoryViewer = ({ stories, initialStoryIndex = 0, onClose, onDelete, onUser
                             </div>
                             <div className="flex items-center gap-2">
                                 <span className="text-white font-bold text-sm tracking-wide group-hover:text-emerald-400 transition-colors">{currentStory.user?.username}</span>
+                                {currentStory.isProtected && (
+                                    <span className="flex items-center gap-1 rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold text-amber-400 border border-amber-500/30">
+                                        <Lock size={10} />
+                                        <span>Vault</span>
+                                    </span>
+                                )}
                             </div>
                         </div>
                         <div className="flex items-center gap-4 relative">
@@ -606,7 +714,7 @@ const StoryViewer = ({ stories, initialStoryIndex = 0, onClose, onDelete, onUser
 
                     {/* Control Footer (Hidden for Owner) */}
                     {!isOwner && (
-                        <div className="absolute bottom-6 left-4 right-4 z-20 flex items-center gap-4">
+                        <div className="absolute bottom-20 left-4 right-4 z-20 flex items-center gap-4">
                             <div className="flex-1 relative">
                                 <input
                                     type="text"
@@ -620,7 +728,7 @@ const StoryViewer = ({ stories, initialStoryIndex = 0, onClose, onDelete, onUser
                                     className="w-full bg-black/20 border border-white/20 rounded-full py-3 px-6 text-white text-sm placeholder-white/70 focus:outline-none focus:border-white/50 backdrop-blur-md"
                                 />
                             </div>
-                            <button onClick={() => setIsLiked(!isLiked)} className="text-white hover:scale-110 transition-transform">
+                            <button onClick={handleLikeStory} className="text-white hover:scale-110 transition-transform">
                                 <Heart size={28} fill={isLiked ? "white" : "none"} />
                             </button>
                             <button onClick={handleSendMessage} className="text-white hover:scale-110 transition-transform">
@@ -634,7 +742,7 @@ const StoryViewer = ({ stories, initialStoryIndex = 0, onClose, onDelete, onUser
                         <>
                             <div
                                 onClick={(e) => { e.stopPropagation(); setShowViewersModal(true); }}
-                                className="absolute bottom-6 left-4 z-30 flex items-center gap-2 cursor-pointer group"
+                                className="absolute bottom-20 left-4 z-30 flex items-center gap-2 cursor-pointer group"
                             >
 
                                 <div className="w-8 h-8 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 group-hover:bg-white/20 transition-colors">
@@ -655,7 +763,7 @@ const StoryViewer = ({ stories, initialStoryIndex = 0, onClose, onDelete, onUser
                             </div>
 
                             {/* Owner Share Button (Bottom Right) */}
-                            <div className="absolute bottom-6 right-4 z-30">
+                            <div className="absolute bottom-20 right-4 z-30">
                                 <button
                                     onClick={(e) => {
                                         e.stopPropagation();
@@ -740,6 +848,61 @@ const StoryViewer = ({ stories, initialStoryIndex = 0, onClose, onDelete, onUser
                             </button>
                         </div>
                     )}
+
+                    {/* Floating Hearts Animation */}
+                    <AnimatePresence>
+                        {floatingHearts.map(heart => {
+                            // Calculate x and y movement based on angle
+                            const radians = (heart.angle * Math.PI) / 180;
+                            const xMove = Math.cos(radians) * heart.distance;
+                            const yMove = -Math.sin(radians) * heart.distance;
+                            
+                            // Snake motion with tighter oscillations (more Instagram-like)
+                            const snakeKeyframes = [
+                                xMove * 0, // Start
+                                xMove * 0.15 + 20, // Wave right
+                                xMove * 0.3 - 18, // Wave left
+                                xMove * 0.45 + 22, // Wave right
+                                xMove * 0.6 - 16, // Wave left
+                                xMove * 0.75 + 18, // Wave right
+                                xMove * 0.9 - 10, // Wave left
+                                xMove // End
+                            ];
+                            
+                            return (
+                                <motion.div
+                                    key={heart.id}
+                                    initial={{ opacity: 0, scale: 0, x: 0, y: 0, rotate: 0 }}
+                                    animate={{ 
+                                        opacity: [0, 1, 1, 0],
+                                        scale: [0, heart.scale, heart.scale, heart.scale * 0.8],
+                                        x: snakeKeyframes,
+                                        y: yMove,
+                                        rotate: heart.rotation
+                                    }}
+                                    exit={{ opacity: 0, scale: 0 }}
+                                    transition={{ 
+                                        duration: 2.2,
+                                        delay: heart.delay,
+                                        ease: "easeInOut",
+                                        x: { ease: "easeInOut" },
+                                        exit: { duration: 0.2 }
+                                    }}
+                                    className="absolute pointer-events-none z-40"
+                                    style={{ 
+                                        right: `${50 + heart.offsetX}px`,
+                                        bottom: '120px'
+                                    }}
+                                >
+                                    <Heart 
+                                        size={28} 
+                                        fill="white" 
+                                        className="text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]"
+                                    />
+                                </motion.div>
+                            );
+                        })}
+                    </AnimatePresence>
                 </div>
             </motion.div>
         </AnimatePresence >

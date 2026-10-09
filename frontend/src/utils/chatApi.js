@@ -13,12 +13,13 @@ const buildHeaders = (extra = {}) => {
     };
 };
 
-const request = async (path, { method = 'GET', body, unlockToken } = {}, retries = 2) => {
+const request = async (path, { method = 'GET', body, unlockToken, keepalive } = {}, retries = 2) => {
     const attempt = async () => {
         const res = await fetch(`${CHAT_API}${path}`, {
             method,
             headers: buildHeaders(unlockToken ? { 'X-Chat-Unlock': unlockToken } : {}),
-            ...(body !== undefined ? { body: JSON.stringify(body) } : {})
+            ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+            ...(keepalive ? { keepalive: true } : {})
         });
 
         let data = null;
@@ -118,5 +119,21 @@ export const sendTyping = (conversationId, typing) =>
     });
 
 export const getUnreadCount = () => request('/api/chat/unread');
+
+export const markMessagesSeen = (conversationId, messageIds = null, unlockToken) =>
+    request(`/api/chat/conversations/${conversationId}/seen`, {
+        method: 'POST',
+        body: messageIds ? { messageIds } : {},
+        unlockToken: unlockToken ?? getUnlockToken(conversationId)
+    });
+
+export const updateActivityHeartbeat = () =>
+    request('/api/chat/activity/heartbeat', { method: 'POST' });
+
+export const markUserInactive = () =>
+    request('/api/chat/activity/inactive', { method: 'POST', keepalive: true });
+
+export const getUserActivity = (userId) =>
+    request(`/api/chat/activity/${userId}`);
 
 export const CHAT_API_URL = CHAT_API;

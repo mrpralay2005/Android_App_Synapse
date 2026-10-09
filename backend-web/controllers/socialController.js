@@ -31,7 +31,18 @@ export const getFeed = async (c) => {
                         id: true,
                         username: true,
                         name: true,
-                        profileImage: true
+                        profileImage: true,
+                        isPrivate: true,
+                        ...(viewerId ? {
+                            followers: {
+                                where: { followerId: viewerId },
+                                select: { id: true }
+                            },
+                            receivedFollowRequests: {
+                                where: { fromId: viewerId },
+                                select: { id: true, status: true }
+                            }
+                        } : {})
                     }
                 },
                 _count: {
@@ -57,6 +68,13 @@ export const getFeed = async (c) => {
             ...post,
             isLiked: (post.likes?.length || 0) > 0,
             isSaved: (post.savedBy?.length || 0) > 0,
+            user: {
+                ...post.user,
+                isFollowing: viewerId ? (post.user.followers?.length || 0) > 0 : false,
+                isRequested: viewerId ? (post.user.receivedFollowRequests?.filter(req => req.status === 'PENDING').length || 0) > 0 : false,
+                followers: undefined,
+                receivedFollowRequests: undefined
+            },
             likes: undefined, // remove raw array
             savedBy: undefined // remove raw array
         }));
@@ -438,16 +456,21 @@ export const getStories = async (c) => {
                 views: viewerId ? {
                     where: { userId: viewerId },
                     select: { id: true, viewedAt: true }
+                } : false,
+                likes: viewerId ? {
+                    where: { userId: viewerId },
+                    select: { id: true }
                 } : false
             },
             orderBy: { createdAt: 'desc' }
         });
 
-        // If no viewer, only show public account stories
+        // If no viewer, only show public non-protected account stories
         if (!viewerId) {
-            const publicStories = allStories.filter(s => !s.user.isPrivate).map(s => ({
+            const publicStories = allStories.filter(s => !s.user.isPrivate && !s.isProtected).map(s => ({
                 ...s,
-                hasViewed: false
+                hasViewed: false,
+                isLiked: false
             }));
             console.log('[getStories] No viewer - returning', publicStories.length, 'public stories');
             return c.json({ success: true, data: publicStories });
@@ -460,14 +483,19 @@ export const getStories = async (c) => {
         });
         const followingIds = following.map(f => f.followingId);
 
-        // Filter: own stories + public stories + stories from accounts I follow
+        // Filter: own stories + public non-protected stories + stories from accounts I follow
         const filteredStories = allStories.filter(story => {
             if (story.userId === viewerId) return true; // Own story
-            if (!story.user.isPrivate) return true; // Public account
-            return followingIds.includes(story.userId); // Private but I follow
+            // Neural Vault: protected stories are follower-only regardless of account privacy
+            if (story.isProtected) return followingIds.includes(story.userId);
+            // Stealth Shield: private account stories are follower-only
+            if (story.user.isPrivate) return followingIds.includes(story.userId);
+            // Public non-protected stories are accessible
+            return true;
         }).map(story => ({
             ...story,
-            hasViewed: story.views && story.views.length > 0
+            hasViewed: story.views && story.views.length > 0,
+            isLiked: story.likes && story.likes.length > 0
         }));
 
         console.log('[getStories] Total:', allStories.length, 'Accessible:', filteredStories.length);
@@ -600,10 +628,13 @@ export const viewStory = async (c) => {
         const prisma = getPrisma(c.env);
 
         // Optimization: Don't fetch story body just to check owner, but we need ownerId.
-        // Assuming we might need to check if story exists anyway.
         const story = await prisma.story.findUnique({
             where: { id: storyId },
-            select: { userId: true }
+            select: { 
+                userId: true,
+                isProtected: true,
+                user: { select: { isPrivate: true } }
+            }
         });
 
         if (!story) return c.json({ success: false, error: "Story not found" }, 404);
@@ -611,6 +642,22 @@ export const viewStory = async (c) => {
         // Filter: Don't count owner's own view
         if (story.userId === user.userId) {
             return c.json({ success: true, ignored: true });
+        }
+
+        // Access check: If story is protected (Neural Vault) or author is private (Stealth Shield),
+        // only followers can view.
+        if (story.isProtected || story.user?.isPrivate) {
+            const isFollower = await prisma.follow.findUnique({
+                where: {
+                    followerId_followingId: {
+                        followerId: user.userId,
+                        followingId: story.userId
+                    }
+                }
+            });
+            if (!isFollower) {
+                return c.json({ success: false, error: "Access denied" }, 403);
+            }
         }
 
         const viewer = await prisma.user.findUnique({
@@ -653,6 +700,30 @@ export const replyToStory = async (c) => {
 
         if (!content) return c.json({ success: false, error: "Content required" }, 400);
 
+        const story = await prisma.story.findUnique({
+            where: { id: storyId },
+            select: { 
+                userId: true,
+                isProtected: true,
+                user: { select: { isPrivate: true } }
+            }
+        });
+        if (!story) return c.json({ success: false, error: "Story not found" }, 404);
+
+        if (story.userId !== user.userId && (story.isProtected || story.user?.isPrivate)) {
+            const isFollower = await prisma.follow.findUnique({
+                where: {
+                    followerId_followingId: {
+                        followerId: user.userId,
+                        followingId: story.userId
+                    }
+                }
+            });
+            if (!isFollower) {
+                return c.json({ success: false, error: "Access denied" }, 403);
+            }
+        }
+
         const message = await prisma.storyMessage.create({
             data: {
                 content,
@@ -686,7 +757,7 @@ export const getStoryDetails = async (c) => {
             return c.json({ success: false, error: "Unauthorized" }, 403);
         }
 
-        const [viewers, messages] = await Promise.all([
+        const [viewers, messages, likes] = await Promise.all([
             prisma.storyView.findMany({
                 where: {
                     storyId,
@@ -711,12 +782,106 @@ export const getStoryDetails = async (c) => {
                 },
                 orderBy: { createdAt: 'desc' },
                 take: 50
+            }),
+            prisma.storyLike.findMany({
+                where: {
+                    storyId,
+                    userId: { not: story.userId } // Filter out owner
+                },
+                include: {
+                    user: {
+                        select: { id: true, username: true, name: true, profileImage: true }
+                    }
+                },
+                orderBy: { createdAt: 'desc' }
             })
         ]);
 
-        return c.json({ success: true, viewers, messages });
+        return c.json({ success: true, viewers, messages, likes });
     } catch (error) {
         console.error("Story Details Error:", error);
         return c.json({ success: false, error: "Failed to fetch details" }, 500);
+    }
+};
+
+export const likeStory = async (c) => {
+    try {
+        const storyId = parseInt(c.req.param('id'));
+        const user = c.get('user');
+        const prisma = getPrisma(c.env);
+
+        // Check if story exists
+        const story = await prisma.story.findUnique({
+            where: { id: storyId },
+            select: { 
+                userId: true,
+                isProtected: true,
+                user: { select: { isPrivate: true } }
+            }
+        });
+
+        if (!story) return c.json({ success: false, error: "Story not found" }, 404);
+
+        // Don't let owner like their own story
+        if (story.userId === user.userId) {
+            return c.json({ success: false, error: "Cannot like your own story" }, 400);
+        }
+
+        if (story.isProtected || story.user?.isPrivate) {
+            const isFollower = await prisma.follow.findUnique({
+                where: {
+                    followerId_followingId: {
+                        followerId: user.userId,
+                        followingId: story.userId
+                    }
+                }
+            });
+            if (!isFollower) {
+                return c.json({ success: false, error: "Access denied" }, 403);
+            }
+        }
+
+        // Toggle like
+        const existing = await prisma.storyLike.findUnique({
+            where: {
+                storyId_userId: {
+                    storyId: storyId,
+                    userId: user.userId
+                }
+            }
+        });
+
+        if (existing) {
+            // Unlike
+            try {
+                await prisma.storyLike.delete({
+                    where: { id: existing.id }
+                });
+                return c.json({ success: true, liked: false });
+            } catch (error) {
+                // If delete fails, treat as if already unliked
+                return c.json({ success: true, liked: false });
+            }
+        } else {
+            // Like
+            try {
+                await prisma.storyLike.create({
+                    data: {
+                        storyId: storyId,
+                        userId: user.userId
+                    }
+                });
+                return c.json({ success: true, liked: true });
+            } catch (error) {
+                // If constraint error, it means already liked (race condition)
+                if (error.code === 'P2002') {
+                    return c.json({ success: true, liked: true });
+                }
+                throw error;
+            }
+        }
+    } catch (error) {
+        console.error("Story Like Error:", error);
+        return c.json({ success: false, error: "Failed to like story" }, 500);
     }
 };
