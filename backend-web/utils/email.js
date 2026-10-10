@@ -44,11 +44,12 @@ export const sendOTP = async (email, otp, env) => {
     try {
         const transporter = await createTransporter(env);
         const mailOptions = {
-            from: `"SynapseX Neural Core" <${env.EMAIL_USER}>`,
+            from: `"Nexus Social" <noreply@nexus-social-co.me>`,
             to: email,
             subject: "Neural Access Verification Code",
             html: `
                 <div style="background-color: #050505; color: #ffffff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; text-align: center; border: 1px solid #10b981;">
+                    <img src="https://nexus-social-co.me/nexus-select-trust--600.png" alt="Nexus Social" style="width: 120px; height: auto; margin-bottom: 20px;" />
                     <h1 style="color: #10b981; font-size: 24px; letter-spacing: 2px;">SYNAPSEX VERIFICATION</h1>
                     <p style="color: #9ca3af; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">Initial Uplink Detected</p>
                     <div style="margin: 30px 0; padding: 20px; border: 1px dashed #10b981; display: inline-block;">
@@ -70,11 +71,12 @@ export const sendResetOTP = async (email, otp, env) => {
     try {
         const transporter = await createTransporter(env);
         const mailOptions = {
-            from: `"SynapseX Security" <${env.EMAIL_USER}>`,
+            from: `"Nexus Social" <noreply@nexus-social-co.me>`,
             to: email,
             subject: "Neural Key Reset Authorization",
             html: `
                 <div style="background-color: #050505; color: #ffffff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; text-align: center; border: 1px solid #10b981;">
+                    <img src="https://nexus-social-co.me/nexus-select-trust--600.png" alt="Nexus Social" style="width: 120px; height: auto; margin-bottom: 20px;" />
                     <h1 style="color: #10b981; font-size: 24px; letter-spacing: 2px;">NEURAL KEY RECOVERY</h1>
                     <div style="margin: 30px 0; padding: 20px; border: 1px dashed #10b981; display: inline-block;">
                         <span style="font-size: 32px; font-weight: bold; color: #ffffff; letter-spacing: 10px;">${otp}</span>
@@ -94,11 +96,12 @@ export const sendEmailChangeOTP = async (email, otp, env) => {
     try {
         const transporter = await createTransporter(env);
         await transporter.sendMail({
-            from: `"SynapseX Security" <${env.EMAIL_USER}>`,
+            from: `"Nexus Social" <noreply@nexus-social-co.me>`,
             to: email,
             subject: "Confirm your SynapseX email change",
             html: `
                 <div style="background-color: #050505; color: #ffffff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; text-align: center; border: 1px solid #3b82f6;">
+                    <img src="https://nexus-social-co.me/nexus-select-trust--600.png" alt="Nexus Social" style="width: 120px; height: auto; margin-bottom: 20px;" />
                     <h1 style="color: #60a5fa; font-size: 24px; letter-spacing: 2px;">EMAIL CHANGE CONFIRMATION</h1>
                     <p style="color: #9ca3af; font-size: 14px;">Enter this code in SynapseX to confirm this new email address.</p>
                     <div style="margin: 30px 0; padding: 20px; border: 1px dashed #3b82f6; display: inline-block;">
