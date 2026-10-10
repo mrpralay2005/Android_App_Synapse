@@ -87,7 +87,8 @@ const formatRich = (text) =>
 const TypingDots = () => (
     <div className="flex items-center gap-1 px-1 py-0.5">
         {[0,1,2].map(i => (
-            <motion.span key={i} className="h-1.5 w-1.5 rounded-full bg-emerald-400"
+            <motion.span key={i}
+                style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: 'linear-gradient(135deg, #a78bfa, #38bdf8)' }}
                 animate={{ opacity:[0.25,1,0.25], y:[0,-3,0] }}
                 transition={{ duration:1, delay:i*0.15, repeat:Infinity, ease:'easeInOut' }} />
         ))}
@@ -100,7 +101,21 @@ const SuggestionGrid = ({ topics, onPick }) => (
         className="flex flex-wrap gap-2 pl-9 pr-1">
         {topics.map(t => (
             <button key={t.id} onClick={() => onPick(t)}
-                className="rounded-full border border-emerald-500/30 bg-emerald-500/[0.07] px-3.5 py-1.5 text-[12px] font-medium text-emerald-200 transition-all active:scale-95 hover:border-emerald-500/55 hover:bg-emerald-500/15">
+                style={{
+                    borderRadius: '9999px',
+                    border: '1px solid rgba(167,139,250,0.35)',
+                    borderTop: '1px solid rgba(192,132,252,0.5)',
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(145,175,255,0.03)), rgba(10,14,40,0.55)',
+                    backdropFilter: 'blur(12px) saturate(180%)',
+                    WebkitBackdropFilter: 'blur(12px) saturate(180%)',
+                    padding: '6px 14px',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: 'rgba(196,181,253,0.9)',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                }}
+            >
                 {t.chip}
             </button>
         ))}
@@ -114,16 +129,59 @@ const MessageBubble = ({ message, onAction, onTopicPick }) => {
             transition={{ duration:0.22 }}
             className={`flex w-full flex-col gap-2 ${isPriya ? 'items-start' : 'items-end'}`}>
             <div className={`flex w-full gap-2 ${isPriya ? 'justify-start' : 'justify-end'}`}>
-                {isPriya && <div className="mt-1 shrink-0"><PriyaAvatar size={28} animated={false} showRing={false} /></div>}
+                {isPriya && <div className="mt-1 shrink-0"><div style={{ position:'relative', width:28, height:28, borderRadius:'50%', overflow:'hidden', border:'1.5px solid rgba(168,85,247,0.4)', flexShrink:0 }}>
+                                <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=80&q=80&auto=format&fit=crop" alt="Priya" style={{ width:'100%', height:'100%', objectFit:'cover', filter:'saturate(1.3)' }} />
+                                <div style={{ position:'absolute', inset:0, background:'linear-gradient(to top, rgba(124,58,237,0.25), transparent)' }} />
+                            </div></div>}
                 <div className="max-w-[82%]">
-                    <div className={isPriya
-                        ? 'rounded-2xl rounded-tl-sm border border-white/10 bg-white/[0.06] px-3.5 py-2.5 text-[13px] leading-relaxed text-gray-200'
-                        : 'rounded-2xl rounded-br-sm bg-emerald-500 px-3.5 py-2.5 text-[13px] font-medium leading-relaxed text-black'}>
-                        <p className="whitespace-pre-line break-words">{formatRich(message.text)}</p>
-                    </div>
+                    {isPriya ? (
+                        <div style={{
+                            borderRadius: '16px 16px 16px 4px',
+                            background: 'linear-gradient(138deg, rgba(255,255,255,0.09) 0%, rgba(145,175,255,0.04) 50%, rgba(255,255,255,0.02) 100%), rgba(10,14,40,0.58)',
+                            border: '1px solid rgba(255,255,255,0.11)',
+                            borderTop: '1px solid rgba(255,255,255,0.20)',
+                            backdropFilter: 'blur(16px) saturate(180%)',
+                            WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+                            padding: '10px 14px',
+                            fontSize: 13,
+                            lineHeight: '1.6',
+                            color: 'rgba(226,232,240,0.92)',
+                            boxShadow: '0 4px 16px rgba(2,4,18,0.3)',
+                        }}>
+                            <p style={{ whiteSpace: 'pre-line', wordBreak: 'break-word' }}>{formatRich(message.text)}</p>
+                        </div>
+                    ) : (
+                        <div style={{
+                            borderRadius: '16px 16px 4px 16px',
+                            background: 'linear-gradient(135deg, #7c3aed 0%, #a855f7 100%)',
+                            padding: '10px 14px',
+                            fontSize: 13,
+                            fontWeight: 500,
+                            lineHeight: '1.6',
+                            color: '#fff',
+                            boxShadow: '0 4px 20px rgba(124,58,237,0.4)',
+                        }}>
+                            <p style={{ whiteSpace: 'pre-line', wordBreak: 'break-word' }}>{formatRich(message.text)}</p>
+                        </div>
+                    )}
                     {message.action && onAction && (
                         <button onClick={() => onAction(message.action)}
-                            className="mt-1.5 inline-flex items-center gap-1.5 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 text-[11px] font-bold text-emerald-300 transition-colors hover:bg-emerald-500/20">
+                            style={{
+                                marginTop: 6,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                borderRadius: '9999px',
+                                border: '1px solid rgba(167,139,250,0.45)',
+                                background: 'linear-gradient(135deg, rgba(124,58,237,0.18), rgba(168,85,247,0.10))',
+                                padding: '6px 12px',
+                                fontSize: 11,
+                                fontWeight: 700,
+                                color: 'rgba(196,181,253,0.9)',
+                                cursor: 'pointer',
+                                backdropFilter: 'blur(8px)',
+                                WebkitBackdropFilter: 'blur(8px)',
+                            }}>
                             {message.action.label}<ArrowRight size={12} />
                         </button>
                     )}
@@ -155,34 +213,86 @@ const SessionsPanel = ({ onResume, onClose }) => {
     return (
         <motion.div initial={{ x:'100%' }} animate={{ x:0 }} exit={{ x:'100%' }}
             transition={{ type:'spring', stiffness:340, damping:34 }}
-            className="absolute inset-0 z-10 flex flex-col bg-[#060c0b]">
-            <div className="flex items-center gap-3 border-b border-white/[0.07] bg-[#080f0d] px-4 py-3">
-                <button onClick={onClose} className="rounded-full p-2 text-gray-400 hover:bg-white/10 hover:text-white transition-colors"><ChevronLeft size={18} /></button>
-                <p className="flex-1 text-[14px] font-black text-white">Chat history</p>
-                <Clock size={15} className="text-gray-500" />
+            style={{
+                position: 'absolute', inset: 0, zIndex: 10,
+                display: 'flex', flexDirection: 'column',
+                background: 'linear-gradient(168deg, #0a0d25 0%, #060818 45%, #04050f 100%)',
+            }}>
+            {/* Ambient orbs */}
+            <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+                <div style={{ position: 'absolute', top: '-5%', left: '-10%', width: '55%', height: '35%', borderRadius: '9999px', background: 'rgba(56,189,248,0.09)', filter: 'blur(55px)', mixBlendMode: 'screen' }} />
+                <div style={{ position: 'absolute', bottom: '10%', right: '-5%', width: '45%', height: '40%', borderRadius: '9999px', background: 'rgba(168,85,247,0.08)', filter: 'blur(55px)', mixBlendMode: 'screen' }} />
             </div>
-            <div className="hide-scrollbar flex-1 overflow-y-auto px-3 py-3 space-y-2">
+
+            <div style={{
+                position: 'relative', zIndex: 1,
+                display: 'flex', alignItems: 'center', gap: 12,
+                borderBottom: '1px solid rgba(255,255,255,0.09)',
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.08), rgba(145,175,255,0.03)), rgba(9,12,36,0.70)',
+                backdropFilter: 'blur(24px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+                padding: '12px 16px',
+            }}>
+                <button onClick={onClose}
+                    style={{
+                        borderRadius: '50%', padding: 8, cursor: 'pointer',
+                        background: 'rgba(255,255,255,0.06)',
+                        border: '1px solid rgba(255,255,255,0.10)',
+                        color: 'rgba(148,163,184,0.8)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        transition: 'background 0.15s',
+                    }}>
+                    <ChevronLeft size={18} />
+                </button>
+                <p style={{ flex: 1, fontSize: 14, fontWeight: 900, color: '#fff', letterSpacing: '-0.01em' }}>Chat history</p>
+                <Clock size={15} style={{ color: 'rgba(100,116,139,0.7)' }} />
+            </div>
+
+            <div className="hide-scrollbar" style={{ position: 'relative', zIndex: 1, flex: 1, overflowY: 'auto', padding: '12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {sessions.length === 0 && (
-                    <div className="flex flex-col items-center py-16 text-center">
-                        <History size={28} className="text-gray-600" />
-                        <p className="mt-3 text-[13px] font-bold text-gray-400">No saved sessions yet</p>
-                        <p className="mt-1 text-[11px] text-gray-600">Start a new chat — it saves automatically.</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 64, textAlign: 'center' }}>
+                        <History size={28} style={{ color: 'rgba(100,116,139,0.5)' }} />
+                        <p style={{ marginTop: 12, fontSize: 13, fontWeight: 700, color: 'rgba(148,163,184,0.6)' }}>No saved sessions yet</p>
+                        <p style={{ marginTop: 4, fontSize: 11, color: 'rgba(100,116,139,0.5)' }}>Start a new chat — it saves automatically.</p>
                     </div>
                 )}
                 {sessions.map(session => (
                     <motion.button key={session.id}
                         initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }}
                         onClick={() => onResume(session)}
-                        className="flex w-full items-center gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.03] px-4 py-3 text-left transition-colors hover:bg-white/[0.07] active:scale-[0.98]">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-                            <Sparkles size={14} className="text-emerald-400" />
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: 12,
+                            borderRadius: 16,
+                            border: '1px solid rgba(255,255,255,0.08)',
+                            borderTop: '1px solid rgba(255,255,255,0.14)',
+                            background: 'linear-gradient(135deg, rgba(255,255,255,0.07), rgba(145,175,255,0.03)), rgba(10,14,40,0.50)',
+                            backdropFilter: 'blur(12px)',
+                            WebkitBackdropFilter: 'blur(12px)',
+                            padding: '12px 16px',
+                            textAlign: 'left',
+                            cursor: 'pointer',
+                            transition: 'background 0.15s',
+                            width: '100%',
+                        }}>
+                        <div style={{
+                            width: 36, height: 36, borderRadius: 12, flexShrink: 0,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            background: 'linear-gradient(135deg, rgba(124,58,237,0.25), rgba(56,189,248,0.12))',
+                            border: '1px solid rgba(167,139,250,0.25)',
+                        }}>
+                            <Sparkles size={14} style={{ color: '#a78bfa' }} />
                         </div>
-                        <div className="min-w-0 flex-1">
-                            <p className="truncate text-[13px] font-bold text-white">{session.title}</p>
-                            <p className="text-[11px] text-gray-500">{session.messages.length - 1} messages · {fmt(session.savedAt)}</p>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                            <p style={{ fontSize: 13, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{session.title}</p>
+                            <p style={{ fontSize: 11, color: 'rgba(100,116,139,0.7)' }}>{session.messages.length - 1} messages · {fmt(session.savedAt)}</p>
                         </div>
                         <button onClick={(e) => handleDelete(session.id, e)}
-                            className="shrink-0 rounded-full p-1.5 text-gray-600 hover:bg-red-500/10 hover:text-red-400 transition-colors">
+                            style={{
+                                flexShrink: 0, borderRadius: '50%', padding: 6, cursor: 'pointer',
+                                background: 'transparent', border: 'none',
+                                color: 'rgba(100,116,139,0.6)',
+                                transition: 'color 0.15s',
+                            }}>
                             <Trash2 size={14} />
                         </button>
                     </motion.button>
@@ -346,66 +456,183 @@ const PriyaChat = ({ onClose, onNavigate, hideHeader = false }) => {
     const handleTopicPick = (topic) => handleSubmit(topic.question, topic);
     const handleAction = (action) => { if (action?.type === 'navigate' && onNavigate) onNavigate(action.view); };
 
+    // ── Liquid glass pill button shared style ─────────────────────────────────
+    const pillBtn = (active = false) => ({
+        display: 'inline-flex', alignItems: 'center', gap: 6,
+        borderRadius: '9999px',
+        border: active ? '1px solid rgba(239,68,68,0.4)' : '1px solid rgba(255,255,255,0.10)',
+        borderTop: active ? '1px solid rgba(239,68,68,0.55)' : '1px solid rgba(255,255,255,0.18)',
+        background: active
+            ? 'linear-gradient(135deg, rgba(239,68,68,0.15), rgba(220,38,38,0.08))'
+            : 'linear-gradient(135deg, rgba(255,255,255,0.07), rgba(145,175,255,0.03)), rgba(10,14,40,0.50)',
+        backdropFilter: 'blur(12px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(12px) saturate(180%)',
+        padding: '6px 12px',
+        fontSize: 11,
+        fontWeight: 700,
+        color: active ? 'rgba(252,165,165,0.9)' : 'rgba(148,163,184,0.8)',
+        cursor: 'pointer',
+        transition: 'all 0.15s',
+    });
+
+    const iconBtn = () => ({
+        borderRadius: '50%', padding: 8, cursor: 'pointer',
+        background: 'rgba(255,255,255,0.05)',
+        border: '1px solid rgba(255,255,255,0.10)',
+        color: 'rgba(148,163,184,0.7)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        transition: 'background 0.15s',
+    });
+
     // ── Render ────────────────────────────────────────────────────────────────
     return (
-        <div className="relative flex h-full flex-col overflow-hidden bg-[#060c0b]">
+        <div style={{ position: 'relative', display: 'flex', height: '100%', flexDirection: 'column', overflow: 'hidden', background: 'transparent' }}>
 
             {/* Standalone header */}
             {!hideHeader && (
-                <div className="flex items-center gap-3 border-b border-white/10 bg-[#080f0d] px-4 py-3">
-                    <PriyaAvatar size={40} />
-                    <div className="min-w-0 flex-1">
-                        <p className="flex items-center gap-1.5 text-sm font-bold text-white">
-                            {PRIYA.name}<Sparkles size={12} className="text-emerald-400" />
+                <div style={{
+                    display: 'flex', alignItems: 'center', gap: 12,
+                    borderBottom: '1px solid rgba(255,255,255,0.09)',
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.09), rgba(145,175,255,0.03)), rgba(9,12,36,0.72)',
+                    backdropFilter: 'blur(24px) saturate(180%)',
+                    WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+                    padding: '12px 16px',
+                }}>
+                    <div style={{ position:'relative', width:40, height:40, borderRadius:'50%', overflow:'hidden', border:'2px solid rgba(168,85,247,0.5)', boxShadow:'0 0 12px rgba(168,85,247,0.4)' }}>
+                    <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=80&q=80&auto=format&fit=crop" alt="Priya" style={{ width:'100%', height:'100%', objectFit:'cover', filter:'saturate(1.3)' }} />
+                    <div style={{ position:'absolute', inset:0, background:'linear-gradient(to top, rgba(124,58,237,0.3), transparent)' }} />
+                </div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                        <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 900, color: '#fff', letterSpacing: '-0.01em' }}>
+                            {PRIYA.name}<Sparkles size={12} style={{ color: '#c084fc' }} />
                         </p>
-                        <p className="truncate text-[10px] text-emerald-400/80">{PRIYA.status}</p>
+                        <p style={{ fontSize: 10, color: 'rgba(192,132,252,0.75)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{PRIYA.status}</p>
                     </div>
-                    <div className="flex items-center gap-0.5">
-                        <button onClick={() => setShowSessions(true)} title="Chat history" className="rounded-full p-2 text-gray-400 hover:bg-white/10 hover:text-emerald-300 transition-colors"><History size={15} /></button>
-                        <button onClick={handleNewSession} title="New session" className="rounded-full p-2 text-gray-400 hover:bg-white/10 hover:text-emerald-300 transition-colors"><RotateCcw size={15} /></button>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <button onClick={() => setShowSessions(true)} title="Chat history" style={iconBtn()}><History size={15} /></button>
+                        <button onClick={handleNewSession} title="New session" style={iconBtn()}><RotateCcw size={15} /></button>
                         <button onClick={handleDeleteChat} title={confirmDelete ? 'Tap again to confirm' : 'Delete chat'}
-                            className={`rounded-full p-2 transition-colors hover:bg-white/10 ${confirmDelete ? 'text-red-400' : 'text-gray-400 hover:text-red-400'}`}><Trash2 size={15} /></button>
+                            style={{ ...iconBtn(), color: confirmDelete ? 'rgba(252,165,165,0.9)' : 'rgba(148,163,184,0.7)' }}>
+                            <Trash2 size={15} />
+                        </button>
                     </div>
                 </div>
             )}
 
             {/* Action row when inside full-screen */}
             {hideHeader && (
-                <div className="flex items-center gap-2 border-b border-white/[0.06] bg-[#080f0d] px-4 py-2">
-                    <button onClick={() => setShowSessions(true)} className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-bold text-gray-400 hover:bg-white/10 hover:text-emerald-300 transition-colors"><History size={12} /> History</button>
-                    <button onClick={handleNewSession} className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[11px] font-bold text-gray-400 hover:bg-white/10 hover:text-emerald-300 transition-colors"><RotateCcw size={12} /> New chat</button>
-                    <button onClick={handleDeleteChat} className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[11px] font-bold transition-colors ${confirmDelete ? 'border-red-500/40 bg-red-500/10 text-red-400' : 'border-white/10 bg-white/[0.04] text-gray-400 hover:text-red-400 hover:bg-white/10'}`}><Trash2 size={12} /> {confirmDelete ? 'Confirm?' : 'Delete'}</button>
+                <div style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    margin: '0 14px 8px 14px',
+                    borderRadius: '20px',
+                    border: '1px solid rgba(255,255,255,0.18)',
+                    borderTop: '1.5px solid rgba(255,255,255,0.40)',
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.14), rgba(145,175,255,0.04)), rgba(9,12,36,0.65)',
+                    backdropFilter: 'blur(20px) saturate(180%)',
+                    WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+                    padding: '8px 14px',
+                    boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.35), 0 8px 20px -4px rgba(0,0,0,0.5)',
+                }}>
+                    <button onClick={() => setShowSessions(true)} style={pillBtn()}><History size={12} /> History</button>
+                    <button onClick={handleNewSession} style={pillBtn()}><RotateCcw size={12} /> New chat</button>
+                    <button onClick={handleDeleteChat} style={pillBtn(confirmDelete)}><Trash2 size={12} /> {confirmDelete ? 'Confirm?' : 'Delete'}</button>
                 </div>
             )}
 
-            {/* Conversation */}
-            <div ref={scrollRef} className="hide-scrollbar flex-1 space-y-4 overflow-y-auto px-4 py-4">
-                {messages.map(msg => (
-                    <MessageBubble key={msg.id} message={msg} onAction={handleAction} onTopicPick={handleTopicPick} />
-                ))}
-                {isTyping && (
-                    <div className="flex items-center gap-2">
-                        <PriyaAvatar size={28} animated={false} showRing={false} />
-                        <div className="rounded-2xl rounded-tl-sm border border-white/10 bg-white/[0.06] px-3.5 py-2"><TypingDots /></div>
-                    </div>
-                )}
+            {/* Conversation inside Floating Liquid Glass Main Box */}
+            <div style={{
+                position: 'relative',
+                flex: 1, minHeight: 0,
+                display: 'flex', flexDirection: 'column',
+                margin: '0 14px 10px 14px',
+                borderRadius: '28px',
+                overflow: 'hidden',
+                background: 'linear-gradient(142deg, rgba(255,255,255,0.18) 0%, rgba(147,197,253,0.09) 35%, rgba(168,85,247,0.07) 70%, rgba(255,255,255,0.02) 100%), rgba(9,13,38,0.60)',
+                border: '1.5px solid rgba(255, 255, 255, 0.30)',
+                borderTop: '2.2px solid rgba(255, 255, 255, 0.80)',
+                borderLeft: '1.8px solid rgba(255, 255, 255, 0.55)',
+                boxShadow: 'inset 0 2px 2px 0 rgba(255, 255, 255, 0.62), inset 0 -2px 3px 0 rgba(125, 211, 252, 0.25), 0 24px 50px -10px rgba(0, 0, 0, 0.75), 0 0 35px -5px rgba(56, 189, 248, 0.22)',
+                backdropFilter: 'blur(32px) saturate(220%)',
+                WebkitBackdropFilter: 'blur(32px) saturate(220%)',
+            }}>
+                <div ref={scrollRef} className="hide-scrollbar" style={{ flex: 1, overflowY: 'auto', padding: '14px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    {messages.map(msg => (
+                        <MessageBubble key={msg.id} message={msg} onAction={handleAction} onTopicPick={handleTopicPick} />
+                    ))}
+                    {isTyping && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <div style={{ position:'relative', width:28, height:28, borderRadius:'50%', overflow:'hidden', border:'1.5px solid rgba(168,85,247,0.4)', flexShrink:0 }}>
+                                <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=80&q=80&auto=format&fit=crop" alt="Priya" style={{ width:'100%', height:'100%', objectFit:'cover', filter:'saturate(1.3)' }} />
+                                <div style={{ position:'absolute', inset:0, background:'linear-gradient(to top, rgba(124,58,237,0.25), transparent)' }} />
+                            </div>
+                            <div style={{
+                                borderRadius: '16px',
+                                background: 'linear-gradient(135deg, rgba(255,255,255,0.16), rgba(145,175,255,0.06)), rgba(10,14,40,0.60)',
+                                border: '1px solid rgba(255,255,255,0.25)',
+                                borderTop: '1.5px solid rgba(255,255,255,0.60)',
+                                backdropFilter: 'blur(16px)',
+                                WebkitBackdropFilter: 'blur(16px)',
+                                padding: '8px 14px',
+                            }}>
+                                <TypingDots />
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
 
-            {/* Composer */}
+            {/* Composer — Floating Pill Dock */}
             <form onSubmit={e => { e.preventDefault(); handleSubmit(); }}
-                className="shrink-0 border-t border-white/10 bg-[#080f0d] px-3 py-3"
-                style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom, 12px))' }}>
-                <div className="flex items-center gap-2">
+                style={{
+                    flexShrink: 0,
+                    margin: '0 14px 10px 14px',
+                    borderRadius: '9999px',
+                    border: '1.5px solid rgba(255,255,255,0.30)',
+                    borderTop: '2px solid rgba(255,255,255,0.75)',
+                    borderLeft: '1.5px solid rgba(255,255,255,0.50)',
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.20), rgba(145,175,255,0.08)), rgba(9,12,36,0.68)',
+                    backdropFilter: 'blur(28px) saturate(200%)',
+                    WebkitBackdropFilter: 'blur(28px) saturate(200%)',
+                    padding: '6px 8px 6px 14px',
+                    boxShadow: 'inset 0 1.5px 2px rgba(255,255,255,0.55), 0 16px 36px -8px rgba(0,0,0,0.7), 0 0 25px -4px rgba(56,189,248,0.25)',
+                    marginBottom: 'max(10px, env(safe-area-inset-bottom, 10px))',
+                }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <input ref={inputRef} value={input}
                         onChange={e => { setInput(e.target.value); setConfirmDelete(false); }}
                         placeholder="Ask Priya anything about SynapseX..."
-                        className="min-w-0 flex-1 rounded-full border border-white/10 bg-white/5 px-4 py-2.5 text-[13px] text-white outline-none placeholder:text-gray-500 focus:border-emerald-500/50" />
+                        style={{
+                            flex: 1, minWidth: 0,
+                            borderRadius: '9999px',
+                            border: '1px solid rgba(255,255,255,0.12)',
+                            borderTop: '1px solid rgba(255,255,255,0.20)',
+                            background: 'linear-gradient(135deg, rgba(255,255,255,0.07), rgba(145,175,255,0.03)), rgba(10,14,40,0.55)',
+                            backdropFilter: 'blur(16px) saturate(180%)',
+                            WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+                            padding: '10px 16px',
+                            fontSize: 13,
+                            color: '#fff',
+                            outline: 'none',
+                        }}
+                    />
                     <button type="submit" disabled={!input.trim() || isTyping} aria-label="Send"
-                        className="shrink-0 rounded-full bg-emerald-500 p-2.5 text-black transition-all hover:bg-emerald-400 disabled:opacity-30">
-                        <Send size={16} />
+                        style={{
+                            flexShrink: 0, borderRadius: '50%',
+                            background: input.trim() && !isTyping
+                                ? 'linear-gradient(135deg, #7c3aed, #a855f7)'
+                                : 'rgba(255,255,255,0.08)',
+                            border: 'none',
+                            padding: 10,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            cursor: input.trim() && !isTyping ? 'pointer' : 'default',
+                            opacity: input.trim() && !isTyping ? 1 : 0.35,
+                            boxShadow: input.trim() && !isTyping ? '0 4px 16px rgba(124,58,237,0.45)' : 'none',
+                            transition: 'all 0.18s',
+                        }}>
+                        <Send size={16} style={{ color: '#fff' }} />
                     </button>
                 </div>
-                <p className="mt-1.5 text-center text-[9px] text-gray-600">Powered by Cloudflare Workers AI · SynapseX only</p>
+                <p style={{ marginTop: 6, textAlign: 'center', fontSize: 9, color: 'rgba(71,85,105,0.7)' }}>Powered by Cloudflare Workers AI · SynapseX only</p>
             </form>
 
             {/* Sessions panel */}
