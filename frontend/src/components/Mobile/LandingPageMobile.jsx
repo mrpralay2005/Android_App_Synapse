@@ -1,214 +1,675 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { Target, Shield, Zap, Globe, X } from 'lucide-react';
-import PriyaAssistant from '../Priya/PriyaAssistant';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+    ArrowUpRight,
+    Fingerprint,
+    Globe2,
+    ShieldCheck,
+    Sparkles,
+    Wand2,
+    X,
+    Zap,
+    Lock,
+    Radio,
+    Activity,
+    Compass,
+    User,
+    Layers,
+    Eye,
+    Shield,
+    Check,
+    MessageCircle,
+    Rss,
+    Users,
+    Video,
+    Heart,
+    TrendingUp,
+    Star,
+    Music2
+} from 'lucide-react';
 
 const MobileLandingPage = ({ onLogin, onRegister, onExit, previewMode = false }) => {
-    const features = [
-        { icon: Shield, title: 'Quantum Security', desc: 'Military-grade encryption for your digital self.' },
-        { icon: Zap, title: 'Instant Sync', desc: 'Real-time behavioral analysis and authentication.' },
-        { icon: Globe, title: 'Global Uplink', desc: 'Access your profile from any node in the world.' },
-        { icon: Target, title: 'AI Core', desc: 'Continuous learning neural protection.' }
+    // Interactive states for the liquid glass controls (mimicking Oppo ColorOS 17 / iOS Liquid Glass)
+    const [activeFeatureIndex, setActiveFeatureIndex] = useState(0);
+    const [activeSlide, setActiveSlide] = useState(0);
+    const [slideDirection, setSlideDirection] = useState(1);
+    const [priyaOpen, setPriyaOpen] = useState(false);
+
+    const slides = [
+        {
+            id: 'privacy',
+            label: 'Privacy',
+            icon: ShieldCheck,
+            iconColor: 'from-sky-400/30 to-indigo-500/30',
+            iconBorder: 'border-sky-300/30',
+            iconText: 'text-sky-200',
+            title: 'Neural Privacy Engine',
+            subtitle: 'Active Protection · 256-bit',
+            cards: [
+                { id: 'vault', label: 'Quantum Vault', sub: 'End-to-end encrypted', icon: Lock, color: 'from-[#38bdf8] to-[#6366f1]' },
+                { id: 'decay', label: 'Zero Telemetry', sub: 'Auto-decaying packets', icon: Zap, color: 'from-[#818cf8] to-[#c084fc]' },
+                { id: 'circle', label: 'Ghost Circles', sub: 'Invisible footprint', icon: Eye, color: 'from-[#c084fc] to-[#f472b6]' },
+            ],
+            footer: { dot: 'bg-emerald-400', text: 'Encrypted Neural Orbit', stat: '0.0ms LEAK', statColor: 'text-sky-300' },
+        },
+        {
+            id: 'messaging',
+            label: 'Messages',
+            icon: MessageCircle,
+            iconColor: 'from-violet-400/30 to-pink-500/30',
+            iconBorder: 'border-violet-300/30',
+            iconText: 'text-violet-200',
+            title: 'Quantum Messaging',
+            subtitle: 'Ephemeral · Encrypted · Real-time',
+            cards: [
+                { id: 'ghost', label: 'Ghost Chats', sub: 'Self-destruct messages', icon: Eye, color: 'from-[#a78bfa] to-[#7c3aed]' },
+                { id: 'voice', label: 'Voice Orbit', sub: 'Encrypted voice notes', icon: Radio, color: 'from-[#f472b6] to-[#ec4899]' },
+                { id: 'group', label: 'Nexus Groups', sub: 'Private communities', icon: Users, color: 'from-[#34d399] to-[#059669]' },
+            ],
+            footer: { dot: 'bg-violet-400', text: 'Zero Data Stored', stat: 'E2E · Always', statColor: 'text-violet-300' },
+        },
+        {
+            id: 'feed',
+            label: 'Feed',
+            icon: Rss,
+            iconColor: 'from-pink-400/30 to-orange-500/30',
+            iconBorder: 'border-pink-300/30',
+            iconText: 'text-pink-200',
+            title: 'Neural Feed',
+            subtitle: 'Curated · Calm · Ad-free',
+            cards: [
+                { id: 'reels', label: 'Reels Orbit', sub: 'Mood-matched reels', icon: Video, color: 'from-[#fb923c] to-[#f43f5e]' },
+                { id: 'trending', label: 'Trending Now', sub: 'Live pulse tracker', icon: TrendingUp, color: 'from-[#facc15] to-[#f97316]' },
+                { id: 'vibes', label: 'Vibe Stories', sub: 'Authentic moments', icon: Heart, color: 'from-[#f472b6] to-[#c084fc]' },
+            ],
+            footer: { dot: 'bg-pink-400', text: 'Zero Ads · Pure Content', stat: '100% Real', statColor: 'text-pink-300' },
+        },
+        {
+            id: 'spaces',
+            label: 'Spaces',
+            icon: Layers,
+            iconColor: 'from-amber-400/30 to-cyan-500/30',
+            iconBorder: 'border-amber-300/30',
+            iconText: 'text-amber-200',
+            title: 'Nexus Spaces',
+            subtitle: 'Communities · Vibes · Universes',
+            cards: [
+                { id: 'music', label: 'Music Spaces', sub: 'Shared listening rooms', icon: Music2, color: 'from-[#22d3ee] to-[#6366f1]' },
+                { id: 'stars', label: 'Star Circles', sub: 'Elite inner groups', icon: Star, color: 'from-[#fbbf24] to-[#f59e0b]' },
+                { id: 'global', label: 'Global Nexus', sub: 'World communities', icon: Globe2, color: 'from-[#4ade80] to-[#06b6d4]' },
+            ],
+            footer: { dot: 'bg-amber-400', text: 'Connected · Worldwide', stat: '∞ Spaces', statColor: 'text-amber-300' },
+        },
+        {
+            id: 'priya',
+            label: 'Priya',
+            icon: Sparkles,
+            iconColor: 'from-pink-400/30 to-violet-500/30',
+            iconBorder: 'border-pink-300/30',
+            iconText: 'text-pink-200',
+            title: 'Priya AI',
+            subtitle: 'Your neural companion',
+            cards: [],
+            footer: { dot: 'bg-pink-400', text: 'Neural Intelligence', stat: 'Always On', statColor: 'text-pink-300' },
+        },
     ];
 
+    const handleSlideChange = (idx) => {
+        setSlideDirection(idx > activeSlide ? 1 : -1);
+        setActiveSlide(idx);
+    };
+
+
     return (
-        <div
-            className="mobile-landing relative w-full overflow-hidden bg-[#04080d] text-white"
-            style={{
-                height: '100%',
-                width: '100%',
-                maxHeight: '100%',
-                maxWidth: '100%',
-                overflow: 'hidden',
-                scrollbarWidth: 'none',
-                msOverflowStyle: 'none',
-                overscrollBehavior: 'none',
-                boxSizing: 'border-box'
-            }}
-        >
+        <main className="mobile-liquid-landing mobile-landing relative isolate h-full w-full text-white select-none">
             <style>{`
-                .mobile-landing {
+                .mobile-liquid-landing {
                     min-height: 0;
-                    /* Dynamic viewport excludes the browser chrome when it is visible. */
                     height: 100dvh;
+                    background:
+                        radial-gradient(110% 65% at 50% -10%, rgba(56, 189, 248, 0.28) 0%, rgba(99, 102, 241, 0.22) 36%, transparent 72%),
+                        radial-gradient(85% 55% at 100% 60%, rgba(192, 132, 252, 0.20) 0%, transparent 65%),
+                        radial-gradient(75% 50% at 0% 85%, rgba(56, 189, 248, 0.16) 0%, transparent 70%),
+                        linear-gradient(168deg, #0a0d25 0%, #060818 45%, #04050f 100%) !important;
+                    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+                    overflow-x: hidden;
+                    overflow-y: auto;
+                    -webkit-overflow-scrolling: touch;
+                    scrollbar-width: none;
                 }
 
-                .mobile-landing-content {
-                    padding-top: max(0.75rem, env(safe-area-inset-top));
-                    padding-right: max(1rem, env(safe-area-inset-right));
-                    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
-                    padding-left: max(1rem, env(safe-area-inset-left));
+                .mobile-liquid-landing::-webkit-scrollbar {
+                    display: none;
                 }
 
-                .mobile-landing-title {
-                    font-size: clamp(2.2rem, 12vw, 3rem);
+                .mobile-liquid-landing * {
+                    box-sizing: border-box;
                 }
 
-                .mobile-landing-copy {
-                    font-size: clamp(0.875rem, 3.8vw, 1rem);
-                    line-height: clamp(1.35rem, 6vw, 1.75rem);
+                /* Deep Fluid Ambient Mesh */
+                .mobile-liquid-landing::before {
+                    content: "";
+                    pointer-events: none;
+                    position: absolute;
+                    inset: 0;
+                    opacity: 0.35;
+                    background-image:
+                        radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+                    background-size: 24px 24px;
+                    mask-image: radial-gradient(ellipse at 50% 30%, black 40%, transparent 80%);
                 }
 
-                .mobile-landing-feature-title {
-                    font-size: clamp(0.75rem, 3.6vw, 1rem);
+                /* Liquid Orbs (Aquamorphic Lighting) */
+                .mobile-liquid-landing .liquid-ambient-orb {
+                    position: absolute;
+                    border-radius: 9999px;
+                    pointer-events: none;
+                    mix-blend-mode: screen;
+                    filter: blur(55px);
+                    opacity: 0.75;
+                    animation: liquidFloat 14s ease-in-out infinite alternate;
                 }
 
-                .mobile-landing-feature-copy {
-                    font-size: clamp(0.625rem, 2.8vw, 0.6875rem);
+                @keyframes liquidFloat {
+                    0% { transform: translateY(0) scale(1); }
+                    50% { transform: translateY(-16px) scale(1.08) translateX(10px); }
+                    100% { transform: translateY(12px) scale(0.95) translateX(-8px); }
                 }
 
-                @media (max-height: 850px) {
-                    .mobile-landing-content { padding-top: max(0.5rem, env(safe-area-inset-top)); padding-bottom: max(0.5rem, env(safe-area-inset-bottom)); }
-                    .mobile-landing-title-block { margin-top: 0.5rem; }
-                    .mobile-landing-copy-block { margin-top: 0.625rem; }
-                    .mobile-landing-actions { margin-top: 0.875rem; gap: 0.5rem; }
-                    .mobile-landing-actions button { padding-top: 0.75rem; padding-bottom: 0.75rem; }
-                    .mobile-landing-features { margin-top: 0.875rem; gap: 0.5rem; }
-                    .mobile-landing-feature { padding: 0.625rem; border-radius: 1rem; }
-                    .mobile-landing-feature-icon { margin-bottom: 0.5rem; height: 2rem; width: 2rem; }
+                /* TRUE LIQUID GLASS MATERIALS (Oppo ColorOS 17 / iOS 18) */
+                .mobile-liquid-landing .liquid-glass-panel {
+                    position: relative;
+                    background: linear-gradient(138deg, rgba(255, 255, 255, 0.15) 0%, rgba(165, 195, 255, 0.065) 45%, rgba(255, 255, 255, 0.02) 100%), rgba(10, 14, 40, 0.52);
+                    border: 1px solid rgba(255, 255, 255, 0.18);
+                    border-top: 1.5px solid rgba(255, 255, 255, 0.38);
+                    border-left: 1.2px solid rgba(255, 255, 255, 0.28);
+                    box-shadow:
+                        inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.42),
+                        inset 0 -1.5px 2px 0 rgba(99, 102, 241, 0.16),
+                        0 20px 48px -12px rgba(2, 4, 18, 0.65),
+                        0 0 28px -6px rgba(56, 189, 248, 0.15);
+                    -webkit-backdrop-filter: blur(28px) saturate(190%);
+                    backdrop-filter: blur(28px) saturate(190%);
                 }
 
-                /* Mobile web has less usable height than an installed app because
-                   Chrome/Safari controls remain on screen. */
-                @media (max-height: 740px) {
-                    .mobile-landing-content { padding: max(0.375rem, env(safe-area-inset-top)) max(0.875rem, env(safe-area-inset-right)) max(0.375rem, env(safe-area-inset-bottom)) max(0.875rem, env(safe-area-inset-left)); }
-                    .mobile-landing-brand { margin-top: 0.125rem; gap: 0.5rem; }
-                    .mobile-landing-brand > div { height: 2.25rem; width: 2.25rem; }
-                    .mobile-landing-brand h1 { font-size: 1.75rem; }
-                    .mobile-landing-title-block { margin-top: 0.75rem; }
-                    .mobile-landing-title { font-size: clamp(2rem, 10.5vw, 2.45rem); line-height: 0.88; }
-                    .mobile-landing-copy-block { margin-top: 0.625rem; }
-                    .mobile-landing-copy { font-size: 0.8125rem; line-height: 1.25rem; }
-                    .mobile-landing-actions { margin-top: 0.875rem; gap: 0.5rem; }
-                    .mobile-landing-actions button { border-radius: 1rem; padding-top: 0.6875rem; padding-bottom: 0.6875rem; font-size: 0.875rem; }
-                    .mobile-landing-features { margin-top: clamp(2rem, 8vh, 3rem); margin-bottom: 0; gap: 0.75rem; }
-                    .mobile-landing-feature { min-height: 6.65rem; padding: 0.75rem; border-radius: 1rem; }
-                    .mobile-landing-feature-icon { margin-bottom: 0.375rem; height: 1.875rem; width: 1.875rem; border-radius: 0.625rem; }
-                    .mobile-landing-feature-title { font-size: 0.75rem; }
-                    .mobile-landing-feature-copy { margin-top: 0.3rem; font-size: 0.6rem; line-height: 0.85rem; }
+                .mobile-liquid-landing .liquid-glass-card {
+                    position: relative;
+                    background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(145, 175, 255, 0.045) 55%, rgba(255, 255, 255, 0.015) 100%), rgba(12, 17, 46, 0.44);
+                    border: 1px solid rgba(255, 255, 255, 0.16);
+                    border-top: 1.2px solid rgba(255, 255, 255, 0.30);
+                    box-shadow:
+                        inset 0 1px 0.8px 0 rgba(255, 255, 255, 0.35),
+                        inset 0 -1px 1px 0 rgba(129, 140, 248, 0.12),
+                        0 14px 34px -8px rgba(0, 0, 0, 0.45);
+                    -webkit-backdrop-filter: blur(20px) saturate(180%);
+                    backdrop-filter: blur(20px) saturate(180%);
                 }
 
-                @media (max-height: 580px) {
-                    .mobile-landing-brand { margin-top: 0; }
-                    .mobile-landing-title { font-size: 2rem; }
-                    .mobile-landing-copy { line-height: 1.3rem; }
-                    .mobile-landing-actions { gap: 0.375rem; }
-                    .mobile-landing-actions button { padding-top: 0.625rem; padding-bottom: 0.625rem; }
-                    .mobile-landing-feature-copy { display: none; }
-                    .mobile-landing-features { margin-top: 0.625rem; margin-bottom: 0; gap: 0.5rem; }
-                    .mobile-landing-feature { min-height: 0; padding: 0.5rem; }
-                    .mobile-landing-feature-icon { margin-bottom: 0.25rem; height: 1.75rem; width: 1.75rem; }
-                    .mobile-landing-feature-title { font-size: 0.6875rem; }
+                .mobile-liquid-landing .liquid-glass-pill {
+                    background: linear-gradient(135deg, rgba(255, 255, 255, 0.14) 0%, rgba(150, 185, 255, 0.06) 100%), rgba(14, 18, 52, 0.35);
+                    border: 1px solid rgba(255, 255, 255, 0.18);
+                    border-top: 1px solid rgba(255, 255, 255, 0.35);
+                    box-shadow:
+                        inset 0 1px 0.8px 0 rgba(255, 255, 255, 0.32),
+                        0 8px 20px -4px rgba(0, 0, 0, 0.32);
+                    -webkit-backdrop-filter: blur(16px) saturate(170%);
+                    backdrop-filter: blur(16px) saturate(170%);
                 }
 
-                div::-webkit-scrollbar { display: none; }
+                /* Liquid Glass Shimmer Highlight */
+                .mobile-liquid-landing .liquid-shimmer::after {
+                    content: "";
+                    position: absolute;
+                    top: 0;
+                    right: 12%;
+                    width: 48%;
+                    height: 2px;
+                    border-radius: 9999px;
+                    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.95), transparent);
+                    filter: drop-shadow(0 0 6px rgba(125, 211, 252, 0.8));
+                    pointer-events: none;
+                }
+
+                /* Liquid Buttons */
+                .mobile-liquid-landing .liquid-btn-primary {
+                    position: relative;
+                    overflow: hidden;
+                    background: linear-gradient(116deg, #e0f2fe 0%, #7dd3fc 28%, #818cf8 68%, #c084fc 100%);
+                    box-shadow:
+                        0 14px 32px -4px rgba(56, 189, 248, 0.42),
+                        0 4px 12px 0 rgba(99, 102, 241, 0.28),
+                        inset 0 1.5px 1.5px rgba(255, 255, 255, 0.95),
+                        inset 0 -2px 3px rgba(24, 38, 110, 0.35);
+                    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
+                }
+
+                .mobile-liquid-landing .liquid-btn-primary:active {
+                    transform: scale(0.965);
+                    box-shadow:
+                        0 8px 18px -2px rgba(56, 189, 248, 0.35),
+                        inset 0 1px 1px rgba(255, 255, 255, 0.8);
+                }
+
+                .mobile-liquid-landing .liquid-btn-secondary {
+                    background: linear-gradient(135deg, rgba(255, 255, 255, 0.13) 0%, rgba(165, 180, 252, 0.05) 100%), rgba(18, 22, 58, 0.55);
+                    border: 1px solid rgba(255, 255, 255, 0.22);
+                    border-top: 1.2px solid rgba(255, 255, 255, 0.38);
+                    box-shadow:
+                        inset 0 1.2px 1px 0 rgba(255, 255, 255, 0.32),
+                        0 10px 24px -6px rgba(0, 0, 0, 0.35);
+                    -webkit-backdrop-filter: blur(18px) saturate(160%);
+                    backdrop-filter: blur(18px) saturate(160%);
+                    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+                }
+
+                .mobile-liquid-landing .liquid-btn-secondary:active {
+                    transform: scale(0.965);
+                }
+
+                /* Oppo ColorOS 17 Fluid Toggle Switch */
+                .mobile-liquid-landing .liquid-toggle-track {
+                    width: 44px;
+                    height: 24px;
+                    border-radius: 9999px;
+                    padding: 2px;
+                    transition: background 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+                    border: 1px solid rgba(255, 255, 255, 0.25);
+                }
+
+                .mobile-liquid-landing .liquid-toggle-active {
+                    background: linear-gradient(135deg, #38bdf8, #818cf8);
+                    box-shadow: 0 0 14px rgba(56, 189, 248, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.5);
+                }
+
+                .mobile-liquid-landing .liquid-toggle-inactive {
+                    background: rgba(255, 255, 255, 0.12);
+                    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
+                }
+
+                .mobile-liquid-landing .liquid-toggle-thumb {
+                    width: 18px;
+                    height: 18px;
+                    border-radius: 9999px;
+                    background: #ffffff;
+                    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.8);
+                    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                }
+
+                /* Luminous Liquid Pedestal (Bottom Stage Reflection) */
+                .mobile-liquid-landing .liquid-pedestal-platform {
+                    position: relative;
+                    width: 100%;
+                    height: 48px;
+                    border-radius: 50%;
+                    background: radial-gradient(ellipse at 50% 50%, rgba(56, 189, 248, 0.35) 0%, rgba(129, 140, 248, 0.18) 35%, rgba(192, 132, 252, 0.08) 55%, transparent 75%);
+                    filter: blur(10px);
+                    pointer-events: none;
+                }
+
+                .mobile-liquid-landing .liquid-pedestal-rim {
+                    position: absolute;
+                    left: 8%;
+                    right: 8%;
+                    height: 1.5px;
+                    background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.85) 25%, rgba(255, 255, 255, 0.95) 50%, rgba(192, 132, 252, 0.85) 75%, transparent);
+                    box-shadow: 0 0 16px 2px rgba(56, 189, 248, 0.7);
+                }
+
+                /* Floating Liquid Dock (ColorOS 17 Aquamorphic Style) */
+                .mobile-liquid-landing .liquid-glass-dock {
+                    background: linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(147, 197, 253, 0.08) 50%, rgba(255, 255, 255, 0.03) 100%), rgba(9, 12, 36, 0.65);
+                    border: 1px solid rgba(255, 255, 255, 0.22);
+                    border-top: 1.5px solid rgba(255, 255, 255, 0.42);
+                    box-shadow:
+                        inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.45),
+                        inset 0 -1.5px 2px 0 rgba(99, 102, 241, 0.18),
+                        0 22px 50px -10px rgba(0, 0, 0, 0.75),
+                        0 0 24px -2px rgba(56, 189, 248, 0.22);
+                    -webkit-backdrop-filter: blur(32px) saturate(200%);
+                    backdrop-filter: blur(32px) saturate(200%);
+                }
+
+                /* Fluid Typography */
+                .mobile-liquid-landing .liquid-hero-title {
+                    font-size: clamp(2.35rem, 10.6vw, 3.25rem);
+                    line-height: 0.95;
+                    letter-spacing: -0.075em;
+                }
+
+                .mobile-liquid-landing .liquid-title-gradient {
+                    background: linear-gradient(108deg, #ffffff 0%, #bae6fd 30%, #7dd3fc 60%, #c084fc 100%);
+                    -webkit-background-clip: text;
+                    background-clip: text;
+                    color: transparent;
+                    filter: drop-shadow(0 2px 14px rgba(56, 189, 248, 0.25));
+                }
+
+
             `}</style>
-            <div className="mobile-landing-atmosphere absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(16,185,129,0.14),_transparent_30%),radial-gradient(circle_at_bottom_left,_rgba(16,185,129,0.10),_transparent_30%)]" />
 
-            <div className="mobile-landing-content relative z-10 mx-auto flex h-full max-w-md flex-col">
-                <motion.button
-                    initial={{ opacity: 0, x: 16 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.35 }}
-                    onClick={onExit}
-                    className="ml-auto flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white shadow-lg backdrop-blur-md transition-transform hover:scale-105"
-                    aria-label="Exit"
-                    title="Exit Neural Gateway"
-                >
-                    <X size={20} />
-                </motion.button>
+            {/* Dynamic Ambient Background Orbs */}
+            <div className="liquid-ambient-orb -left-20 top-16 h-64 w-64 bg-[#38bdf8]/30" />
+            <div className="liquid-ambient-orb -right-16 top-48 h-72 w-72 bg-[#a855f7]/25" />
+            <div className="liquid-ambient-orb left-1/4 top-[58%] h-80 w-80 bg-[#6366f1]/22" />
+            <div className="liquid-ambient-orb bottom-[-4rem] right-4 h-64 w-64 bg-[#06b6d4]/25" />
 
-                <motion.div
-                    initial={{ opacity: 0, y: -16 }}
+            {/* Main Content Area (Scrollable with smooth natural elasticity) */}
+            <div className="relative z-10 mx-auto flex min-h-full max-w-md flex-col px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-[max(5.5rem,env(safe-area-inset-bottom))]">
+
+                {/* 1. LIQUID GLASS HEADER BAR */}
+                <motion.header
+                    initial={{ opacity: 0, y: -14 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                    className="mobile-landing-brand mt-2 flex items-center gap-3"
+                    transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+                    className="flex items-center justify-between py-1"
                 >
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-emerald-500/50 bg-emerald-500/10">
-                        <Target className="h-5 w-5 text-emerald-400" />
+                    <div className="flex items-center gap-3">
+                        {/* 3D Liquid Squircle Brand Badge */}
+                        <div className="relative grid h-11 w-11 place-items-center rounded-[1.2rem] bg-gradient-to-br from-[#e0f2fe] via-[#7dd3fc] to-[#a855f7] shadow-[0_8px_24px_rgba(56,189,248,0.4),inset_0_1.5px_1px_rgba(255,255,255,0.85)]">
+                            <Fingerprint size={23} strokeWidth={2.2} className="text-[#070b28]" />
+                            <div className="absolute inset-0 rounded-[1.2rem] bg-white/20 opacity-40 mix-blend-overlay" />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-[1.38rem] font-black tracking-[-0.07em] text-white">SynapseX</span>
+                                <span className="rounded-full border border-sky-400/30 bg-sky-400/10 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-sky-300">
+                                    OS 17
+                                </span>
+                            </div>
+                            <p className="text-[8.5px] font-bold uppercase tracking-[0.22em] text-[#93c5fd]">
+                                Liquid Neural Space
+                            </p>
+                        </div>
                     </div>
-                    <h1 className="text-[2rem] font-black tracking-[-0.07em] text-white">SynapseX</h1>
-                </motion.div>
 
-                <motion.div
+                    <motion.button
+                        type="button"
+                        onClick={onExit}
+                        whileTap={{ scale: 0.92 }}
+                        className="liquid-glass-pill grid h-10 w-10 place-items-center rounded-full text-[#dbeafe] transition-all hover:bg-white/20 active:scale-90"
+                        aria-label="Exit"
+                        title="Close SynapseX"
+                    >
+                        <X size={18} />
+                    </motion.button>
+                </motion.header>
+
+                {/* 2. LIQUID HERO TYPOGRAPHY */}
+                <motion.section
                     initial={{ opacity: 0, y: 18 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.08 }}
-                    className="mobile-landing-title-block mt-5"
+                    transition={{ duration: 0.55, delay: 0.08, ease: [0.16, 1, 0.3, 1] }}
+                    className="mt-5"
                 >
-                    <h2 className="mobile-landing-title font-black leading-[0.9] tracking-[-0.07em] text-white">
-                        The World's
-                        <span className="block text-emerald-400">Most Secure</span>
-                        Neural Gateway
-                    </h2>
-                </motion.div>
+                    <div className="liquid-glass-pill mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.18em] text-[#bae6fd]">
+                        <span className="relative flex h-2 w-2">
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-sky-400 opacity-75" />
+                            <span className="relative inline-flex h-2 w-2 rounded-full bg-sky-300 shadow-[0_0_8px_#38bdf8]" />
+                        </span>
+                        <Sparkles size={11} className="text-sky-300" />
+                        A calmer way to connect
+                    </div>
 
-                <motion.p
-                    initial={{ opacity: 0, y: 14 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.15 }}
-                    className="mobile-landing-copy mobile-landing-copy-block mt-4 max-w-sm text-gray-300"
-                >
-                    Experience the next generation of digital identity. SynapseX uses advanced behavioral AI to protect your neural footprint across the decentralized web.
-                </motion.p>
+                    <h1 className="liquid-hero-title font-black text-white">
+                        Your world,
+                        <span className="liquid-title-gradient block">beautifully protected.</span>
+                    </h1>
 
+                    <p className="mt-3.5 max-w-[21rem] text-[0.875rem] leading-[1.48] text-[#cbd5e1]">
+                        A quieter, private sanctuary for real moments, protected by fluid zero-knowledge architecture.
+                    </p>
+                </motion.section>
+
+                {/* 3. HERO ACTION BUTTONS (HIGH-ELEVATION LIQUID FINISH) */}
                 <motion.div
-                    initial={{ opacity: 0, y: 14 }}
+                    initial={{ opacity: 0, y: 16 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.22 }}
-                    className="mobile-landing-actions mt-6 flex flex-col gap-3"
+                    transition={{ duration: 0.52, delay: 0.16, ease: [0.16, 1, 0.3, 1] }}
+                    className="mt-5 grid grid-cols-[1.25fr_0.85fr] gap-2.5"
                 >
                     <button
+                        type="button"
                         onClick={onLogin}
-                        className="mobile-landing-primary-action w-full rounded-2xl bg-gradient-to-r from-emerald-400 to-emerald-500 px-4 py-4 text-base font-black text-black shadow-[0_0_24px_rgba(52,211,153,0.45)] transition-transform hover:scale-[1.01]"
+                        className="liquid-btn-primary flex min-h-[3.35rem] items-center justify-center gap-1.5 rounded-[1.3rem] px-4 text-sm font-black tracking-[-0.025em] text-[#05081f]"
                     >
-                        Access Neural Hub
+                        <span>Welcome back</span>
+                        <ArrowUpRight size={17} strokeWidth={2.6} />
                     </button>
 
                     {previewMode ? (
-                        <div className="rounded-2xl border border-amber-300/15 bg-amber-300/[0.06] px-4 py-3 text-center text-[11px] font-bold uppercase tracking-[0.14em] text-amber-200">
-                            Private preview · approved test accounts only
+                        <div className="liquid-btn-secondary flex min-h-[3.35rem] items-center justify-center rounded-[1.3rem] px-3 text-center text-[9px] font-black uppercase leading-tight tracking-[0.14em] text-[#e0f2fe]">
+                            Private Preview
                         </div>
                     ) : (
                         <button
+                            type="button"
                             onClick={onRegister}
-                            className="mobile-landing-secondary-action w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-4 text-base font-black text-white backdrop-blur-md transition-transform hover:scale-[1.01]"
+                            className="liquid-btn-secondary flex min-h-[3.35rem] items-center justify-center rounded-[1.3rem] px-3 text-sm font-extrabold tracking-[-0.025em] text-[#f8fafc]"
                         >
-                            Initialize Identity
+                            Create account
                         </button>
                     )}
                 </motion.div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.28 }}
-                    className="mobile-landing-features mt-6 grid grid-cols-2 gap-3"
+                {/* 4. THE CENTERPIECE: SLIDING LIQUID GLASS FEATURE SHOWCASE */}
+                <motion.section
+                    initial={{ opacity: 0, y: 22, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ duration: 0.58, delay: 0.24, ease: [0.16, 1, 0.3, 1] }}
+                    className="liquid-glass-panel liquid-shimmer mt-5 rounded-[2rem] p-4"
+                    aria-label="Liquid Glass Feature Showcase"
                 >
-                    {features.map(({ icon: Icon, title, desc }) => (
-                        <div
-                            key={title}
-                            className="mobile-landing-feature rounded-2xl border border-white/10 bg-white/[0.03] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]"
-                        >
-                            <div className="mobile-landing-feature-icon mb-3 flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-500/30 bg-emerald-500/10">
-                                <Icon className="h-4 w-4 text-emerald-400" />
-                            </div>
-                            <h3 className="mobile-landing-feature-title font-black leading-tight text-white">{title}</h3>
-                            <p className="mobile-landing-feature-copy mt-2 leading-4 text-gray-400">{desc}</p>
+                    {/* Header: current slide title + Live badge */}
+                    <div className="flex items-center justify-between pb-3 border-b border-white/[0.08]">
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={activeSlide + '-header'}
+                                initial={{ opacity: 0, x: slideDirection * 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: slideDirection * -20 }}
+                                transition={{ duration: 0.22 }}
+                                className="flex items-center gap-2"
+                            >
+                                <div className={`grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br ${slides[activeSlide].iconColor} border ${slides[activeSlide].iconBorder} ${slides[activeSlide].iconText}`}>
+                                    {React.createElement(slides[activeSlide].icon, { size: 16 })}
+                                </div>
+                                <div>
+                                    <p className="text-[11px] font-black tracking-[-0.02em] text-white">{slides[activeSlide].title}</p>
+                                    <p className={`text-[9px] font-bold ${slides[activeSlide].iconText}/80`}>{slides[activeSlide].subtitle}</p>
+                                </div>
+                            </motion.div>
+                        </AnimatePresence>
+                        <div className="flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-400/30 rounded-full px-2.5 py-1">
+                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                            <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-300">Live</span>
                         </div>
-                    ))}
+                    </div>
+
+                    {/* Slide content */}
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={activeSlide}
+                            initial={{ opacity: 0, x: slideDirection * 40 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: slideDirection * -40 }}
+                            transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+                        >
+                            {/* Coming Soon slide */}
+                            {slides[activeSlide].id === 'coming' ? (
+                                <div className="mt-4 flex flex-col items-center justify-center py-4 gap-3">
+                                    <div className="grid h-14 w-14 place-items-center rounded-2xl bg-gradient-to-br from-white/10 to-white/5 border border-white/15">
+                                        <Sparkles size={24} className="text-slate-400" />
+                                    </div>
+                                    <p className="text-[13px] font-black text-white tracking-tight">Something Big Is Coming</p>
+                                    <p className="text-[10px] text-slate-500 text-center max-w-[180px] leading-relaxed">A feature so wild we can't show it yet. Stay tuned.</p>
+                                    <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1.5 mt-1">
+                                        <span className="relative flex h-1.5 w-1.5">
+                                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-slate-400 opacity-60" />
+                                            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-slate-400" />
+                                        </span>
+                                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Coming Soon</span>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    {/* Feature cards grid */}
+                                    <div className="mt-3.5 grid grid-cols-3 gap-2">
+                                        {slides[activeSlide].cards.map((qa) => {
+                                            const IconComponent = qa.icon;
+                                            return (
+                                                <div
+                                                    key={qa.id}
+                                                    className="liquid-glass-card text-left rounded-2xl p-2.5"
+                                                >
+                                                    <div className={`grid h-8 w-8 place-items-center rounded-xl bg-gradient-to-br ${qa.color} text-white shadow-md shadow-sky-500/20`}>
+                                                        <IconComponent size={14} strokeWidth={2.4} />
+                                                    </div>
+                                                    <p className="mt-2 text-[10px] font-extrabold leading-tight tracking-[-0.02em] text-white">{qa.label}</p>
+                                                    <p className="mt-0.5 text-[8px] leading-tight text-slate-400">{qa.sub}</p>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Footer capsule */}
+                                    <div className="liquid-glass-card mt-3 flex items-center justify-between rounded-xl px-3 py-2 border border-white/10">
+                                        <div className="flex items-center gap-2.5">
+                                            <span className="relative flex h-2 w-2">
+                                                <span className={`absolute inline-flex h-full w-full animate-ping rounded-full ${slides[activeSlide].footer.dot} opacity-60`} />
+                                                <span className={`relative inline-flex h-2 w-2 rounded-full ${slides[activeSlide].footer.dot}`} />
+                                            </span>
+                                            <span className="text-[10px] font-semibold text-slate-300">{slides[activeSlide].footer.text}</span>
+                                        </div>
+                                        <span className={`text-[9px] font-black tracking-wider ${slides[activeSlide].footer.statColor}`}>
+                                            {slides[activeSlide].footer.stat}
+                                        </span>
+                                    </div>
+                                </>
+                            )}
+                        </motion.div>
+                    </AnimatePresence>
+                </motion.section>
+
+                {/* 5. LIQUID GLASS FLOATING DOCK (ColorOS 17 / iOS 18 Liquid Dock Navigation) */}
+                <motion.div
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.32, ease: [0.16, 1, 0.3, 1] }}
+                    className="mt-4 flex flex-col items-center"
+                >
+                    <div className="liquid-glass-dock relative flex items-center justify-between gap-1 rounded-[1.6rem] px-3.5 py-2 w-full max-w-[340px]">
+                        {slides.map((slide, idx) => {
+                            const DockIcon = slide.icon;
+                            const isActive = idx === activeSlide;
+                            const isPriya = slide.id === 'priya';
+                            return (
+                                <button
+                                    key={slide.id}
+                                    type="button"
+                                    onClick={() => isPriya ? setPriyaOpen(true) : handleSlideChange(idx)}
+                                    className={`relative flex flex-col items-center justify-center py-1 px-2 rounded-2xl transition-all duration-200 ${
+                                        isActive && !isPriya ? 'text-sky-300 font-bold' : 'text-slate-400 hover:text-white'
+                                    }`}
+                                >
+                                    {isPriya ? (
+                                        <div className={`relative w-9 h-9 rounded-full overflow-hidden border-2 transition-all duration-200 ${isActive ? 'border-pink-400 shadow-[0_0_12px_rgba(244,114,182,0.7)]' : 'border-white/20'}`}>
+                                            <img
+                                                src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=80&q=80&auto=format&fit=crop"
+                                                alt="Priya AI"
+                                                className="w-full h-full object-cover"
+                                                style={{ filter: 'saturate(1.3) brightness(0.95)' }}
+                                            />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-violet-900/40 to-transparent" />
+                                        </div>
+                                    ) : (
+                                        <DockIcon size={18} strokeWidth={isActive ? 2.5 : 2} />
+                                    )}
+                                    <span className={`mt-1 text-[8px] tracking-tight ${isPriya ? 'text-pink-300' : ''}`}>{slide.label}</span>
+                                    {isActive && !isPriya && (
+                                        <motion.div
+                                            layoutId="liquidDockIndicator"
+                                            className="absolute -bottom-1 h-1 w-5 rounded-full bg-gradient-to-r from-sky-400 to-indigo-400 shadow-[0_0_8px_#38bdf8]"
+                                        />
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+
+                    {/* Volumetric Glowing Pedestal Underneath Dock (Reference image illumination) */}
+                    <div className="liquid-pedestal-platform mt-1">
+                        <div className="liquid-pedestal-rim top-2" />
+                    </div>
                 </motion.div>
+
             </div>
 
-            <div className="pointer-events-none absolute -right-8 top-20 h-48 w-48 rounded-full bg-emerald-500/10 blur-3xl" />
-            <div className="pointer-events-none absolute bottom-10 left-0 h-40 w-40 rounded-full bg-emerald-500/10 blur-3xl" />
+            {/* Priya AI Full Screen Modal (placeholder - proper UI coming later) */}
+            <AnimatePresence>
+                {priyaOpen && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.96, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.96, y: 20 }}
+                        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                        className="absolute inset-0 z-50 flex flex-col"
+                        style={{
+                            background: 'linear-gradient(168deg, #0a0d25 0%, #060818 45%, #04050f 100%)',
+                        }}
+                    >
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-5 pt-[max(1.25rem,env(safe-area-inset-top))] pb-4 border-b border-white/[0.08]">
+                            <div className="flex items-center gap-3">
+                                <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-pink-400/60 shadow-[0_0_14px_rgba(244,114,182,0.5)]">
+                                    <img
+                                        src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=80&q=80&auto=format&fit=crop"
+                                        alt="Priya"
+                                        className="w-full h-full object-cover"
+                                        style={{ filter: 'saturate(1.3)' }}
+                                    />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-violet-900/40 to-transparent" />
+                                </div>
+                                <div>
+                                    <p className="text-[13px] font-black text-white tracking-tight">Priya</p>
+                                    <p className="text-[9px] text-pink-300/80 font-semibold">Neural AI · Always listening</p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setPriyaOpen(false)}
+                                className="grid h-9 w-9 place-items-center rounded-full bg-white/10 border border-white/15 text-slate-300 hover:text-white"
+                            >
+                                <X size={16} />
+                            </button>
+                        </div>
 
-            {/* Priya landing guide — full screen, sign up/login only */}
-            <PriyaAssistant landingMode onNavigate={(view) => {
-                if (view === 'signup') onRegister();
-                else if (view === 'login') onLogin();
-            }} />
-        </div>
+                        {/* Placeholder body */}
+                        <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6">
+                            <div className="relative w-24 h-24 rounded-full overflow-hidden border-2 border-pink-400/40 shadow-[0_0_40px_rgba(244,114,182,0.3)]">
+                                <img
+                                    src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=200&q=80&auto=format&fit=crop"
+                                    alt="Priya"
+                                    className="w-full h-full object-cover"
+                                    style={{ filter: 'saturate(1.4) brightness(0.9)' }}
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-violet-900/50 to-transparent" />
+                            </div>
+                            <div className="text-center">
+                                <p className="text-[18px] font-black text-white">Hi, I'm Priya ✦</p>
+                                <p className="text-[12px] text-slate-400 mt-1 leading-relaxed">Your neural AI companion.<br/>Full experience coming soon.</p>
+                            </div>
+                            <div className="flex items-center gap-1.5 bg-pink-500/10 border border-pink-400/20 rounded-full px-4 py-2">
+                                <span className="relative flex h-1.5 w-1.5">
+                                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-pink-400 opacity-60" />
+                                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-pink-400" />
+                                </span>
+                                <span className="text-[10px] font-bold text-pink-300 uppercase tracking-wider">Neural Core Active</span>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </main>
     );
 };
 
