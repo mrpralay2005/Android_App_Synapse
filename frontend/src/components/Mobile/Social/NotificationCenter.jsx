@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { Bell, CheckCheck, Heart, Image as ImageIcon, ShieldCheck, X, Eye, UserPlus, Check, XCircle } from 'lucide-react';
+import { Bell, CheckCheck, Heart, Image as ImageIcon, ShieldCheck, X, Eye, UserPlus, Check, XCircle, Sparkles, AlertTriangle, Shield } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Cookies from 'js-cookie';
 
@@ -34,6 +34,10 @@ const iconFor = (type) => {
     if (type === 'STORY') return <ImageIcon size={17} />;
     if (type === 'PROFILE_VISIT') return <Eye size={17} />;
     if (type === 'FOLLOW_REQUEST') return <UserPlus size={17} />;
+    if (type === 'BETA_APPLICATION_RECEIVED') return <Shield size={17} />;
+    if (type === 'BETA_APPROVED') return <Sparkles size={17} />;
+    if (type === 'BETA_REJECTED') return <AlertTriangle size={17} />;
+    if (type === 'BETA_REVOKED') return <XCircle size={17} />;
     return <Heart size={17} />;
 };
 
@@ -41,6 +45,10 @@ const colorFor = (type) => {
     if (type === 'SECURITY') return 'bg-blue-400/10 text-blue-300';
     if (type === 'PROFILE_VISIT') return 'bg-purple-400/10 text-purple-300';
     if (type === 'FOLLOW_REQUEST') return 'bg-amber-400/10 text-amber-300';
+    if (type === 'BETA_APPLICATION_RECEIVED') return 'bg-cyan-400/10 text-cyan-300';
+    if (type === 'BETA_APPROVED') return 'bg-emerald-400/10 text-emerald-300';
+    if (type === 'BETA_REJECTED') return 'bg-red-400/10 text-red-300';
+    if (type === 'BETA_REVOKED') return 'bg-orange-400/10 text-orange-300';
     return 'bg-emerald-400/10 text-emerald-300';
 };
 
@@ -49,6 +57,10 @@ const expandedCopyFor = (type) => {
     if (type === 'PROFILE_VISIT') return 'Someone visited your profile. Their visit has been recorded in your Neural Analytics.';
     if (type === 'STORY') return 'This person shared a new story. It will be available for the next 24 hours.';
     if (type === 'FOLLOW_REQUEST') return 'Accept to let them follow you and see your posts.';
+    if (type === 'BETA_APPLICATION_RECEIVED') return 'A new Vanguard Beta application has been submitted and is awaiting your review in the Admin Beta Control Panel.';
+    if (type === 'BETA_APPROVED') return 'Your Vanguard Beta application has been approved! You now have access to exclusive beta features.';
+    if (type === 'BETA_REJECTED') return 'Your application was not selected for this cycle. You may re-apply when new cohort slots open.';
+    if (type === 'BETA_REVOKED') return 'Your Vanguard Beta access has been revoked by an administrator. You may contact support for further details.';
     return 'This person shared a new post. Tap their profile to see it.';
 };
 

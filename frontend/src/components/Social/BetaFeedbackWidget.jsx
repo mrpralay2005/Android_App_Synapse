@@ -6,6 +6,7 @@ export default function BetaFeedbackWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
   
   const [formData, setFormData] = useState({
     featureName: '',
@@ -21,6 +22,7 @@ export default function BetaFeedbackWidget() {
 
     try {
       setLoading(true);
+      setError('');
       const data = await submitBetaFeedback(formData);
       
       if (data.success) {
@@ -35,9 +37,12 @@ export default function BetaFeedbackWidget() {
             description: ''
           });
         }, 2000);
+      } else {
+        setError(data.error || 'Feedback could not be submitted. Please try again.');
       }
     } catch (err) {
       console.error('Failed to submit feedback:', err);
+      setError('Feedback could not be submitted. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -48,8 +53,8 @@ export default function BetaFeedbackWidget() {
       {/* Floating Button */}
       {!isOpen && (
         <button
-          onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-full shadow-lg hover:shadow-purple-500/50 transition-all"
+          onClick={() => { setError(''); setIsOpen(true); }}
+          className="fixed bottom-24 right-4 z-40 flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-4 py-3 font-semibold text-white shadow-lg transition-all hover:shadow-purple-500/50 md:bottom-6 md:right-6"
         >
           <MessageSquare className="w-5 h-5" />
           <span>Beta Feedback</span>
@@ -58,7 +63,7 @@ export default function BetaFeedbackWidget() {
 
       {/* Feedback Modal */}
       {isOpen && (
-        <div className="fixed bottom-6 right-6 z-50 w-96 bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900 rounded-2xl shadow-2xl border border-purple-500/20 overflow-hidden">
+        <div className="fixed bottom-24 left-3 right-3 z-50 overflow-hidden rounded-2xl border border-purple-500/20 bg-gradient-to-br from-gray-900 via-purple-900/20 to-gray-900 shadow-2xl md:bottom-6 md:left-auto md:right-6 md:w-96">
           
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b border-purple-500/20 bg-gray-900/95">
@@ -67,7 +72,7 @@ export default function BetaFeedbackWidget() {
               <h3 className="font-bold text-white">Beta Feedback</h3>
             </div>
             <button
-              onClick={() => setIsOpen(false)}
+              onClick={() => { setError(''); setIsOpen(false); }}
               className="p-1 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-white/10"
             >
               <X className="w-5 h-5" />
@@ -148,6 +153,12 @@ export default function BetaFeedbackWidget() {
                     placeholder="Share your thoughts..."
                   />
                 </div>
+
+                {error && (
+                  <div role="alert" className="rounded-lg border border-red-400/20 bg-red-400/10 px-3 py-2 text-xs leading-relaxed text-red-200">
+                    {error}
+                  </div>
+                )}
 
                 <button
                   onClick={handleSubmit}

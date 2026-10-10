@@ -6,7 +6,8 @@ import {
   resendBetaOTP,
   getBetaStatus,
   submitBetaFeedback,
-  getBetaFeatures
+  getBetaFeatures,
+  getMyFeedback
 } from '../controllers/betaController.js';
 
 const betaRoutes = new Hono();
@@ -19,6 +20,7 @@ betaRoutes.get('/status', authenticateToken, getBetaStatus);
 
 // Beta feedback routes
 betaRoutes.post('/feedback', authenticateToken, submitBetaFeedback);
+betaRoutes.get('/my-feedback', authenticateToken, getMyFeedback);
 
 // Beta features
 betaRoutes.get('/features', authenticateToken, getBetaFeatures);

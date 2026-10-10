@@ -1,138 +1,80 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787';
+import Cookies from 'js-cookie';
 
-// Get pending beta applications
-export async function getPendingApplications() {
-  const token = localStorage.getItem('token');
-  const response = await fetch(`${API_URL}/api/admin/beta/applications/pending`, {
-    headers: { 'Authorization': `Bearer ${token}` }
-  });
-  return await response.json();
-}
+const API_URL = import.meta.env.VITE_API_URL || 'https://synapse-backend.mrpralay2005.workers.dev';
 
-// Get all beta applications
-export async function getAllApplications(status = null) {
-  const token = localStorage.getItem('token');
-  const url = status 
-    ? `${API_URL}/api/admin/beta/applications?status=${status}`
-    : `${API_URL}/api/admin/beta/applications`;
-  const response = await fetch(url, {
-    headers: { 'Authorization': `Bearer ${token}` }
-  });
-  return await response.json();
-}
+const adminBetaRequest = async (path, options = {}) => {
+  const token = Cookies.get('synapse_token');
+  try {
+    const response = await fetch(`${API_URL}${path}`, {
+      ...options,
+      headers: {
+        ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...options.headers
+      }
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      return {
+        success: false,
+        error: data.error || `Beta administration service unavailable (${response.status})`,
+        ...data
+      };
+    }
+    return {
+      success: data.success !== false,
+      ...data
+    };
+  } catch (err) {
+    return {
+      success: false,
+      error: err.message || 'Network connection severed.'
+    };
+  }
+};
 
-// Approve beta application
-export async function approveBetaApplication(applicationId, notes = '') {
-  const token = localStorage.getItem('token');
-  const response = await fetch(`${API_URL}/api/admin/beta/applications/approve`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify({ applicationId, notes })
-  });
-  return await response.json();
-}
+export const getPendingApplications = () => adminBetaRequest('/api/admin/beta/applications/pending');
 
-// Reject beta application
-export async function rejectBetaApplication(applicationId, reason = '') {
-  const token = localStorage.getItem('token');
-  const response = await fetch(`${API_URL}/api/admin/beta/applications/reject`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify({ applicationId, reason })
-  });
-  return await response.json();
-}
+export const getAllApplications = (status = null) => adminBetaRequest(
+  `/api/admin/beta/applications${status ? `?status=${encodeURIComponent(status)}` : ''}`
+);
 
-// Revoke beta access
-export async function revokeBetaAccess(userId, reason = '') {
-  const token = localStorage.getItem('token');
-  const response = await fetch(`${API_URL}/api/admin/beta/revoke-access`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify({ userId, reason })
-  });
-  return await response.json();
-}
+export const approveBetaApplication = (applicationId, notes = '') => adminBetaRequest('/api/admin/beta/applications/approve', {
+  method: 'POST',
+  body: JSON.stringify({ applicationId, notes })
+});
 
-// Get all beta feedback
-export async function getAllFeedback(filters = {}) {
-  const token = localStorage.getItem('token');
+export const rejectBetaApplication = (applicationId, reason = '') => adminBetaRequest('/api/admin/beta/applications/reject', {
+  method: 'POST',
+  body: JSON.stringify({ applicationId, reason })
+});
+
+export const revokeBetaAccess = (userId, reason = '', applicationId = null) => adminBetaRequest('/api/admin/beta/revoke-access', {
+  method: 'POST',
+  body: JSON.stringify({ userId, reason, applicationId })
+});
+
+export const getAllFeedback = (filters = {}) => {
   const params = new URLSearchParams();
-  if (filters.status) params.append('status', filters.status);
-  if (filters.unread) params.append('unread', 'true');
-  
-  const url = `${API_URL}/api/admin/beta/feedback${params.toString() ? '?' + params.toString() : ''}`;
-  const response = await fetch(url, {
-    headers: { 'Authorization': `Bearer ${token}` }
-  });
-  return await response.json();
-}
+  if (filters.status) params.set('status', filters.status);
+  if (filters.unread) params.set('unread', 'true');
+  return adminBetaRequest(`/api/admin/beta/feedback${params.size ? `?${params}` : ''}`);
+};
 
-// Mark feedback as read
-export async function markFeedbackRead(feedbackId) {
-  const token = localStorage.getItem('token');
-  const response = await fetch(`${API_URL}/api/admin/beta/feedback/read`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify({ feedbackId })
-  });
-  return await response.json();
-}
+export const markFeedbackRead = (feedbackId) => adminBetaRequest('/api/admin/beta/feedback/read', {
+  method: 'POST',
+  body: JSON.stringify({ feedbackId })
+});
 
-// Respond to feedback
-export async function respondToFeedback(feedbackId, response, newStatus = 'IN_REVIEW') {
-  const token = localStorage.getItem('token');
-  const res = await fetch(`${API_URL}/api/admin/beta/feedback/respond`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify({ feedbackId, response, newStatus })
-  });
-  return await res.json();
-}
+export const respondToFeedback = (feedbackId, response, newStatus = 'IN_REVIEW') => adminBetaRequest('/api/admin/beta/feedback/respond', {
+  method: 'POST',
+  body: JSON.stringify({ feedbackId, response, newStatus })
+});
 
-// Get beta program statistics
-export async function getBetaStats() {
-  const token = localStorage.getItem('token');
-  const response = await fetch(`${API_URL}/api/admin/beta/stats`, {
-    headers: { 'Authorization': `Bearer ${token}` }
-  });
-  return await response.json();
-}
+export const getBetaStats = () => adminBetaRequest('/api/admin/beta/stats');
+export const getAllFeatureFlags = () => adminBetaRequest('/api/admin/beta/features');
 
-// Get all feature flags
-export async function getAllFeatureFlags() {
-  const token = localStorage.getItem('token');
-  const response = await fetch(`${API_URL}/api/admin/beta/features`, {
-    headers: { 'Authorization': `Bearer ${token}` }
-  });
-  return await response.json();
-}
-
-// Update feature flag
-export async function updateFeatureFlag(featureId, enabledForBeta, enabledForAll) {
-  const token = localStorage.getItem('token');
-  const response = await fetch(`${API_URL}/api/admin/beta/features/update`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify({ featureId, enabledForBeta, enabledForAll })
-  });
-  return await response.json();
-}
+export const updateFeatureFlag = (featureId, enabledForBeta, enabledForAll, name = null) => adminBetaRequest('/api/admin/beta/features/update', {
+  method: 'POST',
+  body: JSON.stringify({ featureId, enabledForBeta, enabledForAll, name })
+});

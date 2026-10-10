@@ -93,9 +93,22 @@ export const getNotifications = async (c) => {
         const viewerId = c.get('user')?.userId;
         if (!viewerId) return c.json({ success: false, error: 'Neural authorization missing' }, 401);
         const prisma = getPrisma(c.env);
+        
+        // Fetch viewer to get notification preferences
+        const viewer = await prisma.user.findUnique({
+            where: { id: viewerId },
+            select: {
+                notificationClearedAt: true,
+                notificationPostAlerts: true,
+                notificationStoryAlerts: true,
+                notificationSecurityAlerts: true,
+                profileVisitAlerts: true
+            }
+        });
+        
         const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
-        const viewer = await prisma.user.findUnique({ where: { id: viewerId }, select: { notificationClearedAt: true, profileVisitAlerts: true, notificationPostAlerts: true, notificationStoryAlerts: true, notificationSecurityAlerts: true } });
-        const activitySince = viewer?.notificationClearedAt && viewer.notificationClearedAt > since ? viewer.notificationClearedAt : since;
+        const clearedAt = viewer?.notificationClearedAt ? new Date(viewer.notificationClearedAt) : null;
+        const activitySince = clearedAt && clearedAt.getTime() > since.getTime() ? clearedAt : since;
 
         const following = await prisma.follow.findMany({
             where: { followerId: viewerId },
@@ -103,52 +116,66 @@ export const getNotifications = async (c) => {
         });
         const followedIds = following.map(link => link.followingId);
 
-        const [posts, stories, sessions, profileVisits, followRequests] = await Promise.all([
+        const [posts, stories, sessions, profileVisits, followRequests, betaNotifications] = await Promise.all([
             viewer?.notificationPostAlerts !== false ? prisma.post.findMany({
                 where: { userId: { in: followedIds }, createdAt: { gte: activitySince } },
                 take: 20,
                 orderBy: { createdAt: 'desc' },
                 select: { id: true, createdAt: true, user: { select: { username: true, name: true, profileImage: true } } }
-            }) : Promise.resolve([]),
+            }).catch(e => { console.warn('[NOTIF] posts query error:', e?.message || e); return []; }) : Promise.resolve([]),
             viewer?.notificationStoryAlerts !== false ? prisma.story.findMany({
                 where: { userId: { in: followedIds }, expiresAt: { gt: new Date() }, createdAt: { gte: activitySince } },
                 take: 20,
                 orderBy: { createdAt: 'desc' },
                 select: { id: true, createdAt: true, user: { select: { username: true, name: true, profileImage: true } } }
-            }) : Promise.resolve([]),
+            }).catch(e => { console.warn('[NOTIF] stories query error:', e?.message || e); return []; }) : Promise.resolve([]),
             viewer?.notificationSecurityAlerts !== false ? prisma.session.findMany({
                 where: { userId: viewerId, createdAt: { gte: activitySince } },
                 take: 8,
                 orderBy: { createdAt: 'desc' },
                 select: { id: true, createdAt: true, userAgent: true, ipAddress: true }
-            }) : Promise.resolve([]),
+            }).catch(e => { console.warn('[NOTIF] sessions query error:', e?.message || e); return []; }) : Promise.resolve([]),
             viewer?.profileVisitAlerts ? prisma.profileVisit.findMany({
                 where: { profileOwnerId: viewerId, createdAt: { gte: activitySince } },
                 take: 20,
                 orderBy: { createdAt: 'desc' },
                 select: { id: true, createdAt: true, visitor: { select: { username: true, name: true, profileImage: true } } }
-            }) : Promise.resolve([]),
+            }).catch(e => { console.warn('[NOTIF] profileVisits query error:', e?.message || e); return []; }) : Promise.resolve([]),
             // Follow requests sent TO this user (pending only)
             prisma.followRequest.findMany({
                 where: { toId: viewerId, status: 'PENDING', createdAt: { gte: activitySince } },
                 take: 20,
                 orderBy: { createdAt: 'desc' },
                 select: { id: true, createdAt: true, from: { select: { username: true, name: true, profileImage: true } } }
-            })
+            }).catch(e => { console.warn('[NOTIF] followRequests query error:', e?.message || e); return []; }),
+            // Beta notifications for this user (both applicant notifications and admin alerts)
+            prisma.betaNotification ? prisma.betaNotification.findMany({
+                where: { userId: viewerId, createdAt: { gte: activitySince } },
+                take: 20,
+                orderBy: { createdAt: 'desc' }
+            }).catch(e => { console.warn('[NOTIF] betaNotification query error:', e?.message || e); return []; }) : Promise.resolve([])
         ]);
 
         const activity = [
-            ...posts.map(post => ({ id: `post-${post.id}`, type: 'POST', createdAt: post.createdAt, actor: post.user, title: `${post.user.name || post.user.username} shared a post`, detail: 'New post from an identity you follow.' })),
-            ...stories.map(story => ({ id: `story-${story.id}`, type: 'STORY', createdAt: story.createdAt, actor: story.user, title: `${story.user.name || story.user.username} added a story`, detail: 'A fresh story is available for the next 24 hours.' })),
-            ...sessions.map(session => ({ id: `session-${session.id}`, type: 'SECURITY', createdAt: session.createdAt, actor: null, title: 'New sign-in to your account', detail: `${session.userAgent || 'Unknown device'} · ${session.ipAddress || 'Location protected'}` })),
-            ...profileVisits.map(visit => ({ id: `profile-visit-${visit.id}`, type: 'PROFILE_VISIT', createdAt: visit.createdAt, actor: visit.visitor, title: `${visit.visitor.name || visit.visitor.username} visited your profile`, detail: 'A profile visit was recorded in your analytics.' })),
-            ...followRequests.map(req => ({ id: `follow-req-${req.id}`, type: 'FOLLOW_REQUEST', requestId: req.id, createdAt: req.createdAt, actor: req.from, title: `${req.from.name || req.from.username} wants to follow you`, detail: 'Tap to accept or decline this follow request.' }))
+            ...(posts || []).filter(p => p?.user).map(post => ({ id: `post-${post.id}`, type: 'POST', createdAt: post.createdAt, actor: post.user, title: `${post.user?.name || post.user?.username || 'User'} shared a post`, detail: 'New post from an identity you follow.' })),
+            ...(stories || []).filter(s => s?.user).map(story => ({ id: `story-${story.id}`, type: 'STORY', createdAt: story.createdAt, actor: story.user, title: `${story.user?.name || story.user?.username || 'User'} added a story`, detail: 'A fresh story is available for the next 24 hours.' })),
+            ...(sessions || []).map(session => ({ id: `session-${session.id}`, type: 'SECURITY', createdAt: session.createdAt, actor: null, title: 'New sign-in to your account', detail: `${session.userAgent || 'Unknown device'} · ${session.ipAddress || 'Location protected'}` })),
+            ...(profileVisits || []).map(visit => ({ id: `profile-visit-${visit.id}`, type: 'PROFILE_VISIT', createdAt: visit.createdAt, actor: visit.visitor || null, title: `${visit.visitor?.name || visit.visitor?.username || 'Someone'} visited your profile`, detail: 'A profile visit was recorded in your analytics.' })),
+            ...(followRequests || []).map(req => ({ id: `follow-req-${req.id}`, type: 'FOLLOW_REQUEST', requestId: req.id, createdAt: req.createdAt, actor: req.from || null, title: `${req.from?.name || req.from?.username || 'Someone'} wants to follow you`, detail: 'Tap to accept or decline this follow request.' })),
+            ...(betaNotifications || []).map(bn => ({
+                id: `beta-notif-${bn.id}`,
+                type: bn.type,
+                createdAt: bn.createdAt,
+                actor: bn.actorUsername ? { username: bn.actorUsername, name: bn.actorName, profileImage: bn.actorImage } : null,
+                title: bn.title,
+                detail: bn.detail
+            }))
         ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 30);
 
         return c.json({ success: true, data: activity });
     } catch (error) {
         console.error('Notification stream error:', error);
-        return c.json({ success: false, error: 'Unable to load your activity' }, 500);
+        return c.json({ success: false, error: 'Unable to load your activity', details: error?.message }, 500);
     }
 };
 

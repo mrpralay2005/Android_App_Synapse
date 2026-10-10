@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Cookies from 'js-cookie';
-import BetaProgramModal from './BetaProgramModal';
+import BetaProgramModal from './BetaProgramModalPremium';
 import AdminBetaPanel from '../Admin/AdminBetaPanel';
 
 const SettingsView = ({ user, onUpdateUser, onLogout }) => {

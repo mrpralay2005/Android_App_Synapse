@@ -10,6 +10,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Cookies from 'js-cookie';
 import AdminCommandCenter from './AdminCommandCenter';
 import { ReleaseUpdatePanel } from './ReleaseUpdateCenter';
+import BetaProgramModal from '../../Social/BetaProgramModal';
+import AdminBetaPanel from '../../Admin/AdminBetaPanel';
 
 const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
     const [activeSection, setActiveSection] = useState(null);
@@ -73,6 +75,8 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
     const [analyticsLoading, setAnalyticsLoading] = useState(false);
     const [archiveDownload, setArchiveDownload] = useState(null);
     const [purgeConfirmOpen, setPurgeConfirmOpen] = useState(false);
+    const [betaProgramModalOpen, setBetaProgramModalOpen] = useState(false);
+    const [adminBetaPanelOpen, setAdminBetaPanelOpen] = useState(false);
 
     const apiUrl = import.meta.env.VITE_API_URL || "https://synapse-backend.mrpralay2005.workers.dev";
     const token = Cookies.get('synapse_token');
@@ -133,10 +137,26 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
         { id: 'data', label: 'Archive & Synapses', icon: <Download size={20} />, description: 'Download your data or clear activity' },
         { id: 'account', label: 'Account Center', icon: <User size={20} />, description: 'Review your identity and account controls' },
     ];
+    menuItems.splice(menuItems.length - 1, 0, {
+        id: 'beta',
+        label: 'Beta Program',
+        icon: <Sparkles size={20} />,
+        description: 'Apply for early access and track your review',
+        action: () => setBetaProgramModalOpen(true)
+    });
     // Admins manage the platform through Command Center, so the end-user support
     // shortcut would be redundant and makes the compact settings overview overflow.
     if (user.role !== 'ADMIN') menuItems.splice(menuItems.length - 1, 0, { id: 'help', label: 'System Support', icon: <Globe size={20} />, description: 'Documentation and nexus assistance' });
-    if (user.role === 'ADMIN') menuItems.unshift({ id: 'admin', label: 'Admin Command Center', icon: <ShieldCheck size={20} />, description: 'Review platform operations and creator requests' });
+    if (user.role === 'ADMIN') {
+        menuItems.unshift({
+            id: 'admin-beta',
+            label: 'Admin Beta Control',
+            icon: <ShieldCheck size={20} />,
+            description: 'Review applications, feedback, and feature flags',
+            action: () => setAdminBetaPanelOpen(true)
+        });
+        menuItems.unshift({ id: 'admin', label: 'Admin Command Center', icon: <ShieldCheck size={20} />, description: 'Review platform operations and creator requests' });
+    }
 
     const showStatus = (type, text) => {
         setStatusMsg({ type, text });
@@ -464,8 +484,30 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
         }
     };
 
+    const openMenuItem = (item) => {
+        if (item.action) {
+            item.action();
+            return;
+        }
+        openMobileSection(item.id);
+    };
+
+    const renderBetaOverlays = () => (
+        <>
+            <BetaProgramModal
+                isOpen={betaProgramModalOpen}
+                onClose={() => setBetaProgramModalOpen(false)}
+            />
+            {adminBetaPanelOpen && (
+                <AdminBetaPanel onClose={() => setAdminBetaPanelOpen(false)} />
+            )}
+        </>
+    );
+
     if (isMobile && !mobileDetailOpen) {
         return (
+            <>
+            {renderBetaOverlays()}
             <div className="synapse-settings flex h-full w-full flex-col bg-[#0a0a0a] px-3 pb-3 pt-2">
                 <div className="mb-6 flex h-10 items-center justify-between">
                     <button onClick={onBack} className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-white transition-colors active:bg-white/10" aria-label="Back to feed">
@@ -476,18 +518,18 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
                 </div>
 
                 <div className="flex max-h-[calc(100%-3rem)] flex-none flex-col overflow-y-auto rounded-[1.35rem] border border-white/[0.08] bg-[#101113] p-1.5 hide-scrollbar">
-                    <div className="space-y-1">
+                    <div className="space-y-0.5">
                         {menuItems.map((item) => (
                             <button
                                 key={item.id}
-                                onClick={() => openMobileSection(item.id)}
-                                className="flex h-[48px] w-full items-center gap-3 rounded-xl px-3 text-left text-white transition-colors active:bg-white/[0.07]"
+                                onClick={() => openMenuItem(item)}
+                                className="flex h-[42px] w-full items-center gap-2.5 rounded-xl px-3 text-left text-white transition-colors active:bg-white/[0.07]"
                             >
-                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/[0.06] bg-white/[0.045] text-gray-400">
+                                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/[0.06] bg-white/[0.045] text-gray-400">
                                     {item.icon}
                                 </div>
-                                <span className="flex-1 text-[0.95rem] font-semibold tracking-[-0.025em]">{item.label}</span>
-                                <ChevronRight size={16} className="text-gray-600" />
+                                <span className="flex-1 text-[0.9rem] font-semibold tracking-[-0.025em]">{item.label}</span>
+                                <ChevronRight size={15} className="text-gray-600" />
                             </button>
                         ))}
                     </div>
@@ -501,11 +543,14 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
                     </button>
                 </div>
             </div>
+            </>
         );
     }
 
     if (isMobile && mobileDetailOpen) {
         return (
+            <>
+            {renderBetaOverlays()}
             <div className="synapse-settings flex h-full w-full flex-col bg-[#0f0f0f]">
                 <div className="settings-mobile-header relative flex h-14 items-center justify-between border-b border-white/10 px-4">
                     <button
@@ -540,6 +585,7 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
                     </AnimatePresence>
                 </div>
             </div>
+            </>
         );
     }
 
@@ -1436,6 +1482,8 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
             }
 
             return (
+                <>
+                {renderBetaOverlays()}
                 <div className="synapse-settings h-full w-full overflow-hidden bg-[#0f0f0f]">
                     <div className="flex h-full w-full">
                         <aside className="hidden w-[320px] border-r border-white/10 bg-[#111316] p-5 lg:block">
@@ -1444,7 +1492,7 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
                                 {menuItems.map((item) => (
                                     <button
                                         key={item.id}
-                                        onClick={() => openMobileSection(item.id)}
+                                        onClick={() => openMenuItem(item)}
                                         className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition-all ${activeSection === item.id ? 'bg-emerald-500/10 text-white' : 'bg-transparent text-white hover:bg-white/5'}`}
                                     >
                                         <div className={`flex h-8 w-8 items-center justify-center rounded-full ${activeSection === item.id ? 'bg-emerald-500/15 text-emerald-500' : 'bg-white/5 text-gray-400'}`}>
@@ -1475,6 +1523,7 @@ const SettingsView = ({ user, onUpdateUser, onLogout, onBack }) => {
                         </main>
                     </div>
                 </div>
+                </>
             );
         };
 

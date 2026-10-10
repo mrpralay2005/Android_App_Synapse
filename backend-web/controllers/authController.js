@@ -255,6 +255,9 @@ export const login = async (c) => {
                 quantumDecayEnabled: user.quantumDecayEnabled,
                 quantumDecayDays: user.quantumDecayDays,
                 neuralGuardianEnabled: user.neuralGuardianEnabled,
+                isBetaTester: user.isBetaTester,
+                betaAccessGrantedAt: user.betaAccessGrantedAt,
+                betaAccessRevokedAt: user.betaAccessRevokedAt,
                 creatorModeEnabled: user.creatorModeEnabled,
                 creatorVerificationRequestedAt: user.creatorVerificationRequestedAt,
                 creatorVerificationStatus: user.creatorVerificationStatus,
@@ -467,6 +470,9 @@ export const getMe = async (c) => {
                 neuralGuardianEnabled: user.neuralGuardianEnabled,
                 quantumDecayEnabled: user.quantumDecayEnabled,
                 quantumDecayDays: user.quantumDecayDays,
+                isBetaTester: user.isBetaTester,
+                betaAccessGrantedAt: user.betaAccessGrantedAt,
+                betaAccessRevokedAt: user.betaAccessRevokedAt,
                 links: parseLinks(user.links)
             }
         });

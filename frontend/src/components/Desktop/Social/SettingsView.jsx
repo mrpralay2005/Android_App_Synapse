@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Cookies from 'js-cookie';
+import BetaProgramModal from '../../Social/BetaProgramModal';
+import AdminBetaPanel from '../../Admin/AdminBetaPanel';
 
 const SettingsView = ({ user, onUpdateUser, onLogout }) => {
     const [activeSection, setActiveSection] = useState('profile');
@@ -46,6 +48,8 @@ const SettingsView = ({ user, onUpdateUser, onLogout }) => {
     const [emailEditOpen, setEmailEditOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [statusMsg, setStatusMsg] = useState({ type: '', text: '' });
+    const [betaProgramModalOpen, setBetaProgramModalOpen] = useState(false);
+    const [adminBetaPanelOpen, setAdminBetaPanelOpen] = useState(false);
 
     const apiUrl = "https://synapse-backend.mrpralay2005.workers.dev";
     const token = Cookies.get('synapse_token');
@@ -86,6 +90,14 @@ const SettingsView = ({ user, onUpdateUser, onLogout }) => {
         { id: 'notifications', label: 'Notification Pulse', icon: <Bell size={20} />, description: 'Configure alerts and neural pings' },
         { id: 'interface', label: 'Neural Interface', icon: <Palette size={20} />, description: 'Customize glow levels and glass intensity' },
         { id: 'data', label: 'Archive & Synapses', icon: <Download size={20} />, description: 'Download your data or clear activity' },
+        { id: 'beta', label: 'Beta Program', icon: <Sparkles size={20} className="text-amber-400" />, description: 'Apply for early access and track review', action: () => setBetaProgramModalOpen(true) },
+        ...(user?.role === 'ADMIN' ? [{
+            id: 'admin-beta',
+            label: 'Admin Beta Control',
+            icon: <ShieldAlert size={20} className="text-red-400" />,
+            description: 'Review beta applications & rollout flags',
+            action: () => setAdminBetaPanelOpen(true)
+        }] : []),
         { id: 'help', label: 'System Support', icon: <Globe size={20} />, description: 'Documentation and nexus assistance' },
     ];
 
@@ -253,8 +265,30 @@ const SettingsView = ({ user, onUpdateUser, onLogout }) => {
         setMobileDetailOpen(false);
     };
 
+    const openMenuItem = (item) => {
+        if (item.action) {
+            item.action();
+            return;
+        }
+        openMobileSection(item.id);
+    };
+
+    const renderBetaOverlays = () => (
+        <>
+            <BetaProgramModal
+                isOpen={betaProgramModalOpen}
+                onClose={() => setBetaProgramModalOpen(false)}
+            />
+            {adminBetaPanelOpen && (
+                <AdminBetaPanel onClose={() => setAdminBetaPanelOpen(false)} />
+            )}
+        </>
+    );
+
     if (isMobile && !mobileDetailOpen) {
         return (
+            <>
+            {renderBetaOverlays()}
             <div className="flex h-full w-full flex-col bg-[#0f0f0f] p-3">
                 <div className="mb-4 flex items-center justify-between px-2 pt-1">
                     <button className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white" aria-label="Back">
@@ -269,7 +303,7 @@ const SettingsView = ({ user, onUpdateUser, onLogout }) => {
                         {menuItems.map((item) => (
                             <button
                                 key={item.id}
-                                onClick={() => openMobileSection(item.id)}
+                                onClick={() => openMenuItem(item)}
                                 className={`flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left transition-all ${activeSection === item.id ? 'bg-emerald-500/10 text-white' : 'bg-transparent text-white hover:bg-white/5'}`}
                             >
                                 <div className={`flex h-8 w-8 items-center justify-center rounded-full ${activeSection === item.id ? 'bg-emerald-500/15 text-emerald-500' : 'bg-white/5 text-gray-400'}`}>
@@ -289,11 +323,14 @@ const SettingsView = ({ user, onUpdateUser, onLogout }) => {
                     </button>
                 </div>
             </div>
+            </>
         );
     }
 
     if (isMobile && mobileDetailOpen) {
         return (
+            <>
+            {renderBetaOverlays()}
             <div className="flex h-full w-full flex-col bg-[#0f0f0f]">
                 <div className="flex items-center justify-between border-b border-white/10 px-4 pb-3 pt-3">
                     <button
@@ -322,6 +359,7 @@ const SettingsView = ({ user, onUpdateUser, onLogout }) => {
                     </AnimatePresence>
                 </div>
             </div>
+            </>
         );
     }
 
@@ -1073,6 +1111,8 @@ const SettingsView = ({ user, onUpdateUser, onLogout }) => {
             }
 
             return (
+                <>
+                {renderBetaOverlays()}
                 <div className="h-full w-full overflow-hidden bg-[#0f0f0f]">
                     <div className="flex h-full w-full">
                         <aside className="hidden w-[320px] border-r border-white/10 bg-[#111316] p-5 lg:block">
@@ -1081,7 +1121,7 @@ const SettingsView = ({ user, onUpdateUser, onLogout }) => {
                                 {menuItems.map((item) => (
                                     <button
                                         key={item.id}
-                                        onClick={() => openMobileSection(item.id)}
+                                        onClick={() => openMenuItem(item)}
                                         className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition-all ${activeSection === item.id ? 'bg-emerald-500/10 text-white' : 'bg-transparent text-white hover:bg-white/5'}`}
                                     >
                                         <div className={`flex h-8 w-8 items-center justify-center rounded-full ${activeSection === item.id ? 'bg-emerald-500/15 text-emerald-500' : 'bg-white/5 text-gray-400'}`}>
@@ -1112,6 +1152,7 @@ const SettingsView = ({ user, onUpdateUser, onLogout }) => {
                         </main>
                     </div>
                 </div>
+                </>
             );
         };
 

@@ -1,79 +1,46 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8787';
+import Cookies from 'js-cookie';
 
-// Submit beta program application
-export async function submitBetaApplication(applicationData) {
-  const token = localStorage.getItem('token');
-  const response = await fetch(`${API_URL}/api/beta/apply`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify(applicationData)
-  });
-  return await response.json();
-}
+const API_URL = import.meta.env.VITE_API_URL || 'https://synapse-backend.mrpralay2005.workers.dev';
 
-// Verify OTP for beta application
-export async function verifyBetaOTP(applicationId, otpCode) {
-  const token = localStorage.getItem('token');
-  const response = await fetch(`${API_URL}/api/beta/verify-otp`, {
-    method: 'POST',
+const betaRequest = async (path, options = {}) => {
+  const token = Cookies.get('synapse_token');
+  const response = await fetch(`${API_URL}${path}`, {
+    ...options,
     headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify({ applicationId, otpCode })
-  });
-  return await response.json();
-}
-
-// Resend OTP
-export async function resendBetaOTP(applicationId) {
-  const token = localStorage.getItem('token');
-  const response = await fetch(`${API_URL}/api/beta/resend-otp`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify({ applicationId })
-  });
-  return await response.json();
-}
-
-// Get user's beta status
-export async function getBetaStatus() {
-  const token = localStorage.getItem('token');
-  const response = await fetch(`${API_URL}/api/beta/status`, {
-    headers: {
-      'Authorization': `Bearer ${token}`
+      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...options.headers
     }
   });
-  return await response.json();
-}
 
-// Submit beta feedback
-export async function submitBetaFeedback(feedbackData) {
-  const token = localStorage.getItem('token');
-  const response = await fetch(`${API_URL}/api/beta/feedback`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`
-    },
-    body: JSON.stringify(feedbackData)
-  });
-  return await response.json();
-}
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok && !data.error) {
+    data.error = 'The beta service is temporarily unavailable. Please try again.';
+  }
+  return data;
+};
 
-// Get beta features
-export async function getBetaFeatures() {
-  const token = localStorage.getItem('token');
-  const response = await fetch(`${API_URL}/api/beta/features`, {
-    headers: {
-      'Authorization': `Bearer ${token}`
-    }
-  });
-  return await response.json();
-}
+export const submitBetaApplication = (applicationData) => betaRequest('/api/beta/apply', {
+  method: 'POST',
+  body: JSON.stringify(applicationData)
+});
+
+export const verifyBetaOTP = (applicationId, otpCode) => betaRequest('/api/beta/verify-otp', {
+  method: 'POST',
+  body: JSON.stringify({ applicationId, otpCode })
+});
+
+export const resendBetaOTP = (applicationId) => betaRequest('/api/beta/resend-otp', {
+  method: 'POST',
+  body: JSON.stringify({ applicationId })
+});
+
+export const getBetaStatus = () => betaRequest('/api/beta/status');
+
+export const submitBetaFeedback = (feedbackData) => betaRequest('/api/beta/feedback', {
+  method: 'POST',
+  body: JSON.stringify(feedbackData)
+});
+
+export const getBetaFeatures = () => betaRequest('/api/beta/features');
+export const getMyFeedback = () => betaRequest('/api/beta/my-feedback');
