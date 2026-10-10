@@ -8,7 +8,6 @@ const getAccessToken = async (env) => {
         refresh_token: env.GMAIL_REFRESH_TOKEN,
         grant_type: 'refresh_token',
     });
-
     try {
         const response = await fetch(url, {
             method: 'POST',
@@ -40,138 +39,134 @@ const createTransporter = async (env) => {
     });
 };
 
-const baseTemplate = ({ title, subtitle, otpLabel, otp, footerNote, accentColor = '#a855f7' }) => `
+const baseTemplate = ({ icon, title, subtitle, otpLabel, otp, footerNote }) => `
 <!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background-color:#0f0f13;font-family:'Segoe UI',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color:#0f0f13;padding:40px 20px;">
-    <tr>
-      <td align="center">
-        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;">
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Nexus Social</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f0eeff;font-family:Arial,Helvetica,sans-serif;">
 
-          <!-- Header Brand Bar -->
+  <!-- Outer wrapper -->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+    style="background:linear-gradient(160deg,#ede9fe 0%,#fce7f3 50%,#e0e7ff 100%);padding:48px 16px;min-height:100vh;">
+    <tr>
+      <td align="center" valign="top">
+
+        <!-- Card -->
+        <table role="presentation" width="520" cellpadding="0" cellspacing="0" border="0"
+          style="max-width:520px;width:100%;background:#ffffff;border-radius:20px;overflow:hidden;border:1px solid #e9d5ff;">
+
+          <!-- Top gradient bar -->
           <tr>
-            <td align="center" style="padding-bottom:28px;">
-              <table cellpadding="0" cellspacing="0">
+            <td height="5" style="background:linear-gradient(90deg,#7c3aed,#a855f7,#ec4899,#f97316);font-size:0;line-height:0;">&nbsp;</td>
+          </tr>
+
+          <!-- Card body -->
+          <tr>
+            <td style="padding:44px 48px 36px;text-align:center;">
+
+              <!-- Brand name -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                 <tr>
-                  <td style="background:linear-gradient(135deg,#7c3aed,#a855f7,#ec4899);border-radius:50px;padding:2px;">
-                    <div style="background:#0f0f13;border-radius:50px;padding:10px 28px;">
-                      <span style="font-size:15px;font-weight:700;letter-spacing:3px;background:linear-gradient(135deg,#a855f7,#ec4899);-webkit-background-clip:text;-webkit-text-fill-color:transparent;color:#a855f7;">NEXUS SOCIAL</span>
+                  <td align="center" style="padding-bottom:32px;">
+                    <span style="font-size:13px;font-weight:700;letter-spacing:4px;color:#7c3aed;text-transform:uppercase;">✦ NEXUS SOCIAL ✦</span>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Icon -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="padding-bottom:24px;">
+                    <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#ec4899);text-align:center;line-height:64px;font-size:28px;margin:0 auto;">
+                      ${icon}
                     </div>
                   </td>
                 </tr>
               </table>
-            </td>
-          </tr>
 
-          <!-- Main Card -->
-          <tr>
-            <td style="background:linear-gradient(145deg,#1a1a2e,#16213e);border-radius:24px;overflow:hidden;border:1px solid rgba(168,85,247,0.2);box-shadow:0 25px 60px rgba(168,85,247,0.15);">
+              <!-- Title -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="padding-bottom:8px;">
+                    <h1 style="margin:0;font-size:24px;font-weight:800;color:#1e1b4b;letter-spacing:-0.5px;">${title}</h1>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="padding-bottom:36px;">
+                    <p style="margin:0;font-size:14px;color:#6b7280;line-height:1.6;">${subtitle}</p>
+                  </td>
+                </tr>
+              </table>
 
-              <!-- Top Gradient Strip -->
-              <tr>
-                <td style="background:linear-gradient(90deg,#7c3aed,#a855f7,#ec4899,#f97316);height:4px;display:block;line-height:4px;font-size:4px;">&nbsp;</td>
-              </tr>
+              <!-- OTP label -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="padding-bottom:12px;">
+                    <span style="font-size:11px;font-weight:600;letter-spacing:3px;color:#9ca3af;text-transform:uppercase;">${otpLabel}</span>
+                  </td>
+                </tr>
+              </table>
 
-              <!-- Content Area -->
-              <tr>
-                <td style="padding:50px 50px 40px;">
+              <!-- OTP digits — each digit in its own box -->
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 32px auto;">
+                <tr>
+                  ${otp.toString().split('').map(digit => `
+                  <td style="padding:0 5px;">
+                    <div style="width:52px;height:64px;background:linear-gradient(145deg,#f5f3ff,#ede9fe);border:2px solid #c4b5fd;border-radius:12px;text-align:center;line-height:64px;font-size:30px;font-weight:900;color:#4c1d95;font-family:'Courier New',monospace;">
+                      ${digit}
+                    </div>
+                  </td>`).join('')}
+                </tr>
+              </table>
 
-                  <!-- Icon Circle -->
-                  <table width="100%" cellpadding="0" cellspacing="0">
-                    <tr>
-                      <td align="center" style="padding-bottom:28px;">
-                        <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,rgba(124,58,237,0.3),rgba(236,72,153,0.3));border:1px solid rgba(168,85,247,0.4);display:inline-flex;align-items:center;justify-content:center;text-align:center;line-height:72px;">
-                          <span style="font-size:30px;">🔐</span>
-                        </div>
-                      </td>
-                    </tr>
-                  </table>
-
-                  <!-- Title -->
-                  <table width="100%" cellpadding="0" cellspacing="0">
-                    <tr>
-                      <td align="center" style="padding-bottom:10px;">
-                        <h1 style="margin:0;font-size:26px;font-weight:800;letter-spacing:1px;background:linear-gradient(135deg,#e2e8f0,#a855f7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;color:#e2e8f0;">${title}</h1>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td align="center" style="padding-bottom:36px;">
-                        <p style="margin:0;font-size:14px;color:#94a3b8;letter-spacing:0.5px;">${subtitle}</p>
-                      </td>
-                    </tr>
-                  </table>
-
-                  <!-- OTP Label -->
-                  <table width="100%" cellpadding="0" cellspacing="0">
-                    <tr>
-                      <td align="center" style="padding-bottom:14px;">
-                        <span style="font-size:11px;font-weight:600;letter-spacing:3px;color:#6b7280;text-transform:uppercase;">${otpLabel}</span>
-                      </td>
-                    </tr>
-                  </table>
-
-                  <!-- OTP Box -->
-                  <table width="100%" cellpadding="0" cellspacing="0">
-                    <tr>
-                      <td align="center" style="padding-bottom:36px;">
-                        <div style="display:inline-block;background:linear-gradient(135deg,rgba(124,58,237,0.15),rgba(236,72,153,0.1));border:1px solid rgba(168,85,247,0.35);border-radius:16px;padding:22px 50px;">
-                          <span style="font-size:42px;font-weight:900;letter-spacing:16px;background:linear-gradient(135deg,#ffffff,#c084fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;color:#ffffff;font-family:'Courier New',monospace;">${otp}</span>
-                        </div>
-                      </td>
-                    </tr>
-                  </table>
-
-                  <!-- Expiry Note -->
-                  <table width="100%" cellpadding="0" cellspacing="0">
-                    <tr>
-                      <td align="center" style="padding-bottom:10px;">
-                        <div style="display:inline-block;background:rgba(251,191,36,0.08);border:1px solid rgba(251,191,36,0.2);border-radius:8px;padding:10px 20px;">
-                          <span style="font-size:13px;color:#fbbf24;">⏱ This code expires in <strong>10 minutes</strong></span>
-                        </div>
-                      </td>
-                    </tr>
-                  </table>
-
-                </td>
-              </tr>
+              <!-- Expiry pill -->
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 36px auto;">
+                <tr>
+                  <td style="background:#fef3c7;border:1px solid #fde68a;border-radius:50px;padding:8px 20px;">
+                    <span style="font-size:13px;color:#92400e;font-weight:600;">⏱ Expires in 10 minutes</span>
+                  </td>
+                </tr>
+              </table>
 
               <!-- Divider -->
-              <tr>
-                <td style="padding:0 50px;">
-                  <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(168,85,247,0.3),transparent);"></div>
-                </td>
-              </tr>
-
-              <!-- Footer Note -->
-              <tr>
-                <td style="padding:28px 50px 40px;">
-                  <table width="100%" cellpadding="0" cellspacing="0">
-                    <tr>
-                      <td align="center">
-                        <p style="margin:0;font-size:12px;color:#4b5563;line-height:1.7;">${footerNote}</p>
-                      </td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td height="1" style="background:linear-gradient(90deg,#ffffff,#e9d5ff,#ffffff);font-size:0;line-height:0;">&nbsp;</td>
+                </tr>
+              </table>
 
             </td>
           </tr>
 
-          <!-- Footer Brand -->
+          <!-- Footer inside card -->
           <tr>
-            <td align="center" style="padding-top:28px;">
-              <p style="margin:0;font-size:12px;color:#374151;">Sent by <span style="color:#a855f7;font-weight:600;">Nexus Social</span> &nbsp;·&nbsp; nexus-social-co.me</p>
-              <p style="margin:6px 0 0;font-size:11px;color:#1f2937;">If you didn't request this, you can safely ignore this email.</p>
+            <td style="padding:20px 48px 36px;text-align:center;background:#fafafa;border-top:1px solid #f3f4f6;">
+              <p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.7;">${footerNote}</p>
             </td>
           </tr>
 
         </table>
+        <!-- End card -->
+
+        <!-- Bottom brand line -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:520px;">
+          <tr>
+            <td align="center" style="padding-top:20px;">
+              <p style="margin:0;font-size:12px;color:#6b7280;">
+                <span style="color:#7c3aed;font-weight:700;">Nexus Social</span> &nbsp;·&nbsp; nexus-social-co.me
+              </p>
+            </td>
+          </tr>
+        </table>
+
       </td>
     </tr>
   </table>
+
 </body>
 </html>
 `;
@@ -184,8 +179,9 @@ export const sendOTP = async (email, otp, env) => {
             to: email,
             subject: "Your Nexus Social verification code",
             html: baseTemplate({
+                icon: '🔐',
                 title: 'Verify Your Identity',
-                subtitle: 'Enter this code to complete your sign in',
+                subtitle: 'Enter this code to complete your sign in to Nexus Social.',
                 otpLabel: 'Your one-time code',
                 otp,
                 footerNote: 'This code was requested for your Nexus Social account. Do not share it with anyone — our team will never ask for this code.',
@@ -206,11 +202,12 @@ export const sendResetOTP = async (email, otp, env) => {
             to: email,
             subject: "Reset your Nexus Social password",
             html: baseTemplate({
+                icon: '🔑',
                 title: 'Password Reset',
-                subtitle: 'We received a request to reset your password',
+                subtitle: 'We received a request to reset your Nexus Social password.',
                 otpLabel: 'Reset verification code',
                 otp,
-                footerNote: 'If you did not request a password reset, ignore this email. Your account is safe and your password has not been changed.',
+                footerNote: 'If you did not request a password reset, you can safely ignore this email. Your account remains secure.',
             })
         });
         return true;
@@ -228,11 +225,12 @@ export const sendEmailChangeOTP = async (email, otp, env) => {
             to: email,
             subject: "Confirm your new email address",
             html: baseTemplate({
+                icon: '✉️',
                 title: 'Confirm Email Change',
-                subtitle: 'Enter this code to confirm your new email address',
+                subtitle: 'Enter this code to confirm your new email address on Nexus Social.',
                 otpLabel: 'Confirmation code',
                 otp,
-                footerNote: 'If you did not request an email change on your Nexus Social account, please contact support immediately.',
+                footerNote: 'If you did not request an email change, please contact Nexus Social support immediately.',
             })
         });
         return true;
