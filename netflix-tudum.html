@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Netflix "Ta-Dum" Real Sound Synthesizer (Web Audio API)</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      user-select: none;
+    }
+
+    body {
+      background: #0d0d0f;
+      color: #ffffff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 50% 25%, rgba(229, 9, 20, 0.16) 0%, transparent 60%),
+        radial-gradient(circle at 50% 100%, rgba(20, 20, 30, 0.8) 0%, transparent 80%);
+    }
+
+    .container {
+      width: 100%;
+      max-width: 640px;
+      background: rgba(22, 22, 28, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-top: 1px solid rgba(229, 9, 20, 0.4);
+      border-radius: 24px;
+      padding: 36px 32px;
+      box-shadow: 
+        0 24px 60px -15px rgba(0, 0, 0, 0.9),
+        0 0 40px -10px rgba(229, 9, 20, 0.25);
+      backdrop-filter: blur(20px);
+      text-align: center;
+      position: relative;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .brand-logo {
+      font-size: 32px;
+      font-weight: 900;
+      letter-spacing: 4px;
+      color: #e50914;
+      text-transform: uppercase;
+      text-shadow: 0 0 24px rgba(229, 9, 20, 0.6);
+    }
+
+    .badge {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      background: rgba(229, 9, 20, 0.2);
+      color: #ff5252;
+      border: 1px solid rgba(229, 9, 20, 0.4);
+      padding: 3px 8px;
+      border-radius: 999px;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: #8c8c9a;
+      margin-bottom: 28px;
+      line-height: 1.5;
+    }
+
+    /* Visualizer Canvas */
+    .visualizer-card {
+      background: #08080a;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
+      padding: 12px;
+      margin-bottom: 28px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    canvas {
+      width: 100%;
+      height: 140px;
+      display: block;
+      border-radius: 10px;
+    }
+
+    .visualizer-overlay {
+      position: absolute;
+      top: 18px;
+      left: 20px;
+      font-size: 11px;
+      letter-spacing: 1px;
+      color: #555566;
+      text-transform: uppercase;
+      font-weight: 600;
+      pointer-events: none;
+    }
+
+    /* Play Button */
+    .play-btn {
+      position: relative;
+      background: linear-gradient(135deg, #e50914 0%, #b80610 100%);
+      color: #ffffff;
+      border: none;
+      outline: none;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 20px 48px;
+      border-radius: 999px;
+      cursor: pointer;
+      box-shadow: 
+        0 10px 30px rgba(229, 9, 20, 0.45),
+        inset 0 1px 2px rgba(255, 255, 255, 0.4);
+      transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 30px;
+    }
+
+    .play-btn:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 
+        0 16px 36px rgba(229, 9, 20, 0.6),
+        inset 0 1px 2px rgba(255, 255, 255, 0.5);
+    }
+
+    .play-btn:active {
+      transform: translateY(1px) scale(0.98);
+      box-shadow: 0 6px 20px rgba(229, 9, 20, 0.4);
+    }
+
+    .play-btn svg {
+      width: 22px;
+      height: 22px;
+      fill: currentColor;
+    }
+
+    .presets-row {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+
+    .preset-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #a0a0b0;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 8px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .preset-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+
+    .preset-btn.active {
+      background: rgba(229, 9, 20, 0.18);
+      border-color: rgba(229, 9, 20, 0.5);
+      color: #ff6666;
+    }
+
+    /* Sound Parameters / Sliders */
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      text-align: left;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+
+    .control-item {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .control-label {
+      font-size: 12px;
+      color: #8c8c9a;
+      display: flex;
+      justify-content: space-between;
+      font-weight: 500;
+    }
+
+    .control-value {
+      color: #fff;
+      font-weight: 600;
+    }
+
+    input[type=range] {
+      -webkit-appearance: none;
+      width: 100%;
+      background: #23232c;
+      height: 6px;
+      border-radius: 3px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #e50914;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(229, 9, 20, 0.8);
+      transition: transform 0.1s ease;
+    }
+
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    /* Explanation & Anatomy */
+    .sound-anatomy {
+      text-align: left;
+      background: rgba(14, 14, 18, 0.6);
+      border-radius: 12px;
+      padding: 16px;
+      font-size: 12px;
+      color: #808090;
+      line-height: 1.6;
+      border-left: 3px solid #e50914;
+    }
+
+    .sound-anatomy b {
+      color: #fff;
+    }
+
+    .copy-btn {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #ccc;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      cursor: pointer;
+      margin-top: 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .copy-btn:hover {
+      border-color: #fff;
+      color: #fff;
+    }
+
+    @media (max-width: 500px) {
+      .controls-grid {
+        grid-template-columns: 1fr;
+      }
+      .play-btn {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="brand">
+      <div class="brand-logo">TUDUM</div>
+      <div class="badge">PRO SYNTH</div>
+    </div>
+    <div class="subtitle">
+      Authentic 6-Layer Web Audio API Synthesis Engine<br>
+      No external audio files • 100% Procedural • Instant Playback
+    </div>
+
+    <!-- Visualizer Canvas -->
+    <div class="visualizer-card">
+      <div class="visualizer-overlay" id="statusText">READY • CLICK PLAY</div>
+      <canvas id="visualizerCanvas"></canvas>
+    </div>
+
+    <!-- Main Trigger Button -->
+    <button class="play-btn" id="playBtn" onclick="triggerTudum()">
+      <svg viewBox="0 0 24 24">
+        <path d="M8 5v14l11-7z"/>
+      </svg>
+      PLAY REAL TA-DUM
+    </button>
+
+    <!-- Preset Modes -->
+    <div class="presets-row">
+      <button class="preset-btn active" onclick="setPreset('original', this)">Original Netflix</button>
+      <button class="preset-btn" onclick="setPreset('theater', this)">Cinema Bass Heavy</button>
+      <button class="preset-btn" onclick="setPreset('bright', this)">Crisp / Modern</button>
+      <button class="preset-btn" onclick="setPreset('slowmo', this)">Slow-Motion (0.5x)</button>
+    </div>
+
+    <!-- Sound Parameter Tuning -->
+    <div class="controls-grid">
+      <div class="control-item">
+        <div class="control-label">
+          <span>Master Volume</span>
+          <span class="control-value" id="valVol">100%</span>
+        </div>
+        <input type="range" id="paramVol" min="10" max="150" value="100" oninput="updateParam('valVol', this.value + '%')">
+      </div>
+
+      <div class="control-item">
+        <div class="control-label">
+          <span>Sub Impact Power</span>
+          <span class="control-value" id="valSub">100%</span>
+        </div>
+        <input type="range" id="paramSub" min="20" max="200" value="100" oninput="updateParam('valSub', this.value + '%')">
+      </div>
+
+      <div class="control-item">
+        <div class="control-label">
+          <span>Reverb Hall Decay</span>
+          <span class="control-value" id="valReverb">3.2s</span>
+        </div>
+        <input type="range" id="paramReverb" min="10" max="50" value="32" oninput="updateParam('valReverb', (this.value/10).toFixed(1) + 's')">
+      </div>
+
+      <div class="control-item">
+        <div class="control-label">
+          <span>Playback Rate</span>
+          <span class="control-value" id="valSpeed">1.0x</span>
+        </div>
+        <input type="range" id="paramSpeed" min="5" max="15" value="10" oninput="updateParam('valSpeed', (this.value/10).toFixed(1) + 'x')">
+      </div>
+    </div>
+
+    <!-- Anatomy breakdown -->
+    <div class="sound-anatomy">
+      <b>How this authentic sound is constructed:</b><br>
+      • <b>"Ta" (0.00s):</b> Wedding ring knock click (850Hz transient) + wooden resonance (130Hz→35Hz kick drop).<br>
+      • <b>"-DUM" (0.16s):</b> Deep cinematic anvil thud (84Hz→24Hz sub) + D-minor power chord (D2, A2, D3, F3, A3) with multi-saw detuned chorus.<br>
+      • <b>The "Blossom" (0.22s - 3.2s):</b> High harmonic metallic shimmer (587Hz - 2349Hz) trailing off into an algorithmic stereo reverberation space.
+    </div>
+  </div>
+
+  <script>
+    let audioCtx = null;
+    let analyser = null;
+    let reverbBuffer = null;
+    let animFrame = null;
+
+    // Initialize Web Audio Context & Algorithmic Reverb Impulse
+    function initAudio() {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContext();
+        
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 1024;
+        analyser.smoothingTimeConstant = 0.85;
+
+        // Build 3.4-second natural stereo convolution reverb
+        reverbBuffer = createReverbBuffer(audioCtx, 3.4, 2.2);
+        startVisualizer();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    // Algorithmic Studio Stereo Reverb Impulse
+    function createReverbBuffer(ctx, duration, decay) {
+      const sampleRate = ctx.sampleRate;
+      const length = sampleRate * duration;
+      const buffer = ctx.createBuffer(2, length, sampleRate);
+      const left = buffer.getChannelData(0);
+      const right = buffer.getChannelData(1);
+
+      for (let i = 0; i < length; i++) {
+        const t = i / length;
+        // Exponential decay envelope with subtle early reflections
+        const env = Math.pow(1 - t, decay);
+        // Stereo decorrelation
+        left[i] = (Math.random() * 2 - 1) * env;
+        right[i] = (Math.random() * 2 - 1) * env;
+      }
+      return buffer;
+    }
+
+    // MAIN PROCEDURAL "TA-DUM" ENGINE
+    function playRealTudum(options = {}) {
+      initAudio();
+      const ctx = audioCtx;
+      const now = ctx.currentTime + 0.02;
+
+      // Parameters
+      const volumeScale = (parseFloat(document.getElementById('paramVol').value) / 100) * (options.volume || 1.0);
+      const subScale = (parseFloat(document.getElementById('paramSub').value) / 100) * (options.subBoost || 1.0);
+      const speed = (parseFloat(document.getElementById('paramSpeed').value) / 10) * (options.speed || 1.0);
+      const sp = 1.0 / speed; // time stretch factor
+
+      // Master bus with studio compression & limiter
+      const masterGain = ctx.createGain();
+      masterGain.gain.setValueAtTime(0.92 * volumeScale, now);
+
+      const compressor = ctx.createDynamicsCompressor();
+      compressor.threshold.setValueAtTime(-12, now);
+      compressor.knee.setValueAtTime(8, now);
+      compressor.ratio.setValueAtTime(4.5, now);
+      compressor.attack.setValueAtTime(0.003, now);
+      compressor.release.setValueAtTime(0.25, now);
+
+      masterGain.connect(compressor);
+      compressor.connect(analyser);
+      analyser.connect(ctx.destination);
+
+      // Reverb Bus (Wet signal)
+      const reverbNode = ctx.createConvolver();
+      reverbNode.buffer = reverbBuffer;
+      const reverbGain = ctx.createGain();
+      const reverbSec = (parseFloat(document.getElementById('paramReverb').value) / 10);
+      reverbGain.gain.setValueAtTime(0.24 * (reverbSec / 3.2), now);
+      reverbNode.connect(reverbGain);
+      reverbGain.connect(masterGain);
+
+      // =========================================================================
+      // 1. "TA" - FIRST IMPACT (At t = 0.00s)
+      // Wedding ring / wooden knock transient + short tight kick
+      // =========================================================================
+      const taTime = now;
+
+      // Knock transient click (simulating ring tap on wood)
+      const knockOsc = ctx.createOscillator();
+      const knockGain = ctx.createGain();
+      const knockFilter = ctx.createBiquadFilter();
+
+      knockOsc.type = 'triangle';
+      knockOsc.frequency.setValueAtTime(820, taTime);
+      knockOsc.frequency.exponentialRampToValueAtTime(120, taTime + 0.045 * sp);
+
+      knockFilter.type = 'bandpass';
+      knockFilter.frequency.setValueAtTime(640, taTime);
+      knockFilter.Q.setValueAtTime(3.0, taTime);
+
+      knockGain.gain.setValueAtTime(0.7, taTime);
+      knockGain.gain.exponentialRampToValueAtTime(0.001, taTime + 0.05 * sp);
+
+      knockOsc.connect(knockFilter);
+      knockFilter.connect(knockGain);
+      knockGain.connect(masterGain);
+      knockGain.connect(reverbNode);
+      knockOsc.start(taTime);
+      knockOsc.stop(taTime + 0.06 * sp);
+
+      // "Ta" low-mid body thud
+      const taBodyOsc = ctx.createOscillator();
+      const taBodyGain = ctx.createGain();
+      taBodyOsc.type = 'sine';
+      taBodyOsc.frequency.setValueAtTime(138, taTime);
+      taBodyOsc.frequency.exponentialRampToValueAtTime(42, taTime + 0.22 * sp);
+
+      taBodyGain.gain.setValueAtTime(0.001, taTime);
+      taBodyGain.gain.linearRampToValueAtTime(0.85, taTime + 0.004);
+      taBodyGain.gain.exponentialRampToValueAtTime(0.001, taTime + 0.28 * sp);
+
+      taBodyOsc.connect(taBodyGain);
+      taBodyGain.connect(masterGain);
+      taBodyOsc.start(taTime);
+      taBodyOsc.stop(taTime + 0.30 * sp);
+
+      // =========================================================================
+      // 2. "-DUM" - SECOND IMPACT & ANVIL (At t = 0.165s)
+      // Massive cinematic low end + anvil snap + sub drop
+      // =========================================================================
+      const dumTime = now + 0.165 * sp;
+
+      // Metallic anvil tap snap
+      const anvilOsc = ctx.createOscillator();
+      const anvilGain = ctx.createGain();
+      anvilOsc.type = 'square';
+      anvilOsc.frequency.setValueAtTime(440, dumTime);
+      anvilOsc.frequency.exponentialRampToValueAtTime(90, dumTime + 0.08 * sp);
+
+      const anvilFilter = ctx.createBiquadFilter();
+      anvilFilter.type = 'lowpass';
+      anvilFilter.frequency.setValueAtTime(950, dumTime);
+
+      anvilGain.gain.setValueAtTime(0.42, dumTime);
+      anvilGain.gain.exponentialRampToValueAtTime(0.001, dumTime + 0.09 * sp);
+
+      anvilOsc.connect(anvilFilter);
+      anvilFilter.connect(anvilGain);
+      anvilGain.connect(masterGain);
+      anvilGain.connect(reverbNode);
+      anvilOsc.start(dumTime);
+      anvilOsc.stop(dumTime + 0.10 * sp);
+
+      // Deep Sub Bass Drop (The signature cinematic rumble: 84Hz down to 24Hz)
+      const subOsc = ctx.createOscillator();
+      const subGain = ctx.createGain();
+      subOsc.type = 'sine';
+      subOsc.frequency.setValueAtTime(84, dumTime);
+      subOsc.frequency.exponentialRampToValueAtTime(24, dumTime + 1.6 * sp);
+
+      subGain.gain.setValueAtTime(0.001, dumTime);
+      subGain.gain.linearRampToValueAtTime(1.1 * subScale, dumTime + 0.006);
+      subGain.gain.exponentialRampToValueAtTime(0.001, dumTime + 1.8 * sp);
+
+      subOsc.connect(subGain);
+      subGain.connect(masterGain);
+      subOsc.start(dumTime);
+      subOsc.stop(dumTime + 1.9 * sp);
+
+      // =========================================================================
+      // 3. THE "BLOSSOM" - D MINOR CELLO / ELECTRIC GUITAR CHORD
+      // Real chord: D2 (73.4Hz), A2 (110Hz), D3 (146.8Hz), F3 (174.6Hz), A3 (220Hz)
+      // Multi-voice detuned saw & triangle with dynamic lowpass sweep
+      // =========================================================================
+      const chordNotes = [
+        { f: 73.42,  detune: -3, type: 'sawtooth', gain: 0.18 }, // D2
+        { f: 110.00, detune:  3, type: 'sawtooth', gain: 0.16 }, // A2
+        { f: 146.83, detune: -4, type: 'sawtooth', gain: 0.15 }, // D3
+        { f: 174.61, detune:  4, type: 'triangle', gain: 0.22 }, // F3 (Minor 3rd)
+        { f: 220.00, detune: -2, type: 'sawtooth', gain: 0.12 }  // A3
+      ];
+
+      chordNotes.forEach(note => {
+        const osc = ctx.createOscillator();
+        const noteGain = ctx.createGain();
+        const lpFilter = ctx.createBiquadFilter();
+
+        osc.type = note.type;
+        osc.frequency.setValueAtTime(note.f, dumTime);
+        osc.detune.setValueAtTime(note.detune, dumTime);
+
+        // Warm analog filter envelope
+        lpFilter.type = 'lowpass';
+        lpFilter.frequency.setValueAtTime(620, dumTime);
+        lpFilter.frequency.exponentialRampToValueAtTime(80, dumTime + 2.5 * sp);
+        lpFilter.Q.setValueAtTime(1.8, dumTime);
+
+        // Volume envelope with long cello decay
+        noteGain.gain.setValueAtTime(0.001, dumTime);
+        noteGain.gain.linearRampToValueAtTime(note.gain, dumTime + 0.04);
+        noteGain.gain.exponentialRampToValueAtTime(0.0001, dumTime + 2.6 * sp);
+
+        osc.connect(lpFilter);
+        lpFilter.connect(noteGain);
+        noteGain.connect(masterGain);
+        noteGain.connect(reverbNode); // Send to reverb for space
+
+        osc.start(dumTime);
+        osc.stop(dumTime + 2.7 * sp);
+      });
+
+      // =========================================================================
+      // 4. METALLIC SHIMMER & HIGH REVERSE-BLOOM HARMONICS
+      // Lon Bender's iconic high-pitched ringing bloom that lingers in the air
+      // Frequencies: D5, A5, D6, E6, A6 (587Hz to 2349Hz)
+      // =========================================================================
+      const shimmerNotes = [587.33, 880.00, 1174.66, 1760.00, 2349.32];
+      shimmerNotes.forEach((freq, idx) => {
+        const shimOsc = ctx.createOscillator();
+        const shimGain = ctx.createGain();
+        
+        shimOsc.type = 'sine';
+        shimOsc.frequency.setValueAtTime(freq, dumTime + 0.04);
+
+        // Gentle volume fade-in and long delicate decay
+        const startTime = dumTime + 0.04 + (idx * 0.012);
+        shimGain.gain.setValueAtTime(0.0001, startTime);
+        shimGain.gain.linearRampToValueAtTime(0.055 / (idx + 1), startTime + 0.08);
+        shimGain.gain.exponentialRampToValueAtTime(0.00001, startTime + 3.2 * sp);
+
+        shimOsc.connect(shimGain);
+        shimGain.connect(masterGain);
+        shimGain.connect(reverbNode);
+
+        shimOsc.start(startTime);
+        shimOsc.stop(startTime + 3.3 * sp);
+      });
+
+      // Status indicator
+      const status = document.getElementById('statusText');
+      if (status) {
+        status.innerText = "PLAYING • TA-DUM IMPACT";
+        status.style.color = "#e50914";
+        setTimeout(() => {
+          status.innerText = "REVERB DECAY...";
+          status.style.color = "#ff8888";
+        }, 300);
+        setTimeout(() => {
+          status.innerText = "READY • CLICK PLAY";
+          status.style.color = "#555566";
+        }, 3200 * sp);
+      }
+    }
+
+    // Interactive Trigger Handler
+    function triggerTudum() {
+      playRealTudum();
+    }
+
+    // Presets
+    function setPreset(name, btn) {
+      document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      const vol = document.getElementById('paramVol');
+      const sub = document.getElementById('paramSub');
+      const rev = document.getElementById('paramReverb');
+      const spd = document.getElementById('paramSpeed');
+
+      if (name === 'original') {
+        vol.value = 100; sub.value = 100; rev.value = 32; spd.value = 10;
+      } else if (name === 'theater') {
+        vol.value = 115; sub.value = 180; rev.value = 42; spd.value = 9;
+      } else if (name === 'bright') {
+        vol.value = 100; sub.value = 75; rev.value = 26; spd.value = 11;
+      } else if (name === 'slowmo') {
+        vol.value = 110; sub.value = 120; rev.value = 48; spd.value = 5;
+      }
+
+      updateParam('valVol', vol.value + '%');
+      updateParam('valSub', sub.value + '%');
+      updateParam('valReverb', (rev.value / 10).toFixed(1) + 's');
+      updateParam('valSpeed', (spd.value / 10).toFixed(1) + 'x');
+
+      playRealTudum();
+    }
+
+    function updateParam(id, val) {
+      document.getElementById(id).innerText = val;
+    }
+
+    // Real-time Canvas Waveform & Frequency Visualizer
+    function startVisualizer() {
+      const canvas = document.getElementById('visualizerCanvas');
+      const ctx = canvas.getContext('2d');
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+
+      function resize() {
+        canvas.width = canvas.clientWidth * window.devicePixelRatio;
+        canvas.height = canvas.clientHeight * window.devicePixelRatio;
+      }
+      resize();
+      window.addEventListener('resize', resize);
+
+      function draw() {
+        animFrame = requestAnimationFrame(draw);
+        analyser.getByteFrequencyData(dataArray);
+
+        const w = canvas.width;
+        const h = canvas.height;
+
+        // Dark background clear with subtle trail
+        ctx.fillStyle = '#08080a';
+        ctx.fillRect(0, 0, w, h);
+
+        // Center line
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, h / 2);
+        ctx.lineTo(w, h / 2);
+        ctx.stroke();
+
+        // Draw frequency bars / mirrored spectrum
+        const numBars = 64;
+        const barWidth = (w / numBars);
+
+        for (let i = 0; i < numBars; i++) {
+          const idx = Math.floor(Math.pow(i / numBars, 1.8) * (bufferLength / 3));
+          const val = dataArray[idx] || 0;
+          const barHeight = (val / 255) * (h * 0.85);
+
+          if (barHeight > 1) {
+            const grad = ctx.createLinearGradient(0, h / 2 - barHeight / 2, 0, h / 2 + barHeight / 2);
+            grad.addColorStop(0, 'rgba(229, 9, 20, 0.95)');
+            grad.addColorStop(0.5, 'rgba(255, 90, 95, 0.7)');
+            grad.addColorStop(1, 'rgba(229, 9, 20, 0.95)');
+
+            ctx.fillStyle = grad;
+            ctx.fillRect(i * barWidth + 1, (h - barHeight) / 2, barWidth - 2, barHeight);
+          }
+        }
+      }
+      draw();
+    }
+  </script>
+</body>
+</html>
+

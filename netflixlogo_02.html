@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>N — The Opening Ident, Rebuilt</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Registered custom props so the gold -> red shift actually *tweens* everywhere at once */
+  @property --streak  { syntax:'<color>'; inherits:true; initial-value: rgba(240,178,68,.50); }
+  @property --glowc   { syntax:'<color>'; inherits:true; initial-value: rgba(242,181,68,.42); }
+  @property --svgGlow { syntax:'<color>'; inherits:true; initial-value: rgba(240,170,50,.50); }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { height:100%; overflow:hidden; background:#050505; }
+  body { font-family:'Archivo',sans-serif; color:#fff; -webkit-font-smoothing:antialiased; user-select:none; }
+
+  /* ============ STAGE ============ */
+  #stage{
+    position:fixed; inset:0; background:#050505;
+    --streak: rgba(240,178,68,.50);
+    --glowc:  rgba(242,181,68,.42);
+    --svgGlow:rgba(240,170,50,.50);
+    transition: --streak .55s ease, --glowc .55s ease, --svgGlow .55s ease;
+  }
+  #stage.isRed{
+    --streak: rgba(229,9,20,.50);
+    --glowc:  rgba(229,9,20,.48);
+    --svgGlow:rgba(229,9,20,.55);
+  }
+  #stage.nocur{ cursor:none; }
+
+  /* Background light-streak curtain */
+  #streaks{ position:absolute; inset:0; overflow:hidden; opacity:.55; transition:opacity .8s; }
+  .play #streaks{ opacity:1; }
+  #streaks i{
+    position:absolute; border-radius:2px;
+    background:linear-gradient(to bottom, transparent, var(--streak) 42%, var(--streak) 58%, transparent);
+  }
+
+  /* Speed-line layer, only alive during the zoom */
+  #streakRush{ position:absolute; inset:0; overflow:hidden; opacity:0; transition:opacity .2s; }
+  .zooming #streakRush{ opacity:1; }
+  #streakRush i{
+    position:absolute; top:-45vh; width:2px;
+    background:linear-gradient(to bottom, transparent, rgba(255,232,190,.9) 45%, rgba(255,232,190,.9) 55%, transparent);
+    animation-name:rushFall; animation-timing-function:linear;
+    animation-iteration-count:infinite; animation-play-state:paused;
+  }
+  .zooming #streakRush i{ animation-play-state:running; }
+
+  #vignette{
+    position:absolute; inset:0; pointer-events:none; transition:opacity 1s;
+    background:radial-gradient(ellipse at 50% 50%, transparent 46%, rgba(0,0,0,.72) 100%);
+  }
+  .zooming #vignette{ opacity:.45; }
+
+  /* Film grain */
+  #grain{ position:fixed; inset:0; z-index:15; pointer-events:none; opacity:.06; mix-blend-mode:screen; }
+
+  /* ============ THE N ============ */
+  #nwrap{
+    position:absolute; left:50%; top:50%;
+    height:58vmin; aspect-ratio:365/440;
+    transform:translate(-50%,-50%);
+    opacity:0;
+  }
+  .play #nwrap{ opacity:1; }
+  #nzoom{ position:absolute; inset:0; }
+  #nglow{
+    position:absolute; left:50%; top:50%; width:160%; height:160%;
+    transform:translate(-50%,-50%); border-radius:50%; pointer-events:none;
+    background:radial-gradient(closest-side, var(--glowc), rgba(0,0,0,0) 72%);
+  }
+  #nsvg{ width:100%; height:100%; display:block; overflow:hidden;
+         filter:drop-shadow(0 0 30px var(--svgGlow)); }
+
+  /* Stroke entrance mechanics */
+  .sL,.sR{ transform-box:fill-box; transform-origin:50% 100%; }
+  .sD   { transform-box:fill-box; transform-origin:50% 50%;  }
+
+  .play .sL{ animation:riseUp .45s .45s cubic-bezier(.16,.84,.28,1) both; }
+  .play #sL{ animation:riseUp .45s .45s cubic-bezier(.16,.84,.28,1) both, hot .5s .82s both; }
+
+  .play .sD{ animation:fallIn .6s .95s both; }
+  .play #sD{ animation:fallIn .6s .95s both, hot .45s 1.28s both; }
+
+  .play .sR{ animation:riseUp .45s 1.6s cubic-bezier(.16,.84,.28,1) both; }
+  .play #sR{ animation:riseUp .45s 1.6s cubic-bezier(.16,.84,.28,1) both, hot .5s 1.96s both; }
+
+  .play #bloomGold{ animation:fadeOut .5s 2.5s forwards; }
+  .play #bloomRed { animation:fadeIn80 .6s 2.55s forwards; }
+  .play #zoomBlur { animation:zBlurIn 1s 3.4s forwards; }
+
+  /* Sheen sweep: masks travel across, red rides in right behind the glint */
+  .play .sweepG{ animation:sweepMove .62s 2.45s cubic-bezier(.5,.05,.32,.96) both; }
+  .play .glintG{ animation:sweepMove .62s 2.44s cubic-bezier(.5,.05,.32,.96) both; }
+
+  /* Settle pulse right after the last stick lands, then the zoom crush */
+  .play #nsvg { animation:settle .45s 2.02s ease-out; }
+  .play #nzoom{ animation:zoomIn 1.25s 3.15s cubic-bezier(.55,.02,.92,.38) forwards,
+                          brighten .95s 3.45s forwards; }
+
+  .play #stage{ animation:shake .3s 1.3s; }
+  .play #whiteout{ animation:flashUp .26s 4.3s cubic-bezier(.45,0,.9,.5) forwards; }
+  .play #nglow{ animation:glowRide 4.6s linear both; }
+
+  /* ============ KEYFRAMES ============ */
+  @keyframes riseUp{ from{ transform:scaleY(.001); } to{ transform:scaleY(1); } }
+  @keyframes fallIn{
+    0%  { transform:translateY(-130%); animation-timing-function:cubic-bezier(.5,0,.85,.45); }
+    58% { transform:translateY(0);     animation-timing-function:cubic-bezier(.25,.65,.4,1); }
+    74% { transform:translateY(-6.5%); animation-timing-function:cubic-bezier(.45,0,.7,.6); }
+    88% { transform:translateY(1.8%);  animation-timing-function:ease-out; }
+    100%{ transform:translateY(0); }
+  }
+  @keyframes hot{
+    0%  { filter:brightness(1); }
+    30% { filter:brightness(2.4) drop-shadow(0 0 16px rgba(255,205,110,.95)); }
+    100%{ filter:brightness(1); }
+  }
+  @keyframes fadeOut { to{ opacity:0; } }
+  @keyframes fadeIn80{ to{ opacity:.8; } }
+  @keyframes zBlurIn { to{ opacity:.5; } }
+  @keyframes sweepMove{ from{ transform:translateX(-420px); } to{ transform:translateX(900px); } }
+  @keyframes settle{ 0%{ transform:scale(1); } 45%{ transform:scale(1.05); } 100%{ transform:scale(1); } }
+  @keyframes zoomIn{ to{ transform:scale(16); } }
+  @keyframes brighten{ to{ filter:brightness(2.2) saturate(1.15); } }
+  @keyframes shake{
+    0%,100%{ transform:translate(0,0); } 18%{ transform:translate(4px,-3px); }
+    36%{ transform:translate(-4px,3px); } 54%{ transform:translate(3px,2px); }
+    72%{ transform:translate(-2px,-2px); } 88%{ transform:translate(1px,1px); }
+  }
+  @keyframes flashUp{ to{ opacity:1; } }
+  @keyframes fadeUp{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:none; } }
+  @keyframes glowRide{
+    0%{opacity:0} 19.6%{opacity:.55} 22.8%{opacity:.3} 28.3%{opacity:.78}
+    32.6%{opacity:.4} 44.6%{opacity:.82} 50%{opacity:.45} 56.5%{opacity:.65}
+    68.5%{opacity:.6} 95.7%{opacity:1} 100%{opacity:1}
+  }
+  @keyframes flick{ 0%,100%{ opacity:.08; transform:translateY(-3vh); } 50%{ opacity:.9; transform:translateY(3vh); } }
+  @keyframes rushFall{ 0%{ transform:translateY(-45vh); opacity:0; } 12%{ opacity:.8; } 100%{ transform:translateY(115vh); opacity:0; } }
+  @keyframes spark{
+    0%  { transform:translate(0,0); opacity:1; }
+    55% { transform:translate(calc(var(--sx) * .58), calc(var(--sy) * .30)); opacity:1; }
+    100%{ transform:translate(var(--sx), var(--sy)); opacity:0; }
+  }
+  @keyframes impF{ 0%{ opacity:.9; transform:scaleY(.35); } 100%{ opacity:0; transform:scaleY(1.2); } }
+  @keyframes ping{ 0%{ transform:scale(1); opacity:.65; } 75%,100%{ transform:scale(1.6); opacity:0; } }
+
+  /* ============ UI LAYERS ============ */
+  #skipBtn{
+    position:fixed; right:4.5vw; bottom:6vh; z-index:20;
+    font:600 14px 'Archivo',sans-serif; letter-spacing:.03em;
+    color:#eee; background:rgba(18,18,18,.55); border:1px solid rgba(255,255,255,.45);
+    padding:.7rem 1.5rem; border-radius:2px; cursor:pointer;
+    opacity:0; pointer-events:none; backdrop-filter:blur(3px); -webkit-backdrop-filter:blur(3px);
+    transition:background .2s,color .2s,border-color .2s;
+  }
+  .play #skipBtn{ animation:fadeUp .5s 1.4s both; pointer-events:auto; }
+  #skipBtn:hover{ background:#fff; color:#000; border-color:#fff; }
+
+  #whiteout{
+    position:fixed; inset:0; z-index:35; opacity:0; pointer-events:none;
+    background:radial-gradient(circle at 50% 50%, #fff 0%, #fff 45%, #ffe9c4 75%, #f7c06a 100%);
+  }
+  .cut #nwrap, .cut #streaks, .cut #streakRush, .cut #skipBtn, .cut #vignette{ visibility:hidden; }
+  .cut #whiteout{ display:none; }
+
+  #startOverlay{
+    position:fixed; inset:0; z-index:50;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px;
+    background:rgba(4,4,4,.62);
+    backdrop-filter:blur(5px); -webkit-backdrop-filter:blur(5px);
+    transition:opacity .7s ease;
+  }
+  #startOverlay.hide{ opacity:0; pointer-events:none; }
+  #startOverlay > *{ animation:fadeUp .9s cubic-bezier(.2,.7,.3,1) both; }
+  #startOverlay > *:nth-child(1){ animation-delay:.15s; }
+  #startOverlay > *:nth-child(2){ animation-delay:.3s;  }
+  #startOverlay > *:nth-child(3){ animation-delay:.45s; }
+  #startOverlay > *:nth-child(4){ animation-delay:.6s;  }
+  .miniN{ width:30px; height:40px; opacity:.95; }
+  .eyebrow{ font-size:11px; font-weight:600; letter-spacing:.44em; text-indent:.44em;
+            text-transform:uppercase; color:rgba(255,255,255,.52); text-align:center; padding:0 6vw; }
+  #playBtn{
+    position:relative; width:96px; height:96px; border-radius:50%;
+    border:1px solid rgba(229,9,20,.55); background:rgba(229,9,20,.13);
+    cursor:pointer; display:grid; place-items:center;
+    transition:background .3s, transform .3s;
+  }
+  #playBtn:hover{ background:rgba(229,9,20,.3); transform:scale(1.05); }
+  #playBtn svg{ width:34px; height:34px; fill:#fff; margin-left:5px; }
+  #playBtn::after{
+    content:''; position:absolute; inset:-1px; border-radius:50%;
+    border:1px solid rgba(229,9,20,.55); animation:ping 2.4s ease-out infinite;
+  }
+  .hint{ font-size:13px; color:rgba(255,255,255,.42); text-align:center; padding:0 6vw; }
+
+  #endOverlay{
+    position:fixed; inset:0; z-index:40;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px;
+    opacity:0; pointer-events:none; transition:opacity .9s ease; background:rgba(0,0,0,.3);
+  }
+  #endOverlay.show{ opacity:1; pointer-events:auto; }
+  #replayBtn{
+    width:70px; height:70px; border-radius:50%;
+    border:1px solid rgba(255,255,255,.3); background:rgba(255,255,255,.04);
+    cursor:pointer; display:grid; place-items:center; color:#fff;
+    transition:border-color .25s, color .25s;
+  }
+  #replayBtn svg{ width:26px; height:26px; fill:currentColor; transition:transform .35s; }
+  #replayBtn:hover{ border-color:#e50914; color:#ff3340; }
+  #replayBtn:hover svg{ transform:rotate(-45deg); }
+  .keyhint{ font-size:12px; color:rgba(255,255,255,.35); }
+  .credit{
+    position:absolute; bottom:26px; left:0; right:0; text-align:center;
+    font-size:10.5px; letter-spacing:.22em; text-transform:uppercase; color:rgba(255,255,255,.3);
+    padding:0 5vw;
+  }
+
+  #muteBtn{
+    position:fixed; top:20px; right:22px; z-index:60;
+    width:42px; height:42px; border-radius:50%;
+    border:1px solid rgba(255,255,255,.22); background:rgba(10,10,10,.4);
+    color:rgba(255,255,255,.78); cursor:pointer; display:grid; place-items:center;
+    transition:border-color .2s;
+  }
+  #muteBtn:hover{ border-color:rgba(255,255,255,.55); }
+  #muteBtn svg{ width:20px; height:20px; }
+
+  @media (prefers-reduced-motion:reduce){
+    .play #stage{ animation:none; }
+    .zooming #streakRush{ display:none; }
+    #streaks i{ animation-duration:9s !important; }
+  }
+</style>
+</head>
+<body>
+
+<div id="stage">
+  <div id="streaks" aria-hidden="true"></div>
+  <div id="streakRush" aria-hidden="true"></div>
+  <div id="vignette" aria-hidden="true"></div>
+
+  <div id="nwrap" aria-hidden="true">
+    <div id="nzoom">
+      <div id="nglow"></div>
+      <svg id="nsvg" viewBox="-70 -70 365 440">
+        <defs>
+          <!-- The three strokes of the N -->
+          <path id="pL" d="M0 0h60v300H0Z"/>
+          <path id="pD" d="M57 0h64l47 300h-64Z"/>
+          <path id="pR" d="M165 0h60v300h-60Z"/>
+
+          <!-- Gold ribbon shading -->
+          <linearGradient id="gGL" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#8a5514"/><stop offset=".55" stop-color="#e09a2e"/>
+            <stop offset=".85" stop-color="#ffc95f"/><stop offset="1" stop-color="#ffe6a1"/>
+          </linearGradient>
+          <linearGradient id="gGR" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#ffe6a1"/><stop offset=".15" stop-color="#ffc95f"/>
+            <stop offset=".45" stop-color="#e09a2e"/><stop offset="1" stop-color="#8a5514"/>
+          </linearGradient>
+          <linearGradient id="gGD" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#ffdd92"/><stop offset=".45" stop-color="#f2b144"/>
+            <stop offset="1" stop-color="#c07f1f"/>
+          </linearGradient>
+
+          <!-- Netflix red shading -->
+          <linearGradient id="gRL" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#8c050d"/><stop offset=".55" stop-color="#e50914"/>
+            <stop offset="1" stop-color="#ff2f3a"/>
+          </linearGradient>
+          <linearGradient id="gRR" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#ff2f3a"/><stop offset=".45" stop-color="#e50914"/>
+            <stop offset="1" stop-color="#8c050d"/>
+          </linearGradient>
+          <linearGradient id="gRD" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#ff2130"/><stop offset=".5" stop-color="#e50914"/>
+            <stop offset="1" stop-color="#b00610"/>
+          </linearGradient>
+
+          <!-- Soft trailing edge of the color sweep -->
+          <linearGradient id="gEdge" gradientUnits="userSpaceOnUse" x1="-90" y1="0" x2="-6" y2="0">
+            <stop offset="0" stop-color="#fff"/><stop offset=".7" stop-color="#fff"/>
+            <stop offset="1" stop-color="#000"/>
+          </linearGradient>
+
+          <filter id="fB12" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="12"/></filter>
+          <filter id="fB14" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="14"/></filter>
+          <filter id="fB4"  x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="4"/></filter>
+          <filter id="fB2"  x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="2.5"/></filter>
+
+          <!-- The moving color-sweep mask + the glint band mask -->
+          <mask id="mSweep" maskUnits="userSpaceOnUse" x="-70" y="-70" width="365" height="440">
+            <g class="sweepG"><polygon fill="url(#gEdge)" points="-900,-220 0,-220 -80,540 -900,540"/></g>
+          </mask>
+          <mask id="mGlint" maskUnits="userSpaceOnUse" x="-70" y="-70" width="365" height="440">
+            <g class="glintG"><polygon fill="#fff" points="-60,-220 6,-220 -74,540 -140,540"/></g>
+          </mask>
+        </defs>
+
+        <!-- Warm light-halo copies that ride along with each stroke -->
+        <g id="bloomGold" filter="url(#fB12)" opacity=".65">
+          <g class="sL"><use href="#pL" fill="#dd9a33"/></g>
+          <g class="sR"><use href="#pR" fill="#dd9a33"/></g>
+          <g class="sD"><use href="#pD" fill="#f2b144"/></g>
+        </g>
+        <g id="bloomRed" filter="url(#fB14)" mask="url(#mSweep)" opacity="0">
+          <use href="#pL" fill="#e50914"/><use href="#pD" fill="#e50914"/><use href="#pR" fill="#e50914"/>
+        </g>
+
+        <!-- Gold strokes (the "writing" layer) -->
+        <g id="sL" class="sL"><use href="#pL" fill="url(#gGL)"/></g>
+        <g id="sR" class="sR"><use href="#pR" fill="url(#gRR)"/></g>
+        <g id="sD" class="sD"><use href="#pD" fill="url(#gGD)"/></g>
+
+        <!-- Red strokes, revealed by the sweep -->
+        <g id="redG" mask="url(#mSweep)">
+          <use href="#pL" fill="url(#gRL)"/><use href="#pR" fill="url(#gRR)"/><use href="#pD" fill="url(#gRD)"/>
+        </g>
+
+        <!-- Motion-blur halo that fades in during the zoom -->
+        <g id="zoomBlur" filter="url(#fB4)" opacity="0">
+          <use href="#pL" fill="#ff1a26"/><use href="#pD" fill="#ff1a26"/><use href="#pR" fill="#ff1a26"/>
+        </g>
+
+        <!-- White-hot glint riding the sweep -->
+        <g id="glintL" mask="url(#mGlint)" filter="url(#fB2)" opacity=".95">
+          <use href="#pL" fill="#fff"/><use href="#pD" fill="#fff"/><use href="#pR" fill="#fff"/>
+        </g>
+
+        <!-- Impact sparks get injected here -->
+        <g id="fx"></g>
+      </svg>
+    </div>
+  </div>
+
+  <button id="skipBtn">Skip intro</button>
+  <div id="whiteout" aria-hidden="true"></div>
+</div>
+
+<svg id="grain" aria-hidden="true">
+  <filter id="gF">
+    <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="2" stitchTiles="stitch"/>
+    <feColorMatrix type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  .5 .5 .5 0 0"/>
+  </filter>
+  <rect width="100%" height="100%" filter="url(#gF)"/>
+</svg>
+
+<div id="startOverlay">
+  <svg class="miniN" viewBox="0 0 225 300" aria-hidden="true">
+    <path d="M0 0h60v300H0Z" fill="#e50914"/>
+    <path d="M57 0h64l47 300h-64Z" fill="#e50914"/>
+    <path d="M165 0h60v300h-60Z" fill="#e50914"/>
+  </svg>
+  <p class="eyebrow">The opening ident — rebuilt in code</p>
+  <button id="playBtn" aria-label="Play the ident">
+    <svg viewBox="0 0 24 24"><path d="M8 5.2v13.6L19.2 12z"/></svg>
+  </button>
+  <p class="hint">Sound on &middot; every frame drawn with SVG, CSS &amp; Web Audio</p>
+</div>
+
+<div id="endOverlay">
+  <button id="replayBtn" aria-label="Replay">
+    <svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+  </button>
+  <p class="hint">Replay the ident</p>
+  <p class="keyhint">R replay &middot; S skip &middot; M mute</p>
+  <p class="credit">A fan-made recreation, drawn entirely in code &mdash; not affiliated with Netflix</p>
+</div>
+
+<button id="muteBtn" aria-label="Toggle sound">
+  <svg id="icoOn" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3z" fill="currentColor"/><path d="M16.2 8.6a4.8 4.8 0 0 1 0 6.8M18.6 6.2a8.2 8.2 0 0 1 0 11.6" stroke="currentColor" fill="none" stroke-width="1.6" stroke-linecap="round"/></svg>
+  <svg id="icoOff" viewBox="0 0 24 24" style="display:none"><path d="M3 9v6h4l5 5V4L7 9H3z" fill="currentColor"/><path d="M16 9l6 6M22 9l-6 6" stroke="currentColor" fill="none" stroke-width="1.6" stroke-linecap="round"/></svg>
+</button>
+
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const stage = $('stage'), fx = $('fx'), endOverlay = $('endOverlay'),
+        startOverlay = $('startOverlay'), SVGNS = 'http://www.w3.org/2000/svg';
+
+  /* ---------- background light-streak curtain ---------- */
+  const sk = $('streaks');
+  for (let i = 0; i < 44; i++) {
+    const s = document.createElement('i');
+    s.style.left   = (Math.random() * 100).toFixed(2) + '%';
+    s.style.top    = (Math.random() * 96).toFixed(2) + '%';
+    s.style.height = (12 + Math.random() * 38).toFixed(1) + 'vh';
+    s.style.width  = (Math.random() < .75 ? 1 : 2) + 'px';
+    s.style.animation = `flick ${(3.2 + Math.random() * 4.5).toFixed(2)}s ease-in-out ${(-Math.random() * 7).toFixed(2)}s infinite`;
+    sk.appendChild(s);
+  }
+  const rk = $('streakRush');
+  for (let i = 0; i < 16; i++) {
+    const s = document.createElement('i');
+    s.style.left = (Math.random() * 100).toFixed(2) + '%';
+    s.style.height = (20 + Math.random() * 24).toFixed(1) + 'vh';
+    s.style.animationDuration = (0.45 + Math.random() * 0.3).toFixed(2) + 's';
+    s.style.animationDelay = (Math.random() * 0.45).toFixed(2) + 's';
+    rk.appendChild(s);
+  }
+
+  /* ---------- Web Audio: the whole soundscape is synthesized ---------- */
+  let AC = null, master = null, noiseBuf = null, muted = false;
+
+  function ensureAudio() {
+    if (AC) return;
+    AC = new (window.AudioContext || window.webkitAudioContext)();
+    const comp = AC.createDynamicsCompressor();
+    comp.threshold.value = -16; comp.ratio.value = 5;
+    comp.attack.value = .003; comp.release.value = .25;
+    master = AC.createGain();
+    master.gain.value = muted ? 0 : .85;
+    master.connect(comp); comp.connect(AC.destination);
+    const len = AC.sampleRate * 2;
+    noiseBuf = AC.createBuffer(1, len, AC.sampleRate);
+    const d = noiseBuf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  }
+  const noise = (t, dur) => {
+    const s = AC.createBufferSource(); s.buffer = noiseBuf; s.loop = true;
+    s.start(t); s.stop(t + dur + .05); return s;
+  };
+  function whoosh(t, up) {                       // stroke rising / dropping
+    const s = noise(t, .4), f = AC.createBiquadFilter();
+    f.type = 'bandpass'; f.Q.value = 1.4;
+    f.frequency.setValueAtTime(up ? 260 : 1500, t);
+    f.frequency.exponentialRampToValueAtTime(up ? 1500 : 220, t + .34);
+    const g = AC.createGain();
+    g.gain.setValueAtTime(.0001, t);
+    g.gain.exponentialRampToValueAtTime(.16, t + .07);
+    g.gain.exponentialRampToValueAtTime(.0001, t + .38);
+    s.connect(f); f.connect(g);
+    if (AC.createStereoPanner) {
+      const p = AC.createStereoPanner(); p.pan.value = Math.random() * 1.2 - .6;
+      g.connect(p); p.connect(master);
+    } else g.connect(master);
+  }
+  function boom(t, { f0 = 130, f1 = 42, dur = .3, vol = .5 } = {}) {  // bass hit
+    const o = AC.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(f0, t);
+    o.frequency.exponentialRampToValueAtTime(f1, t + dur * .85);
+    const g = AC.createGain();
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + .05);
+    const s = noise(t, .08), lp = AC.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 2400;
+    const ng = AC.createGain();
+    ng.gain.setValueAtTime(.28, t);
+    ng.gain.exponentialRampToValueAtTime(.0001, t + .07);
+    s.connect(lp); lp.connect(ng); ng.connect(master);
+  }
+  function shimmer(t) {                          // sparkle during the gold->red sweep
+    const s = noise(t, .7), hp = AC.createBiquadFilter();
+    hp.type = 'highpass'; hp.frequency.value = 3800;
+    const g = AC.createGain();
+    g.gain.setValueAtTime(.0001, t);
+    g.gain.exponentialRampToValueAtTime(.09, t + .12);
+    g.gain.exponentialRampToValueAtTime(.0001, t + .62);
+    s.connect(hp); hp.connect(g); g.connect(master);
+    [2340, 3120, 4690].forEach((f, i) => {
+      const o = AC.createOscillator(); o.type = 'sine'; o.frequency.value = f;
+      const og = AC.createGain(), tt = t + .04 * i;
+      og.gain.setValueAtTime(.0001, tt);
+      og.gain.exponentialRampToValueAtTime(.045, tt + .02);
+      og.gain.exponentialRampToValueAtTime(.0001, tt + .4);
+      o.connect(og); og.connect(master); o.start(tt); o.stop(tt + .45);
+    });
+  }
+  function riser(t, dur = 1.32) {                // camera-zoom swell
+    const s = noise(t, dur), f = AC.createBiquadFilter();
+    f.type = 'bandpass'; f.Q.value = 1.6;
+    f.frequency.setValueAtTime(160, t);
+    f.frequency.exponentialRampToValueAtTime(2800, t + dur * .96);
+    const g = AC.createGain();
+    g.gain.setValueAtTime(.0001, t);
+    g.gain.exponentialRampToValueAtTime(.2, t + dur * .9);
+    g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    s.connect(f); f.connect(g); g.connect(master);
+    const o = AC.createOscillator(); o.type = 'sawtooth';
+    o.frequency.setValueAtTime(50, t);
+    o.frequency.exponentialRampToValueAtTime(210, t + dur * .95);
+    const lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900;
+    const og = AC.createGain();
+    og.gain.setValueAtTime(.0001, t);
+    og.gain.exponentialRampToValueAtTime(.05, t + dur * .9);
+    og.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    o.connect(lp); lp.connect(og); og.connect(master); o.start(t); o.stop(t + dur + .05);
+  }
+  function tudum(t) {                            // ta... dum.
+    boom(t,        { f0: 180, f1: 58, dur: .2,  vol: .75 });
+    boom(t + .26,  { f0: 150, f1: 34, dur: .62, vol: .95 });
+    const o = AC.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(46, t + .26);
+    o.frequency.exponentialRampToValueAtTime(28, t + 1.1);
+    const g = AC.createGain();
+    g.gain.setValueAtTime(.0001, t + .26);
+    g.gain.exponentialRampToValueAtTime(.32, t + .3);
+    g.gain.exponentialRampToValueAtTime(.0001, t + 1.15);
+    o.connect(g); g.connect(master); o.start(t + .26); o.stop(t + 1.2);
+  }
+
+  /* ---------- impact sparks at the diagonal landing point ---------- */
+  function sparks() {
+    const cols = ['#ffd98a', '#ffbe55', '#fff3d0', '#ff9d3d'];
+    for (let i = 0; i < 16; i++) {
+      const c = document.createElementNS(SVGNS, 'circle');
+      const ang = (-168 + Math.random() * 150) * Math.PI / 180;
+      const sp = 22 + Math.random() * 62;
+      c.setAttribute('cx', (166 + Math.random() * 8 - 4).toFixed(1));
+      c.setAttribute('cy', (296 + Math.random() * 6 - 3).toFixed(1));
+      c.setAttribute('r', (0.8 + Math.random() * 1.9).toFixed(2));
+      c.setAttribute('fill', cols[i % 4]);
+      c.style.setProperty('--sx', (Math.cos(ang) * sp).toFixed(1) + 'px');
+      c.style.setProperty('--sy', (Math.sin(ang) * sp * .7 + 30 + Math.random() * 14).toFixed(1) + 'px');
+      c.style.animation = `spark ${(0.45 + Math.random() * 0.4).toFixed(2)}s cubic-bezier(.1,.5,.45,1) both`;
+      fx.appendChild(c);
+    }
+    const r = document.createElementNS(SVGNS, 'rect');   // vertical light flash at the joint
+    r.setAttribute('x', '162'); r.setAttribute('y', '176');
+    r.setAttribute('width', '6'); r.setAttribute('height', '122');
+    r.setAttribute('fill', '#ffe6a1');
+    r.style.transformBox = 'fill-box'; r.style.transformOrigin = '50% 100%';
+    r.style.animation = 'impF .3s ease-out both';
+    fx.appendChild(r);
+  }
+
+  /* ---------- master timeline (ms from play) ---------- */
+  let timers = [];
+  const t = (ms, fn) => timers.push(setTimeout(fn, ms));
+  const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
+
+  function runTimeline() {
+    clearTimers(); fx.innerHTML = '';
+    t(450,  () => AC && whoosh(AC.currentTime, true));    // left bar rises
+    t(950,  () => AC && whoosh(AC.currentTime, false));   // diagonal drops
+    t(1300, () => { if (AC) boom(AC.currentTime, { f0: 120, f1: 40, dur: .34, vol: .5 }); sparks(); });
+    t(1600, () => AC && whoosh(AC.currentTime, true));    // right bar rises
+    t(2450, () => { if (AC) shimmer(AC.currentTime); stage.classList.add('isRed'); });
+    t(3150, () => { stage.classList.add('zooming'); AC && riser(AC.currentTime); });
+    t(4560, () => { stage.classList.add('cut'); AC && tudum(AC.currentTime); });  // hard cut
+    t(5400, () => endOverlay.classList.add('show'));
+  }
+
+  /* ---------- controls ---------- */
+  function play() {
+    if (stage.classList.contains('play')) return;
+    ensureAudio();
+    if (AC.state === 'suspended') AC.resume();
+    startOverlay.classList.add('hide');
+    stage.classList.add('play');
+    runTimeline(); idle();
+  }
+  function replay() {
+    clearTimers(); fx.innerHTML = '';
+    endOverlay.classList.remove('show');
+    stage.classList.remove('play', 'cut', 'isRed', 'zooming', 'nocur');
+    void stage.offsetWidth;                    // reflow -> all CSS animations restart
+    stage.classList.add('play');
+    runTimeline();
+  }
+  function skip() {
+    if (!stage.classList.contains('play') || stage.classList.contains('cut')) return;
+    clearTimers(); fx.innerHTML = '';
+    stage.classList.remove('play', 'isRed', 'zooming');
+    stage.classList.add('cut');
+    endOverlay.classList.add('show');
+    AC && tudum(AC.currentTime);
+  }
+  function toggleMute() {
+    muted = !muted;
+    if (master) master.gain.setTargetAtTime(muted ? 0 : .85, AC.currentTime, .015);
+    $('icoOn').style.display  = muted ? 'none'  : 'block';
+    $('icoOff').style.display = muted ? 'block' : 'none';
+  }
+
+  $('playBtn').addEventListener('click', play);
+  $('replayBtn').addEventListener('click', replay);
+  $('skipBtn').addEventListener('click', skip);
+  $('muteBtn').addEventListener('click', e => { e.stopPropagation(); toggleMute(); });
+
+  addEventListener('keydown', e => {
+    const k = e.key.toLowerCase();
+    if (k === 'm') toggleMute();
+    else if (e.key === ' ' || k === 'r') {
+      if (endOverlay.classList.contains('show')) { e.preventDefault(); replay(); }
+    } else if (k === 's' || e.key === 'Escape') skip();
+  });
+
+  /* hide the cursor while the ident plays, like a real player */
+  let idleT;
+  function idle() {
+    stage.classList.remove('nocur'); clearTimeout(idleT);
+    idleT = setTimeout(() => {
+      if (stage.classList.contains('play') && !stage.classList.contains('cut'))
+        stage.classList.add('nocur');
+    }, 1700);
+  }
+  addEventListener('mousemove', idle);
+})();
+</script>
+</body>
+</html>

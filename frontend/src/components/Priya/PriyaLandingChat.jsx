@@ -1,12 +1,29 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { Send, ArrowRight, Sparkles } from 'lucide-react';
-import PriyaAvatar from './PriyaAvatar';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+    ArrowRight,
+    ArrowUp,
+    Sparkles,
+    Code2,
+    PenTool,
+    MessageSquare,
+    Clock,
+    Camera,
+    Plus,
+    Send,
+    ChevronLeft,
+    X,
+    Bell,
+    Layers,
+    Shield,
+    Users,
+    MoreHorizontal
+} from 'lucide-react';
+// PriyaAvatar removed - using real photo now
 
-// ─── Config ───────────────────────────────────────────────────────────────────
+// ─── API Config ────────────────────────────────────────────────────────────────
 const API_URL = import.meta.env.VITE_API_URL || 'https://synapse-backend.mrpralay2005.workers.dev';
 
-// ─── Landing AI call (no auth token needed — landing page is pre-login) ──────
 const callLandingAI = async (message, history = []) => {
     try {
         const res = await fetch(`${API_URL}/api/ai/priya-landing`, {
@@ -31,6 +48,7 @@ const callLandingAI = async (message, history = []) => {
     }
 };
 
+// ─── Preset Knowledge Topics ──────────────────────────────────────────────────
 const TOPICS = [
     {
         id: 'how-to-signup',
@@ -49,7 +67,7 @@ const TOPICS = [
     {
         id: 'forgot-password',
         chip: 'I forgot my password',
-        answer: "No problem at all! 💚\n1. Tap **Welcome back**.\n2. On the login screen tap **Forgot password**.\n3. Enter your registered email — we send a one-time reset code.\n4. Enter the code and set a new password.",
+        answer: "No problem at all! 💜\n1. Tap **Welcome back**.\n2. On the login screen tap **Forgot password**.\n3. Enter your registered email — we send a one-time reset code.\n4. Enter the code and set a new password.",
         followUps: ['go-login'],
         action: { label: 'Go to Login', type: 'navigate', view: 'login' }
     },
@@ -62,7 +80,7 @@ const TOPICS = [
     {
         id: 'what-is-synapsex',
         chip: 'What is SynapseX?',
-        answer: "SynapseX is an AI-powered social platform with zero-knowledge encryption. 🔐\nYou get a social feed, Stories, direct messages and a behavioural AI layer that protects your private identity.\nCreate a free account to explore everything!",
+        answer: "SynapseX is an AI-powered social sanctuary with zero-knowledge encryption. 🔐\nYou get a fluid social feed, Stories, direct messages, and behavioral privacy.\nCreate a free account to explore everything!",
         followUps: ['how-to-signup', 'how-to-login']
     },
     {
@@ -80,16 +98,16 @@ const TOPICS = [
         action: { label: 'Log In now', type: 'navigate', view: 'login' }
     },
     {
-        id: 'username-rules',
-        chip: 'Username rules',
-        answer: "Your username is your public identity on SynapseX. 👤\n• Must be unique — no duplicates.\n• Shown with an @ in front.\n• Use letters, numbers, underscores or dots.\n• You can change it later from your profile settings.",
-        followUps: ['how-to-signup']
+        id: 'code-wizard',
+        chip: 'Code Wizard',
+        answer: "Here is a CSS snippet for a high-performance glass effect using ColorOS 17 tones:\n\n```css\n.glass-card {\n  background: rgba(139, 92, 246, 0.12);\n  backdrop-filter: blur(24px);\n  border: 1px solid rgba(255, 255, 255, 0.12);\n  box-shadow: inset 0 1px 1px rgba(255,255,255,0.2);\n}\n```\n\nNeed assistance implementing this in your project?",
+        followUps: ['what-is-synapsex', 'how-to-signup']
     },
     {
-        id: 'password-rules',
-        chip: 'Password requirements',
-        answer: "SynapseX needs a reasonably strong password. 🔐\n• Minimum 8 characters.\n• Mix of letters and numbers recommended.\n• Passwords are stored as one-way hashes — nobody can read yours.",
-        followUps: ['how-to-signup']
+        id: 'creative-copy',
+        chip: 'Creative Copy',
+        answer: "Here's a creative bio idea for your new profile:\n\n*\"Curating real moments in a digital sanctuary. Protected by zero-knowledge encryption, powered by AI.\"*\n\nWould you like me to refine this or write a story?",
+        followUps: ['how-to-signup', 'what-is-synapsex']
     }
 ];
 
@@ -123,19 +141,53 @@ const matchQuery = (raw) => {
 let seq = 0;
 const nid = () => `lc-${Date.now()}-${seq++}`;
 
-const formatRich = (text) =>
-    String(text).split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g).filter(Boolean).map((p,i) => {
+// Format rich text with markdown and code blocks
+const formatRich = (text) => {
+    // Check if contains code block
+    if (text.includes('```')) {
+        const parts = text.split(/(```[\s\S]*?```)/g);
+        return parts.map((part, i) => {
+            if (part.startsWith('```') && part.endsWith('```')) {
+                const lines = part.slice(3, -3).trim().split('\n');
+                const lang = lines[0].match(/^[a-z]+/i) ? lines[0] : '';
+                const code = lang ? lines.slice(1).join('\n') : lines.join('\n');
+                return (
+                    <div key={i} className="my-2.5 overflow-hidden rounded-xl border border-white/10 bg-[#0d0d22]/90 p-3 font-mono text-[11.5px] text-cyan-200 shadow-inner">
+                        <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-white/10 text-[9px] uppercase tracking-wider text-slate-400">
+                            <span>{lang || 'code'}</span>
+                            <span className="text-emerald-400">synapse</span>
+                        </div>
+                        <pre className="overflow-x-auto text-emerald-300">
+                            <code>{code}</code>
+                        </pre>
+                    </div>
+                );
+            }
+            return (
+                <span key={i}>
+                    {part.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g).filter(Boolean).map((p, j) => {
+                        if (p.startsWith('**') && p.endsWith('**')) return <strong key={j} className="font-extrabold text-white tracking-tight">{p.slice(2,-2)}</strong>;
+                        if (p.startsWith('*') && p.endsWith('*')) return <em key={j} className="italic text-purple-200">{p.slice(1,-1)}</em>;
+                        return p;
+                    })}
+                </span>
+            );
+        });
+    }
+
+    return String(text).split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g).filter(Boolean).map((p, i) => {
         if (p.startsWith('**') && p.endsWith('**')) return <strong key={i} className="font-extrabold text-white tracking-tight">{p.slice(2,-2)}</strong>;
-        if (p.startsWith('*')  && p.endsWith('*'))  return <em key={i} className="italic text-sky-200">{p.slice(1,-1)}</em>;
+        if (p.startsWith('*') && p.endsWith('*')) return <em key={i} className="italic text-purple-200">{p.slice(1,-1)}</em>;
         return <span key={i}>{p}</span>;
     });
+};
 
 const TypingDots = () => (
     <div className="flex items-center gap-1.5 px-1 py-1">
         {[0, 1, 2].map(i => (
             <motion.span
                 key={i}
-                className="h-2 w-2 rounded-full bg-gradient-to-r from-sky-400 to-indigo-400 shadow-[0_0_8px_#38bdf8]"
+                className="h-2 w-2 rounded-full bg-gradient-to-r from-purple-400 to-violet-400 shadow-[0_0_6px_rgba(168,85,247,0.6)]"
                 animate={{ opacity: [0.35, 1, 0.35], y: [0, -4, 0] }}
                 transition={{ duration: 1.1, delay: i * 0.18, repeat: Infinity, ease: 'easeInOut' }}
             />
@@ -143,37 +195,675 @@ const TypingDots = () => (
     </div>
 );
 
-const SuggestionGrid = ({ topics, onPick }) => (
+// ═══════════════════════════════════════════════════════════════════════════════
+// ─── SCREEN 1: GET STARTED SPLASH (Matches media_1791668907501_bedf3d5a.png) ──
+// ═══════════════════════════════════════════════════════════════════════════════
+const GetStartedScreen = ({ onStart, onClose }) => (
     <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.25, delay: 0.08 }}
-        className="flex flex-wrap gap-2 mt-1 px-0.5"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        transition={{ duration: 0.4 }}
+        className="relative flex h-full flex-col justify-between px-6 pt-5 pb-14 sm:pb-8 overflow-y-auto no-scrollbar"
+        style={{
+            paddingBottom: 'max(3.25rem, calc(env(safe-area-inset-bottom, 0px) + 2.25rem))',
+            background: 'linear-gradient(160deg, rgba(30,27,75,0.95) 0%, rgba(88,28,135,0.85) 35%, rgba(49,46,129,0.9) 70%, rgba(30,27,75,0.95) 100%)',
+        }}
     >
-        {topics.map(t => (
-            <button
-                key={t.id}
-                onClick={() => onPick(t)}
-                className="group relative overflow-hidden rounded-full border border-sky-400/30 bg-gradient-to-r from-white/[0.14] via-sky-500/[0.10] to-indigo-500/[0.10] px-3.5 py-1.5 text-[11.5px] font-semibold text-sky-200 shadow-[inset_0_1px_1px_rgba(255,255,255,0.38),0_4px_14px_-2px_rgba(0,0,0,0.35)] backdrop-blur-md transition-all active:scale-95 hover:border-sky-300/60 hover:bg-white/[0.22] hover:text-white"
+        {/* Background Ambient Bubbles (ColorOS 17 signature floating glass spheres) */}
+        <div
+            className="pointer-events-none absolute -right-14 -top-8 h-60 w-60 rounded-full"
+            style={{
+                background: 'radial-gradient(circle at 35% 35%, rgba(168,85,247,0.36), rgba(124,58,237,0.16) 50%, transparent 75%)',
+                border: '1px solid rgba(255,255,255,0.12)',
+                boxShadow: 'inset 0 -8px 24px rgba(124,58,237,0.2), 0 12px 36px -6px rgba(0,0,0,0.35)',
+            }}
+        />
+        <div
+            className="pointer-events-none absolute -left-12 top-[32%] h-44 w-44 rounded-full"
+            style={{
+                background: 'radial-gradient(circle at 40% 30%, rgba(192,132,252,0.30), rgba(147,51,234,0.12) 55%, transparent 75%)',
+                border: '1px solid rgba(255,255,255,0.10)',
+                boxShadow: 'inset 0 -6px 20px rgba(147,51,234,0.15)',
+            }}
+        />
+        <div
+            className="pointer-events-none absolute right-2 bottom-[24%] h-36 w-36 rounded-full"
+            style={{
+                background: 'radial-gradient(circle at 30% 35%, rgba(196,181,253,0.28), rgba(139,92,246,0.10) 55%, transparent)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                boxShadow: 'inset 0 -5px 16px rgba(139,92,246,0.12)',
+            }}
+        />
+
+        {/* Top Header: Badge + Close Button */}
+        <div className="relative z-10 flex items-center justify-between">
+            <div 
+                className="rounded-full px-3.5 py-1 text-[9.5px] font-bold uppercase tracking-[0.22em] text-purple-200"
+                style={{
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(168,85,247,0.08) 100%), rgba(20,20,46,0.4)',
+                    border: '1px solid rgba(255,255,255,0.18)',
+                    borderTop: '1.5px solid rgba(255,255,255,0.35)',
+                    boxShadow: 'inset 0 1px 1.5px rgba(255,255,255,0.15), 0 8px 20px -4px rgba(0,0,0,0.3)',
+                    backdropFilter: 'blur(20px)',
+                }}
             >
-                <span className="relative z-10 flex items-center gap-1.5">
-                    <Sparkles size={11} className="text-sky-300 opacity-80 group-hover:opacity-100" />
-                    {t.chip}
-                </span>
+                Next-Gen Intelligence
+            </div>
+
+            <button
+                type="button"
+                onClick={onClose}
+                aria-label="Close"
+                className="grid h-8 w-8 place-items-center rounded-full text-slate-300 transition-all active:scale-90 hover:text-white"
+                style={{
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.09), rgba(168,85,247,0.05)), rgba(18,18,42,0.5)',
+                    border: '1px solid rgba(255,255,255,0.15)',
+                    borderTop: '1.5px solid rgba(255,255,255,0.28)',
+                    boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.12), 0 6px 16px -3px rgba(0,0,0,0.3)',
+                    backdropFilter: 'blur(16px)',
+                }}
+            >
+                <X size={15} />
             </button>
-        ))}
+        </div>
+
+        {/* Centerpiece: Glowing Infinity Squircle + Title */}
+        <div className="relative z-10 flex flex-col items-center text-center my-auto py-2">
+            {/* 3D Liquid Squircle with Priya AI Avatar (Clean, no glitched circle) */}
+            <motion.div
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.15, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                className="relative mb-3 grid h-[88px] w-[88px] place-items-center rounded-[1.85rem]"
+                style={{
+                    background: 'linear-gradient(135deg, rgba(168,85,247,0.35) 0%, rgba(124,58,237,0.25) 50%, rgba(255,255,255,0.08) 100%), rgba(20,20,46,0.7)',
+                    border: '1.5px solid rgba(255,255,255,0.22)',
+                    borderTop: '2px solid rgba(255,255,255,0.45)',
+                    boxShadow: '0 20px 48px -10px rgba(168,85,247,0.5), inset 0 2px 2px rgba(255,255,255,0.4)',
+                    backdropFilter: 'blur(28px)',
+                }}
+            >
+                {/* Specular highlight */}
+                <div className="pointer-events-none absolute top-0 left-[15%] right-[15%] h-[1px] bg-gradient-to-r from-transparent via-white/70 to-transparent" />
+                
+                <img
+                    src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=200&q=80&auto=format&fit=crop"
+                    alt="Priya AI"
+                    style={{
+                        width: "100%", height: "100%",
+                        objectFit: "cover",
+                        objectPosition: "center top",
+                        filter: "saturate(1.3) brightness(0.95)",
+                        borderRadius: "1.85rem",
+                    }}
+                />
+                <div style={{ position:"absolute", inset:0, borderRadius:"1.85rem", background:"linear-gradient(to top, rgba(124,58,237,0.35) 0%, transparent 60%)", pointerEvents:"none" }} />
+            </motion.div>
+
+            {/* NEURAL. Heading with glowing violet dot */}
+            <motion.h1
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.25, duration: 0.5 }}
+                className="flex items-center justify-center text-[32px] sm:text-4xl font-black tracking-[-0.05em] text-white"
+            >
+                <span>NEURAL</span>
+                <span className="ml-1 inline-block h-2.5 w-2.5 rounded-full bg-[#c084fc] shadow-[0_0_10px_#c084fc]" />
+            </motion.h1>
+
+            {/* Subtitle */}
+            <motion.p
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.35, duration: 0.5 }}
+                className="mt-2.5 max-w-[240px] text-[12.5px] leading-relaxed text-slate-300"
+            >
+                Your personal AI companion for infinite possibilities.
+            </motion.p>
+
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.42, duration: 0.5 }}
+                className="mt-3 flex items-center gap-2.5"
+            >
+                <div className="flex -space-x-2">
+                    <div className="h-6 w-6 rounded-full border-2 border-[#121228] bg-gradient-to-br from-violet-400 to-purple-600 grid place-items-center"><Users size={11} className="text-white" /></div>
+                    <div className="h-6 w-6 rounded-full border-2 border-[#121228] bg-gradient-to-br from-sky-400 to-indigo-600 grid place-items-center"><Users size={11} className="text-white" /></div>
+                    <div className="h-6 w-6 rounded-full border-2 border-[#121228] bg-gradient-to-br from-fuchsia-400 to-pink-600 grid place-items-center"><Users size={11} className="text-white" /></div>
+                </div>
+                <span className="text-[10px] font-semibold tracking-wider text-slate-400">Trusted by 2M+ users</span>
+            </motion.div>
+        </div>
+
+        {/* Bottom CTA Row: Get Started Button (Raised up, never cut off) */}
+        <div className="relative z-10 w-full flex flex-col items-center mb-1">
+            <motion.button
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.45, duration: 0.5 }}
+                onClick={onStart}
+                className="flex w-full items-center justify-center rounded-2xl py-3.5 text-[15px] font-black tracking-tight text-[#070b24] shadow-lg transition-all hover:scale-[1.01] active:scale-[0.98]"
+                style={{
+                    background: 'linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%)',
+                    boxShadow: '0 16px 36px -6px rgba(0,0,0,0.4), inset 0 2px 2px rgba(255,255,255,0.95)',
+                }}
+            >
+                Get Started
+            </motion.button>
+        </div>
     </motion.div>
 );
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// ─── SCREEN 2: HOME DASHBOARD (Matches media_1791668907477_82f28028.png) ──────
+// ═══════════════════════════════════════════════════════════════════════════════
+const HomeScreen = ({ onStartChat, onCapabilityClick, onClose }) => {
+    return (
+        <motion.div
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -30 }}
+            transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            className="flex h-full flex-col overflow-hidden px-5 pt-4 pb-6 sm:pb-4"
+            style={{
+                paddingBottom: 'max(1.5rem, calc(env(safe-area-inset-bottom, 0px) + 1rem))',
+                background: 'linear-gradient(160deg, rgba(30,27,75,0.95) 0%, rgba(88,28,135,0.85) 35%, rgba(49,46,129,0.9) 70%, rgba(30,27,75,0.95) 100%)',
+            }}
+        >
+            {/* Top User Greeting Bar - Wrapped in Liquid Glass Box */}
+            <div className="flex items-center justify-between pb-4">
+                <div 
+                    className="flex items-center gap-3 rounded-2xl px-3.5 py-2.5 flex-1 mr-3"
+                    style={{
+                        background: 'linear-gradient(135deg, rgba(255,255,255,0.11) 0%, rgba(168,85,247,0.09) 50%, rgba(255,255,255,0.05) 100%), rgba(18,18,42,0.65)',
+                        border: '1.5px solid rgba(255,255,255,0.18)',
+                        borderTop: '2px solid rgba(255,255,255,0.35)',
+                        boxShadow: 'inset 0 1.5px 2px rgba(255,255,255,0.16), 0 10px 28px -6px rgba(0,0,0,0.4)',
+                        backdropFilter: 'blur(26px)',
+                    }}
+                >
+                    <div className="relative">
+                        <div
+                            className="grid h-11 w-11 place-items-center rounded-2xl overflow-hidden"
+                            style={{
+                                background: 'linear-gradient(135deg, rgba(168,85,247,0.28) 0%, rgba(139,92,246,0.18) 100%), rgba(20,20,46,0.5)',
+                                border: '1.5px solid rgba(168,85,247,0.35)',
+                                borderTop: '2px solid rgba(255,255,255,0.4)',
+                                boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.2), 0 8px 24px -4px rgba(168,85,247,0.4)',
+                                backdropFilter: 'blur(16px)',
+                            }}
+                        >
+                            <img
+                                src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=200&q=80&auto=format&fit=crop"
+                                alt="Priya AI"
+                                style={{
+                                    width: "100%", height: "100%",
+                                    objectFit: "cover",
+                                    objectPosition: "center top",
+                                }}
+                            />
+                        </div>
+                        <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-[#101026] bg-emerald-400 shadow-[0_0_8px_#34d399]" />
+                    </div>
+                    <div>
+                        <h3 className="text-[15px] font-black text-white tracking-tight">Hello, Robert</h3>
+                        <p className="text-[9px] font-black uppercase tracking-[0.18em] text-slate-400">
+                            Neural Assistant Active
+                        </p>
+                    </div>
+                </div>
+
+                <button
+                    type="button"
+                    onClick={onClose}
+                    aria-label="Close"
+                    className="grid h-12 w-12 place-items-center rounded-2xl text-slate-300 transition-all active:scale-90 hover:text-white"
+                    style={{
+                        background: 'linear-gradient(135deg, rgba(255,255,255,0.09), rgba(168,85,247,0.05)), rgba(18,18,42,0.5)',
+                        border: '1px solid rgba(255,255,255,0.14)',
+                        borderTop: '1.5px solid rgba(255,255,255,0.28)',
+                        boxShadow: 'inset 0 1px 1.5px rgba(255,255,255,0.12), 0 8px 20px -4px rgba(0,0,0,0.35)',
+                        backdropFilter: 'blur(20px)',
+                    }}
+                >
+                    <X size={17} />
+                </button>
+            </div>
+
+            {/* Scrollable Center Content */}
+            <div className="hide-scrollbar flex-1 space-y-4 overflow-y-auto pr-0.5 pb-2">
+                {/* 1. Large Liquid Glass Feature Card ("What can I help you create?") */}
+                <div
+                    className="relative overflow-hidden rounded-[2rem] p-6 text-left"
+                    style={{
+                        background: 'linear-gradient(142deg, rgba(168,85,247,0.22) 0%, rgba(139,92,246,0.14) 40%, rgba(99,102,241,0.08) 100%), rgba(20,20,46,0.65)',
+                        border: '1.5px solid rgba(255,255,255,0.18)',
+                        borderTop: '2px solid rgba(255,255,255,0.38)',
+                        boxShadow: 'inset 0 1.5px 2px rgba(255,255,255,0.18), 0 20px 48px -10px rgba(0,0,0,0.5)',
+                        backdropFilter: 'blur(30px)',
+                    }}
+                >
+                    <div className="pointer-events-none absolute top-0 left-[10%] right-[10%] h-[1px] bg-gradient-to-r from-transparent via-white/50 to-transparent" />
+
+                    <h2 className="text-[26px] font-black leading-[1.12] tracking-[-0.035em] text-white">
+                        What can I<br />help you create?
+                    </h2>
+
+                    <p className="mt-2.5 max-w-[240px] text-[12.5px] leading-relaxed text-slate-300">
+                        I'm your creative partner for code, writing, and analysis.
+                    </p>
+                </div>
+
+                {/* 2. CAPABILITIES Section */}
+                <div>
+                    <div className="flex items-center justify-between pb-2 px-1">
+                        <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+                            Capabilities
+                        </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2.5">
+                        {/* Capability 1: Sign Up */}
+                        <button
+                            type="button"
+                            onClick={() => onCapabilityClick('how-to-signup')}
+                            className="group relative overflow-hidden rounded-[1.6rem] p-4 text-left transition-all active:scale-[0.97]"
+                            style={{
+                                background: 'linear-gradient(145deg, rgba(255,255,255,0.08) 0%, rgba(168,85,247,0.08) 50%, rgba(255,255,255,0.02) 100%), rgba(18,18,40,0.55)',
+                                border: '1px solid rgba(255,255,255,0.12)',
+                                borderTop: '1.5px solid rgba(255,255,255,0.22)',
+                                boxShadow: 'inset 0 1px 1.5px rgba(255,255,255,0.1), 0 10px 28px -6px rgba(0,0,0,0.4)',
+                                backdropFilter: 'blur(20px)',
+                            }}
+                        >
+                            <div className="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-purple-500/35 to-violet-600/35 border border-purple-400/30 text-purple-300 mb-3">
+                                <Users size={18} strokeWidth={2.4} />
+                            </div>
+                            <p className="text-[12.5px] font-black text-white tracking-tight">Sign Up</p>
+                            <p className="mt-0.5 text-[9.5px] text-slate-400">Create Account</p>
+                        </button>
+
+                        {/* Capability 2: Log In */}
+                        <button
+                            type="button"
+                            onClick={() => onCapabilityClick('how-to-login')}
+                            className="group relative overflow-hidden rounded-[1.6rem] p-4 text-left transition-all active:scale-[0.97]"
+                            style={{
+                                background: 'linear-gradient(145deg, rgba(255,255,255,0.08) 0%, rgba(59,130,246,0.08) 50%, rgba(255,255,255,0.02) 100%), rgba(18,18,40,0.55)',
+                                border: '1px solid rgba(255,255,255,0.12)',
+                                borderTop: '1.5px solid rgba(255,255,255,0.22)',
+                                boxShadow: 'inset 0 1px 1.5px rgba(255,255,255,0.1), 0 10px 28px -6px rgba(0,0,0,0.4)',
+                                backdropFilter: 'blur(20px)',
+                            }}
+                        >
+                            <div className="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-blue-500/35 to-indigo-600/35 border border-blue-400/30 text-blue-300 mb-3">
+                                <Shield size={17} strokeWidth={2.4} />
+                            </div>
+                            <p className="text-[12.5px] font-black text-white tracking-tight">Log In</p>
+                            <p className="mt-0.5 text-[9.5px] text-slate-400">Welcome Back</p>
+                        </button>
+                    </div>
+                </div>
+
+                {/* 3. QUICK SHORTCUTS Section */}
+                <div>
+                    <div className="flex items-center justify-between pb-2 px-1">
+                        <span className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
+                            Quick Shortcuts
+                        </span>
+                    </div>
+
+                    <div className="space-y-2">
+                        {/* What is Nexus shortcut */}
+                        <button
+                            type="button"
+                            onClick={() => onStartChat('what-is-synapsex')}
+                            className="flex w-full items-center gap-3 rounded-2xl p-3.5 text-left transition-all active:scale-[0.98]"
+                            style={{
+                                background: 'linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(168,85,247,0.08) 50%, rgba(255,255,255,0.04) 100%), rgba(18,18,42,0.65)',
+                                border: '1.5px solid rgba(255,255,255,0.16)',
+                                borderTop: '2px solid rgba(255,255,255,0.32)',
+                                boxShadow: 'inset 0 1px 1.5px rgba(255,255,255,0.14), 0 10px 28px -6px rgba(0,0,0,0.45)',
+                                backdropFilter: 'blur(24px)',
+                            }}
+                        >
+                            <div 
+                                className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-purple-300"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(168,85,247,0.25), rgba(124,58,237,0.15))',
+                                    border: '1px solid rgba(168,85,247,0.35)',
+                                    boxShadow: '0 4px 12px rgba(168,85,247,0.3)',
+                                }}
+                            >
+                                <Layers size={16} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <p className="text-[12px] font-bold text-white">What is Nexus?</p>
+                                <p className="text-[10px] text-slate-400 truncate">Learn about our platform</p>
+                            </div>
+                        </button>
+
+                        {/* Forgot Password shortcut */}
+                        <button
+                            type="button"
+                            onClick={() => onStartChat('forgot-password')}
+                            className="flex w-full items-center gap-3 rounded-2xl p-3.5 text-left transition-all active:scale-[0.98]"
+                            style={{
+                                background: 'linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(59,130,246,0.08) 50%, rgba(255,255,255,0.04) 100%), rgba(18,18,42,0.65)',
+                                border: '1.5px solid rgba(255,255,255,0.16)',
+                                borderTop: '2px solid rgba(255,255,255,0.32)',
+                                boxShadow: 'inset 0 1px 1.5px rgba(255,255,255,0.14), 0 10px 28px -6px rgba(0,0,0,0.45)',
+                                backdropFilter: 'blur(24px)',
+                            }}
+                        >
+                            <div 
+                                className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-blue-300"
+                                style={{
+                                    background: 'linear-gradient(135deg, rgba(59,130,246,0.25), rgba(37,99,235,0.15))',
+                                    border: '1px solid rgba(59,130,246,0.35)',
+                                    boxShadow: '0 4px 12px rgba(59,130,246,0.3)',
+                                }}
+                            >
+                                <Shield size={16} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                                <p className="text-[12px] font-bold text-white">Forgot Password?</p>
+                                <p className="text-[10px] text-slate-400 truncate">Reset your account</p>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                {/* Bottom CTA Button: Start Chatting (moved inside scrollable area) */}
+                <div className="pt-2 pb-4">
+                    <button
+                        type="button"
+                        onClick={() => onStartChat()}
+                        className="flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-[15px] font-black tracking-tight text-[#070b24] shadow-lg transition-all hover:scale-[1.01] active:scale-[0.98]"
+                        style={{
+                            background: 'linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%)',
+                            boxShadow: '0 16px 36px -6px rgba(0,0,0,0.4), inset 0 2px 2px rgba(255,255,255,0.95)',
+                        }}
+                    >
+                        <Sparkles size={16} className="text-purple-600" />
+                        <span>Start Chatting</span>
+                    </button>
+                </div>
+            </div>
+        </motion.div>
+    );
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ─── SCREEN 3: CHAT SCREEN (Matches media_1791668907536_e1b977ed.png) ─────────
+// ═══════════════════════════════════════════════════════════════════════════════
+const ChatScreen = ({
+    messages,
+    isTyping,
+    input,
+    setInput,
+    handleSubmit,
+    handleChipClick,
+    handleAction,
+    onBack,
+    onClose,
+    inputRef,
+    scrollRef
+}) => (
+    <motion.div
+        initial={{ opacity: 0, x: 30 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: -30 }}
+        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+        className="relative flex h-full flex-col overflow-hidden px-4 pt-3 pb-20 sm:pb-16"
+        style={{
+            paddingBottom: 'max(5rem, calc(env(safe-area-inset-bottom, 0px) + 3.5rem))',
+            background: 'linear-gradient(160deg, rgba(30,27,75,0.95) 0%, rgba(88,28,135,0.85) 35%, rgba(49,46,129,0.9) 70%, rgba(30,27,75,0.95) 100%)',
+        }}
+    >
+        {/* Top Chat Header Bar (< Neural Assistant ONLINE •••) */}
+        <div className="flex items-center justify-between pb-3">
+            <button
+                type="button"
+                onClick={onBack}
+                aria-label="Back to home"
+                className="grid h-9 w-9 place-items-center rounded-2xl text-slate-200 transition-all active:scale-90 hover:text-white"
+                style={{
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.10), rgba(168,85,247,0.06)), rgba(18,18,42,0.55)',
+                    border: '1.5px solid rgba(255,255,255,0.18)',
+                    borderTop: '2px solid rgba(255,255,255,0.32)',
+                    boxShadow: 'inset 0 1px 1.5px rgba(255,255,255,0.15), 0 8px 20px -4px rgba(0,0,0,0.4)',
+                    backdropFilter: 'blur(22px)',
+                }}
+            >
+                <ChevronLeft size={18} strokeWidth={2.4} />
+            </button>
+
+            <div 
+                className="text-center px-8 py-1 rounded-2xl"
+                style={{
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.11) 0%, rgba(168,85,247,0.09) 50%, rgba(255,255,255,0.05) 100%), rgba(18,18,42,0.65)',
+                    border: '1.5px solid rgba(255,255,255,0.18)',
+                    borderTop: '2px solid rgba(255,255,255,0.35)',
+                    boxShadow: 'inset 0 1.5px 2px rgba(255,255,255,0.16), 0 10px 28px -6px rgba(0,0,0,0.4)',
+                    backdropFilter: 'blur(26px)',
+                }}
+            >
+                <p className="text-[13px] font-black text-white tracking-tight">Neural Assistant</p>
+                <p className="flex items-center justify-center gap-1.5 text-[9px] font-bold text-emerald-400 uppercase tracking-widest">
+                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399]" />
+                    ONLINE
+                </p>
+            </div>
+
+            <button
+                type="button"
+                onClick={onClose}
+                aria-label="Options or Close"
+                className="grid h-9 w-9 place-items-center rounded-2xl text-slate-200 transition-all active:scale-90 hover:text-white"
+                style={{
+                    background: 'linear-gradient(135deg, rgba(255,255,255,0.10), rgba(168,85,247,0.06)), rgba(18,18,42,0.55)',
+                    border: '1.5px solid rgba(255,255,255,0.18)',
+                    borderTop: '2px solid rgba(255,255,255,0.32)',
+                    boxShadow: 'inset 0 1px 1.5px rgba(255,255,255,0.15), 0 8px 20px -4px rgba(0,0,0,0.4)',
+                    backdropFilter: 'blur(22px)',
+                }}
+            >
+                <X size={15} strokeWidth={2.4} />
+            </button>
+        </div>
+
+        {/* Message Stream */}
+        <div ref={scrollRef} className="hide-scrollbar flex-1 space-y-4 overflow-y-auto px-1 py-2">
+            {messages.map(msg => {
+                const isPriya = msg.role === 'priya';
+                return (
+                    <motion.div
+                        key={msg.id}
+                        initial={{ opacity: 0, y: 10, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+                        className="w-full"
+                    >
+                        {isPriya ? (
+                            <div className="flex flex-col gap-2 w-full">
+                                {/* AI Assistant tag */}
+                                <div className="flex items-center gap-1.5 pl-1">
+                                    <div 
+                                        className="grid h-4 w-4 place-items-center rounded text-[9px] text-purple-200 font-bold"
+                                        style={{
+                                            background: 'linear-gradient(135deg, rgba(168,85,247,0.30), rgba(124,58,237,0.20))',
+                                            border: '1px solid rgba(168,85,247,0.4)',
+                                            boxShadow: '0 2px 8px rgba(168,85,247,0.25)',
+                                        }}
+                                    >
+                                        AI
+                                    </div>
+                                    <span className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400">
+                                        AI ASSISTANT
+                                    </span>
+                                </div>
+
+                                {/* Liquid Glass Message Card */}
+                                <div
+                                    className="relative w-full rounded-[1.6rem] p-4 text-[13px] leading-relaxed text-slate-200"
+                                    style={{
+                                        background: 'linear-gradient(142deg, rgba(255,255,255,0.11) 0%, rgba(168,85,247,0.08) 50%, rgba(255,255,255,0.03) 100%), rgba(18,18,42,0.65)',
+                                        border: '1px solid rgba(255,255,255,0.14)',
+                                        borderTop: '1.8px solid rgba(255,255,255,0.28)',
+                                        boxShadow: 'inset 0 1px 1.5px rgba(255,255,255,0.12), 0 12px 28px -6px rgba(0,0,0,0.45)',
+                                        backdropFilter: 'blur(24px)',
+                                    }}
+                                >
+                                    <div className="pointer-events-none absolute top-0 left-[8%] right-[8%] h-[0.5px] bg-gradient-to-r from-transparent via-white/40 to-transparent" />
+                                    <div>{formatRich(msg.text)}</div>
+
+                                    {/* Action button inside Priya message */}
+                                    {msg.action && (
+                                        <button
+                                            type="button"
+                                            onClick={() => handleAction(msg.action)}
+                                            className="mt-3.5 inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-[11px] font-black uppercase tracking-wider text-white transition-all hover:scale-[1.02] active:scale-95"
+                                            style={{
+                                                background: 'linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)',
+                                                boxShadow: '0 8px 20px -4px rgba(168,85,247,0.45), inset 0 1px 1px rgba(255,255,255,0.25)',
+                                            }}
+                                        >
+                                            <span>{msg.action.label}</span>
+                                            <ArrowRight size={13} strokeWidth={2.6} />
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Suggestion Chips */}
+                                {msg.chips?.length > 0 && (
+                                    <div className="flex flex-wrap gap-2 mt-0.5 px-0.5">
+                                        {msg.chips.map(t => (
+                                            <button
+                                                key={t.id}
+                                                onClick={() => handleChipClick(t)}
+                                                className="group rounded-full px-3.5 py-1.5 text-[11px] font-semibold text-purple-200 transition-all active:scale-95 hover:text-white"
+                                                style={{
+                                                    background: 'linear-gradient(135deg, rgba(168,85,247,0.18) 0%, rgba(124,58,237,0.12) 100%), rgba(20,20,46,0.4)',
+                                                    border: '1px solid rgba(168,85,247,0.35)',
+                                                    boxShadow: '0 4px 12px rgba(168,85,247,0.2)',
+                                                    backdropFilter: 'blur(16px)',
+                                                }}
+                                            >
+                                                <span className="flex items-center gap-1.5">
+                                                    <Sparkles size={10} className="text-purple-300 opacity-80" />
+                                                    {t.chip}
+                                                </span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-end w-full">
+                                {/* Solid White Message Bubble with Dark Text */}
+                                <div
+                                    className="relative max-w-[84%] rounded-[1.4rem] px-4 py-3 text-[13px] font-semibold leading-relaxed text-[#101428]"
+                                    style={{
+                                        background: '#ffffff',
+                                        boxShadow: '0 8px 24px -4px rgba(0,0,0,0.3), inset 0 1px 1px rgba(255,255,255,0.95)',
+                                    }}
+                                >
+                                    <p className="whitespace-pre-line break-words">{msg.text}</p>
+                                </div>
+                                <span className="mt-1 mr-1 text-[9px] text-slate-400">12:42 PM</span>
+                            </div>
+                        )}
+                    </motion.div>
+                );
+            })}
+
+            {/* Typing Indicator */}
+            {isTyping && (
+                <motion.div
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-2"
+                >
+                    <div 
+                        className="grid h-4 w-4 place-items-center rounded text-[9px] text-purple-200 font-bold"
+                        style={{
+                            background: 'linear-gradient(135deg, rgba(168,85,247,0.30), rgba(124,58,237,0.20))',
+                            border: '1px solid rgba(168,85,247,0.4)',
+                            boxShadow: '0 2px 8px rgba(168,85,247,0.25)',
+                        }}
+                    >
+                        AI
+                    </div>
+                    <div
+                        className="rounded-2xl px-4 py-2"
+                        style={{
+                            background: 'rgba(255,255,255,0.06)',
+                            border: '1px solid rgba(255,255,255,0.12)',
+                            backdropFilter: 'blur(16px)',
+                        }}
+                    >
+                        <TypingDots />
+                    </div>
+                </motion.div>
+            )}
+        </div>
+
+        {/* Bottom Composer Dock ((+) Message assistant... >) */}
+        <form
+            onSubmit={handleSubmit}
+            className="absolute bottom-0 left-0 right-0 mx-4 mb-16 flex items-center gap-2 rounded-full px-3.5 py-1.5"
+            style={{
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(168,85,247,0.10) 50%, rgba(255,255,255,0.06) 100%), rgba(18,18,42,0.75)',
+                border: '1.8px solid rgba(255,255,255,0.20)',
+                borderTop: '2.5px solid rgba(255,255,255,0.40)',
+                boxShadow: 'inset 0 2px 3px rgba(255,255,255,0.18), 0 12px 32px -6px rgba(0,0,0,0.5)',
+                backdropFilter: 'blur(28px)',
+            }}
+        >
+            <div className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-slate-400 hover:text-white">
+                <Plus size={16} />
+            </div>
+
+            <input
+                ref={inputRef}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="Message assistant..."
+                className="min-w-0 flex-1 bg-transparent px-1 py-2 text-[13px] font-medium text-white placeholder:text-slate-400 outline-none"
+            />
+
+            <button
+                type="submit"
+                disabled={!input.trim() || isTyping}
+                aria-label="Send message"
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-full transition-all hover:scale-105 active:scale-90 disabled:opacity-35"
+                style={{
+                    background: input.trim() && !isTyping
+                        ? 'linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)'
+                        : 'rgba(255,255,255,0.1)',
+                    boxShadow: input.trim() && !isTyping
+                        ? '0 4px 16px rgba(168,85,247,0.5)'
+                        : 'none',
+                }}
+            >
+                <Send size={14} className="text-white ml-0.5" />
+            </button>
+        </form>
+    </motion.div>
+);
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ─── MAIN CONTROLLER COMPONENT ────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
 const PriyaLandingChat = ({ onClose, onNavigate }) => {
     const defaultChips = DEFAULT_CHIPS.map(id => TOPICS.find(t => t.id === id)).filter(Boolean);
 
-    const [messages, setMessages] = useState([{
-        id: nid(),
-        role: 'priya',
-        text: "Hi! I'm Priya 💚\nI can help you **sign up** or **log in** to SynapseX.\nWhat would you like to do?",
-        chips: defaultChips
-    }]);
+    // State flow: 'splash' -> 'home' -> 'chat'
+    const [view, setView] = useState('splash');
+    const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
 
@@ -194,78 +884,116 @@ const PriyaLandingChat = ({ onClose, onNavigate }) => {
         if (node) node.scrollTop = node.scrollHeight;
     }, [messages, isTyping]);
 
-    useEffect(() => { setTimeout(() => inputRef.current?.focus(), 400); }, []);
+    useEffect(() => {
+        if (view === 'chat') {
+            setTimeout(() => inputRef.current?.focus(), 300);
+        }
+    }, [view]);
+
+    const startChat = (initialTopic, prompt) => {
+        const introMsg = {
+            id: nid(),
+            role: 'priya',
+            text: "Hello Robert! I've analyzed your request for a glassmorphism design. Would you like me to generate some color palettes that complement the frosted glass effect?",
+            chips: defaultChips
+        };
+
+        const initialMsgs = [introMsg];
+
+        if (prompt) {
+            initialMsgs.push({
+                id: nid(),
+                role: 'user',
+                text: prompt
+            });
+        }
+
+        setMessages(initialMsgs);
+        setView('chat');
+
+        if (prompt) {
+            setIsTyping(true);
+            const topic = matchQuery(prompt);
+            schedule(() => {
+                setIsTyping(false);
+                if (topic.type === 'topic') {
+                    setMessages(prev => [...prev, {
+                        id: nid(),
+                        role: 'priya',
+                        text: topic.topic.answer,
+                        chips: defaultChips,
+                        action: topic.topic.action
+                    }]);
+                } else {
+                    callLandingAI(prompt, initialMsgs).then(aiReply => {
+                        setMessages(prev => [...prev, {
+                            id: nid(),
+                            role: 'priya',
+                            text: aiReply || "Great choice! Here is a CSS snippet for a high-performance glass effect using those tones:\n\n```css\n.glass-card {\n  background: rgba(139, 92, 246, 0.12);\n  backdrop-filter: blur(24px);\n  border: 1px solid rgba(255, 255, 255, 0.12);\n}\n```",
+                            chips: defaultChips
+                        }]);
+                    });
+                }
+            }, 500);
+            return;
+        }
+
+        if (initialTopic) {
+            schedule(() => {
+                const topic = TOPICS.find(t => t.id === initialTopic);
+                if (topic) {
+                    setMessages(prev => [...prev, { id: nid(), role: 'user', text: topic.chip }]);
+                    replyTopic(topic);
+                }
+            }, 300);
+        }
+    };
 
     const replyTopic = (topic) => {
         setIsTyping(true);
-        const followUpChips = (topic.followUps || []).map(id => TOPICS.find(t => t.id === id)).filter(Boolean);
         schedule(() => {
             setIsTyping(false);
+            const followChips = (topic.followUps || [])
+                .map(id => TOPICS.find(t => t.id === id))
+                .filter(Boolean);
             setMessages(prev => [...prev, {
                 id: nid(),
                 role: 'priya',
                 text: topic.answer,
-                action: topic.action || null,
-                chips: followUpChips
+                chips: followChips.length ? followChips : defaultChips,
+                action: topic.action
             }]);
-        }, 550 + Math.random() * 320);
-    };
-
-    const clearLastChips = (prev) => {
-        const upd = [...prev];
-        for (let i = upd.length - 1; i >= 0; i--) {
-            if (upd[i].chips?.length) { upd[i] = { ...upd[i], chips: [] }; break; }
-        }
-        return upd;
+        }, 550);
     };
 
     const handleChipClick = (topic) => {
-        setMessages(prev => [...clearLastChips(prev), { id: nid(), role: 'user', text: topic.chip }]);
+        setMessages(prev => [...prev, { id: nid(), role: 'user', text: topic.chip }]);
         replyTopic(topic);
     };
 
-    const handleSubmit = async (e) => {
-        e?.preventDefault();
-        const text = input.trim();
-        if (!text || isTyping) return;
-        setInput('');
-        setMessages(prev => [...clearLastChips(prev), { id: nid(), role: 'user', text }]);
+    const handleCapabilityClick = (capId) => {
+        startChat(capId);
+    };
 
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        const text = input.trim();
+        if (!text) return;
+        setInput('');
+        setMessages(prev => [...prev, { id: nid(), role: 'user', text }]);
         setIsTyping(true);
 
-        // Try real AI first
-        const historySnapshot = messages.slice(-4);
-        const aiReply = await callLandingAI(text, historySnapshot);
-
-        if (aiReply) {
-            setIsTyping(false);
-            setMessages(prev => [...prev, { id: nid(), role: 'priya', text: aiReply }]);
-            return;
-        }
-
-        // AI unavailable → keyword fallback
         const result = matchQuery(text);
-
         if (result.type === 'topic') {
-            const followUpChips = (result.topic.followUps || []).map(id => TOPICS.find(t => t.id === id)).filter(Boolean);
-            schedule(() => {
-                setIsTyping(false);
-                setMessages(prev => [...prev, {
-                    id: nid(),
-                    role: 'priya',
-                    text: result.topic.answer,
-                    action: result.topic.action || null,
-                    chips: followUpChips
-                }]);
-            }, 400);
+            replyTopic(result.topic);
             return;
         }
 
         if (result.type === 'smalltalk') {
             const replies = {
-                greetings: "Hello! 💚 I'm here to help you sign up or log in to SynapseX. What do you need?",
-                thanks:    "You're welcome! 💚 Let me know if you need anything else.",
-                farewell:  "Take care! 💚 Come back anytime you need help."
+                greetings: "Hello Robert! 💜 I'm here to assist you with design, coding, or getting started with SynapseX.",
+                thanks:    "You're very welcome! 💜 Let me know if you need more CSS styles or guidance.",
+                farewell:  "Take care! 💜 Come back whenever you need creative assistance."
             };
             schedule(() => {
                 setIsTyping(false);
@@ -274,15 +1002,22 @@ const PriyaLandingChat = ({ onClose, onNavigate }) => {
             return;
         }
 
-        schedule(() => {
-            setIsTyping(false);
-            setMessages(prev => [...prev, {
-                id: nid(),
-                role: 'priya',
-                text: "I'm only trained to help with sign-up and login here. 😊\nTry one of these:",
-                chips: defaultChips
-            }]);
-        }, 400);
+        // Try AI call, fallback to contextual design code response
+        callLandingAI(text, messages).then(aiReply => {
+            schedule(() => {
+                setIsTyping(false);
+                if (aiReply) {
+                    setMessages(prev => [...prev, { id: nid(), role: 'priya', text: aiReply, chips: defaultChips }]);
+                } else {
+                    setMessages(prev => [...prev, {
+                        id: nid(),
+                        role: 'priya',
+                        text: "Great choice! Here is a CSS snippet for a high-performance glass effect using those tones:\n\n```css\n.glass-card {\n  background: rgba(139, 92, 246, 0.1);\n  backdrop-filter: blur(24px);\n  border: 1px solid rgba(255, 255, 255, 0.1);\n}\n```",
+                        chips: defaultChips
+                    }]);
+                }
+            }, 350);
+        });
     };
 
     const handleAction = (action) => {
@@ -292,140 +1027,40 @@ const PriyaLandingChat = ({ onClose, onNavigate }) => {
     };
 
     return (
-        <div className="flex h-full flex-col bg-transparent px-3.5 pb-2">
-            {/* ── Centerpiece: Floating Liquid Glass Main Box (ColorOS 17 Aquamorphic) ── */}
-            <div
-                className="relative flex-1 min-h-0 flex flex-col rounded-[28px] overflow-hidden"
-                style={{
-                    background: 'linear-gradient(142deg, rgba(255,255,255,0.18) 0%, rgba(147,197,253,0.09) 35%, rgba(168,85,247,0.07) 70%, rgba(255,255,255,0.02) 100%), rgba(9,13,38,0.60)',
-                    border: '1.5px solid rgba(255, 255, 255, 0.30)',
-                    borderTop: '2.2px solid rgba(255, 255, 255, 0.80)',
-                    borderLeft: '1.8px solid rgba(255, 255, 255, 0.55)',
-                    boxShadow: 'inset 0 2px 2px 0 rgba(255, 255, 255, 0.62), inset 0 -2px 3px 0 rgba(125, 211, 252, 0.25), 0 24px 50px -10px rgba(0, 0, 0, 0.75), 0 0 35px -5px rgba(56, 189, 248, 0.22)',
-                    backdropFilter: 'blur(32px) saturate(220%)',
-                    WebkitBackdropFilter: 'blur(32px) saturate(220%)',
-                }}
-            >
-                {/* Top specular reflection shimmer */}
-                <div style={{ position: 'absolute', top: 0, left: '8%', right: '8%', height: '1.5px', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.9), transparent)', filter: 'drop-shadow(0 0 6px rgba(125,211,252,0.8))', pointerEvents: 'none' }} />
-
-                {/* Main Box Header Strip */}
-                <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.08] shrink-0 bg-white/[0.02]">
-                    <div className="flex items-center gap-2">
-                        <span className="relative flex h-2 w-2">
-                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-cyan-400 opacity-75" />
-                            <span className="relative inline-flex h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_8px_#38bdf8]" />
-                        </span>
-                        <span className="text-[10px] font-black uppercase tracking-[0.16em] text-cyan-200">Fluid AI Channel</span>
-                    </div>
-                    <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/10 border border-white/20 text-[9.5px] font-bold text-slate-300">
-                        <Sparkles size={10} className="text-cyan-300" />
-                        <span>ColorOS 17 Engine</span>
-                    </div>
-                </div>
-
-                {/* Conversation Feed inside Floating Main Box */}
-                <div ref={scrollRef} className="hide-scrollbar flex-1 space-y-3.5 overflow-y-auto p-3.5">
-                    {messages.map(msg => {
-                        const isPriya = msg.role === 'priya';
-                        return (
-                            <motion.div
-                                key={msg.id}
-                                initial={{ opacity: 0, y: 12, scale: 0.98 }}
-                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-                                className="w-full"
-                            >
-                                {isPriya ? (
-                                    <div className="flex flex-col gap-2.5 w-full">
-                                        {/* Priya Message Floating Card */}
-                                        <div
-                                            className="relative w-full rounded-[22px] border-[1.5px] border-white/35 border-t-white/80 border-l-white/60 bg-gradient-to-br from-white/[0.22] via-sky-300/[0.10] to-indigo-950/[0.35] p-3.5 text-[13.5px] leading-relaxed text-slate-100 shadow-[inset_0_2px_2px_rgba(255,255,255,0.68),inset_0_-1.5px_2px_rgba(125,211,252,0.25),0_12px_28px_-6px_rgba(0,0,0,0.55)] backdrop-blur-2xl"
-                                        >
-                                            <div className="flex items-center gap-2 mb-2 pb-2 border-b border-white/[0.08]">
-                                                <div style={{ width:24, height:24, borderRadius:'50%', overflow:'hidden', border:'1.5px solid rgba(168,85,247,0.5)', flexShrink:0 }}>
-                                                    <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=80&q=80&auto=format&fit=crop" alt="Priya" style={{ width:'100%', height:'100%', objectFit:'cover', filter:'saturate(1.3)' }} />
-                                                </div>
-                                                <span className="text-[11px] font-extrabold text-white tracking-tight">Priya Assistant</span>
-                                                <span className="ml-auto text-[9px] font-bold uppercase tracking-wider text-sky-300 bg-sky-400/15 border border-sky-400/30 px-2 py-0.5 rounded-full">AI Guide</span>
-                                            </div>
-                                            <p className="whitespace-pre-line break-words">{formatRich(msg.text)}</p>
-
-                                            {/* Action Button inside Priya message */}
-                                            {msg.action && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleAction(msg.action)}
-                                                    className="mt-3 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-sky-400 via-indigo-400 to-purple-400 px-4 py-2 text-[11.5px] font-black uppercase tracking-wider text-[#060922] shadow-[0_8px_24px_rgba(56,189,248,0.45),inset_0_1.5px_1px_rgba(255,255,255,0.9)] transition-all hover:scale-[1.03] active:scale-95"
-                                                >
-                                                    <span>{msg.action.label}</span>
-                                                    <ArrowRight size={13} strokeWidth={2.6} />
-                                                </button>
-                                            )}
-                                        </div>
-
-                                        {/* Suggestion Chips */}
-                                        {msg.chips?.length > 0 && (
-                                            <SuggestionGrid topics={msg.chips} onPick={handleChipClick} />
-                                        )}
-                                    </div>
-                                ) : (
-                                    <div className="flex justify-end w-full">
-                                        <div className="relative max-w-[85%] rounded-[20px] bg-gradient-to-r from-[#f0f9ff] via-[#7dd3fc] to-[#c084fc] px-4 py-2.5 text-[13.5px] font-bold leading-relaxed text-[#060924] shadow-[0_12px_28px_-4px_rgba(56,189,248,0.5),inset_0_2px_1.5px_rgba(255,255,255,0.98)]">
-                                            <p className="whitespace-pre-line break-words">{msg.text}</p>
-                                        </div>
-                                    </div>
-                                )}
-                            </motion.div>
-                        );
-                    })}
-
-                    {/* Typing Indicator */}
-                    {isTyping && (
-                        <motion.div
-                            initial={{ opacity: 0, y: 6 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="flex items-center gap-2.5 pl-0.5"
-                        >
-                            <div style={{ width:28, height:28, borderRadius:'50%', overflow:'hidden', border:'1.5px solid rgba(168,85,247,0.5)', boxShadow:'0 0 10px rgba(168,85,247,0.35)', flexShrink:0 }}>
-                                <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=80&q=80&auto=format&fit=crop" alt="Priya" style={{ width:'100%', height:'100%', objectFit:'cover', filter:'saturate(1.3)' }} />
-                            </div>
-                            <div className="rounded-[1.2rem] border-[1.5px] border-white/30 border-t-white/70 bg-gradient-to-br from-white/[0.22] to-sky-900/[0.25] px-3.5 py-2 shadow-[inset_0_1.5px_1px_rgba(255,255,255,0.55),0_12px_28px_-8px_rgba(0,0,0,0.5)] backdrop-blur-2xl">
-                                <TypingDots />
-                            </div>
-                        </motion.div>
-                    )}
-                </div>
-            </div>
-
-            {/* ── Floating Liquid Glass Composer (Trough style like reference Login inputs) ── */}
-            <div className="shrink-0 mt-2.5 mb-1 pb-[env(safe-area-inset-bottom,0px)]">
-                <form
-                    onSubmit={handleSubmit}
-                    className="relative flex items-center gap-2 rounded-full border-[1.5px] border-white/32 border-t-white/80 border-l-white/60 bg-gradient-to-r from-white/[0.22] via-sky-500/[0.10] to-indigo-900/[0.35] p-1.5 shadow-[inset_0_2px_2px_rgba(255,255,255,0.60),inset_0_-1.5px_2px_rgba(99,102,241,0.25),0_20px_45px_-10px_rgba(0,0,0,0.75),0_0_25px_-2px_rgba(56,189,248,0.28)] backdrop-blur-3xl"
-                >
-                    <input
-                        ref={inputRef}
-                        value={input}
-                        onChange={e => setInput(e.target.value)}
-                        placeholder="Ask Priya about sign up or login..."
-                        className="min-w-0 flex-1 bg-transparent px-4 py-2 text-[13px] text-white outline-none placeholder:text-slate-300 font-medium"
+        <div className="flex h-full flex-col bg-transparent">
+            <AnimatePresence mode="wait">
+                {view === 'splash' && (
+                    <GetStartedScreen
+                        key="splash"
+                        onStart={() => setView('home')}
+                        onClose={onClose}
                     />
-
-                    <button
-                        type="submit"
-                        disabled={!input.trim() || isTyping}
-                        aria-label="Send"
-                        className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-gradient-to-r from-[#f0f9ff] via-[#7dd3fc] to-[#a855f7] text-[#06081e] shadow-[0_8px_20px_rgba(56,189,248,0.5),inset_0_1.5px_1px_rgba(255,255,255,0.95)] transition-all hover:scale-105 active:scale-90 disabled:opacity-30 disabled:scale-100"
-                    >
-                        <Send size={15} strokeWidth={2.6} />
-                    </button>
-                </form>
-
-                <p className="mt-1 text-center text-[8.5px] font-semibold tracking-wider text-slate-400/80">
-                    Priya Neural Guide • ColorOS 17 Liquid Glass
-                </p>
-            </div>
+                )}
+                {view === 'home' && (
+                    <HomeScreen
+                        key="home"
+                        onStartChat={startChat}
+                        onCapabilityClick={handleCapabilityClick}
+                        onClose={onClose}
+                    />
+                )}
+                {view === 'chat' && (
+                    <ChatScreen
+                        key="chat"
+                        messages={messages}
+                        isTyping={isTyping}
+                        input={input}
+                        setInput={setInput}
+                        handleSubmit={handleSubmit}
+                        handleChipClick={handleChipClick}
+                        handleAction={handleAction}
+                        onBack={() => setView('home')}
+                        onClose={onClose}
+                        inputRef={inputRef}
+                        scrollRef={scrollRef}
+                    />
+                )}
+            </AnimatePresence>
         </div>
     );
 };

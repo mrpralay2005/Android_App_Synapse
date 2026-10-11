@@ -13,6 +13,7 @@ import MobileLoginBox from './components/Mobile/Auth/LoginBox';
 import MobileSignUpBox from './components/Mobile/Auth/SignUpBox';
 import MobileOTPBox from './components/Mobile/Auth/OTPBox';
 import MobileForgotPasswordBox from './components/Mobile/Auth/ForgotPasswordBox';
+import NexusPortalSplash from './components/SplashScreen/NexusPortalSplash';
 import './components/Mobile/Auth/mobileAuth.css';
 
 // Synapse Core Logo
@@ -164,7 +165,6 @@ function App() {
                 localStorage.removeItem('synapse_last_view');
                 setUser(null);
                 setView('landing');
-                setIsLoading(false);
                 return;
             }
 
@@ -184,7 +184,6 @@ function App() {
 
             if (!token) {
                 if (view === 'profile') setView('landing');
-                setTimeout(() => setIsLoading(false), 800);
                 return;
             }
 
@@ -253,7 +252,7 @@ function App() {
                 if (sessionIsStillCurrent()) handleLogout();
                 userLoggedIn = false;
             } finally {
-                setTimeout(() => setIsLoading(false), 1200);
+                // Background sync complete - splash screen manages its own timing via onComplete
             }
         };
 
@@ -324,16 +323,7 @@ function App() {
     };
 
     if (isLoading) {
-        return (
-            <div className="min-h-screen bg-black flex items-center justify-center">
-                <div className="flex flex-col items-center">
-                    <SynapseLogo size={50} />
-                    <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-emerald-500 text-[9px] uppercase tracking-[0.4em] font-bold mt-10 ml-1">
-                        Neural Synchronization
-                    </motion.p>
-                </div>
-            </div>
-        );
+        return <NexusPortalSplash onComplete={() => setIsLoading(false)} />;
     }
 
     if (isExited) {

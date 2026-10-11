@@ -151,81 +151,77 @@ const PriyaAssistant = ({ onNavigate, landingMode = false, forceOpen = false, on
                         }}
                         className={`fixed inset-0 z-[960] flex flex-col overflow-hidden ${landingMode ? 'mobile-priya-sheet' : ''}`}
                         style={{
-                            background: 'radial-gradient(110% 65% at 50% -10%, rgba(56, 189, 248, 0.26) 0%, rgba(99, 102, 241, 0.20) 36%, transparent 72%), radial-gradient(85% 55% at 100% 60%, rgba(192, 132, 252, 0.22) 0%, transparent 65%), linear-gradient(168deg, #0a0d25 0%, #060818 45%, #04050f 100%)',
+                            background: 'radial-gradient(110% 65% at 50% -10%, rgba(168, 85, 247, 0.30) 0%, rgba(124, 58, 237, 0.22) 36%, transparent 72%), radial-gradient(85% 55% at 100% 60%, rgba(139, 92, 246, 0.22) 0%, transparent 65%), linear-gradient(168deg, #12122a 0%, #0d0d1f 45%, #080814 100%)',
                             transformOrigin: 'bottom right',
                         }}
                     >
                         {/* Dynamic Liquid Ambient Lighting Orbs */}
                         <div className="pointer-events-none absolute inset-0 overflow-hidden">
-                            <div style={{ position: 'absolute', top: '-6%', left: '-12%', width: '60%', height: '40%', borderRadius: '9999px', background: 'rgba(56,189,248,0.30)', filter: 'blur(60px)', mixBlendMode: 'screen' }} />
-                            <div style={{ position: 'absolute', top: '25%', right: '-12%', width: '58%', height: '45%', borderRadius: '9999px', background: 'rgba(168,85,247,0.26)', filter: 'blur(65px)', mixBlendMode: 'screen' }} />
-                            <div style={{ position: 'absolute', bottom: '10%', left: '10%', width: '65%', height: '35%', borderRadius: '9999px', background: 'rgba(99,102,241,0.22)', filter: 'blur(70px)', mixBlendMode: 'screen' }} />
-                            <div style={{ position: 'absolute', bottom: '-8%', right: '5%', width: '50%', height: '35%', borderRadius: '9999px', background: 'rgba(6,182,212,0.25)', filter: 'blur(60px)', mixBlendMode: 'screen' }} />
+                            <div style={{ position: 'absolute', top: '-6%', left: '-12%', width: '60%', height: '40%', borderRadius: '9999px', background: 'rgba(168,85,247,0.28)', filter: 'blur(60px)' }} />
+                            <div style={{ position: 'absolute', top: '25%', right: '-12%', width: '58%', height: '45%', borderRadius: '9999px', background: 'rgba(139,92,246,0.22)', filter: 'blur(65px)' }} />
+                            <div style={{ position: 'absolute', bottom: '10%', left: '10%', width: '65%', height: '35%', borderRadius: '9999px', background: 'rgba(124,58,237,0.18)', filter: 'blur(70px)' }} />
+                            <div style={{ position: 'absolute', bottom: '-8%', right: '5%', width: '50%', height: '35%', borderRadius: '9999px', background: 'rgba(192,132,252,0.20)', filter: 'blur(60px)' }} />
                         </div>
 
                         {/* Status bar spacer */}
                         <div style={{ height: 'env(safe-area-inset-top, 0px)' }} />
 
-                        {/* Header — Floating Liquid Glass Island (Oppo ColorOS 17 / Aquamorphic) */}
-                        <div
-                            className={`relative z-10 flex items-center gap-3 px-4 py-3 mx-3.5 mt-2.5 mb-2 rounded-[26px] ${landingMode ? 'mobile-priya-sheet-header' : ''}`}
-                            style={{
-                                background: 'linear-gradient(135deg, rgba(255,255,255,0.20) 0%, rgba(147,197,253,0.10) 45%, rgba(192,132,252,0.06) 75%, rgba(255,255,255,0.03) 100%), rgba(10,14,42,0.68)',
-                                border: '1.5px solid rgba(255,255,255,0.32)',
-                                borderTop: '2.2px solid rgba(255,255,255,0.85)',
-                                borderLeft: '1.8px solid rgba(255,255,255,0.60)',
-                                boxShadow: 'inset 0 2px 2px 0 rgba(255,255,255,0.65), inset 0 -1.5px 2px 0 rgba(125,211,252,0.25), 0 20px 45px -10px rgba(0,0,0,0.72), 0 0 30px -4px rgba(56,189,248,0.30)',
-                                backdropFilter: 'blur(32px) saturate(210%)',
-                                WebkitBackdropFilter: 'blur(32px) saturate(210%)',
-                            }}
-                        >
-                            {/* Top specular reflection shimmer */}
-                            <div style={{ position: 'absolute', top: 0, left: '10%', right: '10%', height: '1.5px', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.9), transparent)', filter: 'drop-shadow(0 0 6px rgba(125,211,252,0.8))', pointerEvents: 'none' }} />
-
-                            {/* Crystal Avatar Squircle Badge */}
-                            <div style={{ position:'relative', width:44, height:44, borderRadius:'50%', overflow:'hidden', border:'2px solid rgba(168,85,247,0.55)', boxShadow:'0 0 16px rgba(168,85,247,0.45)', flexShrink:0 }}>
-                                <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=80&q=80&auto=format&fit=crop" alt="Priya" style={{ width:'100%', height:'100%', objectFit:'cover', filter:'saturate(1.3) brightness(0.95)' }} />
-                                <div style={{ position:'absolute', inset:0, background:'linear-gradient(to top, rgba(124,58,237,0.35), transparent)' }} />
-                            </div>
-
-                            <div className="min-w-0 flex-1">
-                                <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 16, fontWeight: 900, color: '#fff', letterSpacing: '-0.03em' }}>
-                                    <span style={{ background: 'linear-gradient(108deg, #ffffff 0%, #bae6fd 40%, #c084fc 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', filter: 'drop-shadow(0 2px 8px rgba(56,189,248,0.3))' }}>
-                                        {PRIYA.name}
-                                    </span>
-                                    <Sparkles size={13} style={{ color: '#7dd3fc' }} />
-                                    <span style={{ fontSize: 8.5, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.14em', padding: '2px 6px', borderRadius: 9999, border: '1px solid rgba(56,189,248,0.35)', background: 'rgba(56,189,248,0.12)', color: '#7dd3fc' }}>
-                                        Liquid Core
-                                    </span>
-                                </p>
-                                <p style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10.5, color: '#93c5fd', fontWeight: 600, letterSpacing: '0.02em', marginTop: 1 }}>
-                                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#38bdf8', boxShadow: '0 0 8px #38bdf8', display: 'inline-block' }} />
-                                    {statusText}
-                                </p>
-                            </div>
-
-                            {/* Liquid Glass Close Pill Button */}
-                            <button
-                                onClick={closeChat}
-                                aria-label="Close Priya"
+                        {/* Header — Floating Liquid Glass Island for in-app chat only */}
+                        {!landingMode && (
+                            <div
+                                className="relative z-10 flex items-center gap-3 px-4 py-3 mx-3.5 mt-2.5 mb-2 rounded-[26px]"
                                 style={{
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    width: 38, height: 38, borderRadius: '50%', cursor: 'pointer',
-                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.16) 0%, rgba(147,197,253,0.06) 100%), rgba(18,22,58,0.5)',
-                                    border: '1px solid rgba(255,255,255,0.22)',
-                                    borderTop: '1.2px solid rgba(255,255,255,0.42)',
-                                    boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.38), 0 8px 18px -4px rgba(0,0,0,0.4)',
-                                    color: '#dbeafe',
-                                    backdropFilter: 'blur(16px)',
-                                    WebkitBackdropFilter: 'blur(16px)',
-                                    transition: 'transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                                    background: 'linear-gradient(135deg, rgba(255,255,255,0.10) 0%, rgba(168,85,247,0.08) 45%, rgba(255,255,255,0.03) 100%), rgba(18,18,42,0.72)',
+                                    border: '1px solid rgba(255,255,255,0.14)',
+                                    borderTop: '1.5px solid rgba(255,255,255,0.28)',
+                                    boxShadow: 'inset 0 1.5px 2px 0 rgba(255,255,255,0.12), 0 16px 36px -10px rgba(0,0,0,0.60), 0 0 25px -4px rgba(168,85,247,0.20)',
+                                    backdropFilter: 'blur(32px) saturate(180%)',
+                                    WebkitBackdropFilter: 'blur(32px) saturate(180%)',
                                 }}
                             >
-                                <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-                                    <path d="M4.5 7 L9 12 L13.5 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-                                </svg>
-                            </button>
-                        </div>
+                                {/* Top specular reflection shimmer */}
+                                <div style={{ position: 'absolute', top: 0, left: '10%', right: '10%', height: '1px', background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.45), transparent)', pointerEvents: 'none' }} />
+
+                                {/* Avatar */}
+                                <div className="relative grid h-10 w-10 shrink-0 place-items-center rounded-full border border-purple-400/30 shadow-[0_4px_14px_rgba(168,85,247,0.30)]"
+                                    style={{ background: 'linear-gradient(135deg, rgba(168,85,247,0.22), rgba(139,92,246,0.12))' }}>
+                                    <PriyaAvatar size={30} animated showRing={false} />
+                                    <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-[1.5px] border-[#12122a] bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.6)]" />
+                                </div>
+
+                                <div className="min-w-0 flex-1">
+                                    <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 15, fontWeight: 900, color: '#fff', letterSpacing: '-0.02em' }}>
+                                        Neural Assistant
+                                        <Sparkles size={12} style={{ color: '#c084fc' }} />
+                                    </p>
+                                    <p style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 10, color: '#a78bfa', fontWeight: 600, letterSpacing: '0.03em', marginTop: 1 }}>
+                                        <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#34d399', boxShadow: '0 0 6px #34d399', display: 'inline-block' }} />
+                                        Online
+                                    </p>
+                                </div>
+
+                                {/* Close Button */}
+                                <button
+                                    onClick={closeChat}
+                                    aria-label="Close Priya"
+                                    style={{
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        width: 36, height: 36, borderRadius: '50%', cursor: 'pointer',
+                                        background: 'rgba(255,255,255,0.06)',
+                                        border: '1px solid rgba(255,255,255,0.12)',
+                                        boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.08)',
+                                        color: '#94a3b8',
+                                        backdropFilter: 'blur(16px)',
+                                        WebkitBackdropFilter: 'blur(16px)',
+                                        transition: 'transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1)',
+                                    }}
+                                >
+                                    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                                        <path d="M4.5 7 L9 12 L13.5 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                </button>
+                            </div>
+                        )}
 
                         {/* Chat body — different component per mode */}
                         <div className="relative z-10 min-h-0 flex-1 overflow-hidden">
