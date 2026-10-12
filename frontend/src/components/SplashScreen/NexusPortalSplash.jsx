@@ -871,137 +871,103 @@ const NexusPortalSplash = ({ onComplete }) => {
       }
     }
 
+    let soundBuffer = window.__NEXUS_SOUND_BUFFER__ || null;
+    let activeAudioSource = null;
+    let htmlAudioFallback = null;
+
     function ensureAudio() {
-      if (!AC) {
+      if (!window.__SYNAPSE_AUDIO_CTX__) {
         const Ctx = window.AudioContext || window.webkitAudioContext;
         if (!Ctx) return null;
-        AC = new Ctx();
+        window.__SYNAPSE_AUDIO_CTX__ = new Ctx();
       }
+      AC = window.__SYNAPSE_AUDIO_CTX__;
       if (AC.state === "suspended") AC.resume();
       return AC;
     }
 
+    function preloadSoundFile() {
+      if (soundBuffer || typeof window === 'undefined') return;
+      fetch('/nexus_sound_effect.mp3')
+        .then(res => res.arrayBuffer())
+        .then(buf => {
+          const ac = ensureAudio();
+          if (ac) {
+            ac.decodeAudioData(buf, decoded => {
+              soundBuffer = decoded;
+              window.__NEXUS_SOUND_BUFFER__ = decoded;
+            }, () => {});
+          }
+        })
+        .catch(() => {});
+    }
+    preloadSoundFile();
+
     function playSound(t0, playbackRate) {
-      const ac = AC;
+      const ac = ensureAudio();
       if (!ac) return;
       const sp = 1 / playbackRate;
       if (master) { try { master.disconnect(); } catch (e) {} }
       master = ac.createGain();
-      master.gain.value = 0.95;
+      master.gain.value = 1.0;
       const comp = ac.createDynamicsCompressor();
-      comp.threshold.value = -14; comp.ratio.value = 4;
+      comp.threshold.value = -12; comp.ratio.value = 3;
       master.connect(comp); comp.connect(ac.destination);
 
-      // ─── 1. FIRST IMPACT ("Ta" when N creation starts: t0 + T.a0 * sp) ───────
-      const taTime = t0 + T.a0 * sp;
-      const kickOsc = ac.createOscillator();
-      const kickGain = ac.createGain();
-      kickOsc.type = 'sine';
-      kickOsc.frequency.setValueAtTime(125, taTime);
-      kickOsc.frequency.exponentialRampToValueAtTime(32, taTime + 0.38 * sp);
-      kickGain.gain.setValueAtTime(0.001, taTime);
-      kickGain.gain.setValueAtTime(0.85, taTime + 0.005);
-      kickGain.gain.exponentialRampToValueAtTime(0.001, taTime + 0.40 * sp);
-      kickOsc.connect(kickGain);
-      kickGain.connect(master);
-      kickOsc.start(taTime);
-      kickOsc.stop(taTime + 0.45 * sp);
+      // Align sound so its first strike (at sample 0.30s) hits exactly when the diagonal stick starts (T.d0 = 0.64s)
+      const fileHitOffset = 0.30;
+      const soundStart = t0 + (T.d0 - fileHitOffset) * sp;
 
-      const clickOsc = ac.createOscillator();
-      const clickGain = ac.createGain();
-      clickOsc.type = 'triangle';
-      clickOsc.frequency.setValueAtTime(340, taTime);
-      clickOsc.frequency.exponentialRampToValueAtTime(60, taTime + 0.18 * sp);
-      clickGain.gain.setValueAtTime(0.35, taTime);
-      clickGain.gain.exponentialRampToValueAtTime(0.001, taTime + 0.20 * sp);
-      clickOsc.connect(clickGain);
-      clickGain.connect(master);
-      clickOsc.start(taTime);
-      clickOsc.stop(taTime + 0.22 * sp);
-
-      // ─── 2. SECOND IMPACT ("-DUM" at diagonal stick creation: t0 + T.d0 * sp) ─
-      const dumTime = t0 + T.d0 * sp;
-      const subOsc = ac.createOscillator();
-      const subGain = ac.createGain();
-      subOsc.type = 'sine';
-      subOsc.frequency.setValueAtTime(85, dumTime);
-      subOsc.frequency.exponentialRampToValueAtTime(26, dumTime + 1.4 * sp);
-      subGain.gain.setValueAtTime(0.95, dumTime);
-      subGain.gain.exponentialRampToValueAtTime(0.001, dumTime + 1.6 * sp);
-      subOsc.connect(subGain);
-      subGain.connect(master);
-      subOsc.start(dumTime);
-      subOsc.stop(dumTime + 1.7 * sp);
-
-      const chordFreqs = [73.42, 110.0, 146.83, 174.61, 220.0];
-      chordFreqs.forEach((freq, idx) => {
-        const osc = ac.createOscillator();
-        const gain = ac.createGain();
-        const filter = ac.createBiquadFilter();
-
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(freq + (idx % 2 === 0 ? 0.35 : -0.35), dumTime);
-
-        filter.type = 'lowpass';
-        filter.frequency.setValueAtTime(450, dumTime);
-        filter.frequency.exponentialRampToValueAtTime(90, dumTime + 2.0 * sp);
-
-        gain.gain.setValueAtTime(0.24 / chordFreqs.length, dumTime);
-        gain.gain.exponentialRampToValueAtTime(0.0001, dumTime + 2.2 * sp);
-
-        osc.connect(filter);
-        filter.connect(gain);
-        gain.connect(master);
-
-        osc.start(dumTime);
-        osc.stop(dumTime + 2.3 * sp);
-      });
-
-      const shimmerFreqs = [587.33, 880.0, 1174.66, 1760.0, 2349.32];
-      shimmerFreqs.forEach((freq, i) => {
-        const osc = ac.createOscillator();
-        const gain = ac.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(freq, dumTime + 0.05);
-
-        gain.gain.setValueAtTime(0.045 / (i + 1), dumTime + 0.05);
-        gain.gain.exponentialRampToValueAtTime(0.00001, dumTime + 2.8 * sp);
-
-        osc.connect(gain);
-        gain.connect(master);
-
-        osc.start(dumTime + 0.05);
-        osc.stop(dumTime + 2.9 * sp);
-      });
-
-      const sweepTime = t0 + (T.z0 - 0.15) * sp;
-      const bufferSize = Math.max(256, Math.floor(ac.sampleRate * 0.9 * sp));
-      const noiseBuffer = ac.createBuffer(1, bufferSize, ac.sampleRate);
-      const output = noiseBuffer.getChannelData(0);
-      for (let i = 0; i < bufferSize; i++) {
-        output[i] = Math.random() * 2 - 1;
+      if (soundBuffer) {
+        if (activeAudioSource) { try { activeAudioSource.stop(); } catch (e) {} }
+        const src = ac.createBufferSource();
+        src.buffer = soundBuffer;
+        src.playbackRate.setValueAtTime(playbackRate, soundStart);
+        src.connect(master);
+        src.start(soundStart);
+        activeAudioSource = src;
+      } else {
+        // Fallback: fetch & start at offset if buffer is still decoding
+        fetch('/nexus_sound_effect.mp3')
+          .then(res => res.arrayBuffer())
+          .then(buf => ac.decodeAudioData(buf))
+          .then(decoded => {
+            soundBuffer = decoded;
+            window.__NEXUS_SOUND_BUFFER__ = decoded;
+            if (!running) return;
+            const animElapsed = currentTime();
+            const soundAnimStart = T.d0 - fileHitOffset;
+            if (animElapsed < soundAnimStart) {
+              const startAt = ac.currentTime + (soundAnimStart - animElapsed) * sp;
+              const src = ac.createBufferSource();
+              src.buffer = decoded;
+              src.playbackRate.setValueAtTime(playbackRate, startAt);
+              src.connect(master);
+              src.start(startAt);
+              activeAudioSource = src;
+            } else {
+              const fileOffset = (animElapsed - soundAnimStart) * playbackRate;
+              if (fileOffset < decoded.duration) {
+                const src = ac.createBufferSource();
+                src.buffer = decoded;
+                src.playbackRate.setValueAtTime(playbackRate, ac.currentTime);
+                src.connect(master);
+                src.start(ac.currentTime, fileOffset);
+                activeAudioSource = src;
+              }
+            }
+          })
+          .catch(() => {
+            try {
+              if (!htmlAudioFallback) {
+                htmlAudioFallback = new Audio('/nexus_sound_effect.mp3');
+              }
+              htmlAudioFallback.playbackRate = playbackRate;
+              htmlAudioFallback.currentTime = Math.max(0, currentTime());
+              htmlAudioFallback.play().catch(() => {});
+            } catch (e) {}
+          });
       }
-
-      const whiteNoise = ac.createBufferSource();
-      whiteNoise.buffer = noiseBuffer;
-
-      const bandFilter = ac.createBiquadFilter();
-      bandFilter.type = 'bandpass';
-      bandFilter.Q.value = 2.5;
-      bandFilter.frequency.setValueAtTime(320, sweepTime);
-      bandFilter.frequency.exponentialRampToValueAtTime(2600, sweepTime + 0.8 * sp);
-
-      const noiseGain = ac.createGain();
-      noiseGain.gain.setValueAtTime(0.005, sweepTime);
-      noiseGain.gain.linearRampToValueAtTime(0.16, sweepTime + 0.35 * sp);
-      noiseGain.gain.exponentialRampToValueAtTime(0.0001, sweepTime + 0.9 * sp);
-
-      whiteNoise.connect(bandFilter);
-      bandFilter.connect(noiseGain);
-      noiseGain.connect(master);
-
-      whiteNoise.start(sweepTime);
-      whiteNoise.stop(sweepTime + 0.95 * sp);
     }
 
     let soundStarted = false;
@@ -1013,14 +979,45 @@ const NexusPortalSplash = ({ onComplete }) => {
       if (ac.state === 'running') {
         soundStarted = true;
         const animElapsed = running ? currentTime() : 0;
-        const t0 = ac.currentTime + 0.08 - (animElapsed / rate);
-        playSound(t0, rate);
+        const fileHitOffset = 0.30;
+        const soundAnimStart = T.d0 - fileHitOffset;
+        const sp = 1 / rate;
+        const soundStart = ac.currentTime + (soundAnimStart - animElapsed) * sp;
+
+        if (soundBuffer) {
+          if (animElapsed < soundAnimStart) {
+            const src = ac.createBufferSource();
+            src.buffer = soundBuffer;
+            src.playbackRate.setValueAtTime(rate, soundStart);
+            src.connect(master || ac.destination);
+            src.start(soundStart);
+            activeAudioSource = src;
+          } else {
+            const fileOffset = (animElapsed - soundAnimStart) * rate;
+            if (fileOffset < soundBuffer.duration) {
+              if (activeAudioSource) { try { activeAudioSource.stop(); } catch (e) {} }
+              const src = ac.createBufferSource();
+              src.buffer = soundBuffer;
+              src.playbackRate.setValueAtTime(rate, ac.currentTime);
+              src.connect(master || ac.destination);
+              src.start(ac.currentTime, fileOffset);
+              activeAudioSource = src;
+            }
+          }
+        }
         useAudioClock = true;
       }
     }
 
     function stopSound() {
       soundStarted = false;
+      if (activeAudioSource) {
+        try { activeAudioSource.stop(); } catch (e) {}
+        activeAudioSource = null;
+      }
+      if (htmlAudioFallback) {
+        try { htmlAudioFallback.pause(); htmlAudioFallback.currentTime = 0; } catch (e) {}
+      }
       if (master && AC) {
         try {
           master.gain.cancelScheduledValues(AC.currentTime);
