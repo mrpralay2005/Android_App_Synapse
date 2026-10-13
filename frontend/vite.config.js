@@ -26,6 +26,31 @@ export default defineConfig(({ mode }) => {
                 }
             }
         ],
+        // ── Performance Optimizations for Mobile ─────────────────────────────
+        build: {
+            // Code splitting - load components on demand
+            rollupOptions: {
+                output: {
+                    manualChunks: {
+                        // Separate vendor chunks for better caching
+                        'react-vendor': ['react', 'react-dom'],
+                        'animation-vendor': ['framer-motion'],
+                        'ui-vendor': ['lucide-react', 'clsx', 'tailwind-merge']
+                    }
+                }
+            },
+            // Optimize chunks
+            chunkSizeWarningLimit: 1000,
+            // Minify aggressively
+            minify: 'terser',
+            terserOptions: {
+                compress: {
+                    drop_console: mode === 'production', // Remove console.logs in production
+                    drop_debugger: true,
+                    pure_funcs: ['console.log', 'console.info', 'console.debug']
+                }
+            }
+        },
         // ── Dev proxy — eliminates CORS when running locally ──────────────────
         // All /api/* requests are forwarded to the real backend by Vite's dev
         // server, which doesn't have browser CORS restrictions. This only runs

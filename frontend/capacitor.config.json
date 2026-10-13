@@ -1,6 +1,6 @@
 {
-    "appId": "com.pralay.synapsex",
-    "appName": "SynapseX",
-    "webDir": "dist",
-    "bundledWebRuntime": false
+  "appId": "com.pralay.synapsex",
+  "appName": "Nexus",
+  "webDir": "dist",
+  "bundledWebRuntime": false
 }
