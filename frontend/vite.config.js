@@ -41,15 +41,8 @@ export default defineConfig(({ mode }) => {
             },
             // Optimize chunks
             chunkSizeWarningLimit: 1000,
-            // Minify aggressively
-            minify: 'terser',
-            terserOptions: {
-                compress: {
-                    drop_console: mode === 'production', // Remove console.logs in production
-                    drop_debugger: true,
-                    pure_funcs: ['console.log', 'console.info', 'console.debug']
-                }
-            }
+            // Minify with esbuild (faster, built-in)
+            minify: 'esbuild'
         },
         // ── Dev proxy — eliminates CORS when running locally ──────────────────
         // All /api/* requests are forwarded to the real backend by Vite's dev
