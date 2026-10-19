@@ -1,12 +1,52 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Plus, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import PostCard from './PostCard';
 import Cookies from 'js-cookie';
+import { prefetchData, CACHE_TTL } from '../../../utils/synapseCache';
 
 const isVideo = (url) => {
     if (!url) return false;
     return url.match(/\.(mp4|webm|mov|m4v|m3u8|ogv)$|video/i);
+};
+
+// ── Instagram Strategy: Lazy load posts with Intersection Observer ──
+const LazyPost = ({ post, index, onCinemaMode }) => {
+    const [isVisible, setIsVisible] = useState(index < 3); // First 3 posts render immediately
+    const ref = useRef(null);
+
+    useEffect(() => {
+        if (isVisible || index < 3) return; // Already visible or in first 3
+        
+        const observer = new IntersectionObserver(
+            ([entry]) => {
+                if (entry.isIntersecting) {
+                    setIsVisible(true);
+                    observer.disconnect();
+                }
+            },
+            {
+                rootMargin: '200px 0px', // Start loading 200px before visible
+            }
+        );
+
+        if (ref.current) {
+            observer.observe(ref.current);
+        }
+
+        return () => observer.disconnect();
+    }, [isVisible, index]);
+
+    if (!isVisible) {
+        // Placeholder skeleton while not visible
+        return (
+            <div ref={ref} style={{ minHeight: '600px' }}>
+                <PostSkeleton />
+            </div>
+        );
+    }
+
+    return <PostCard post={post} index={index} onCinemaMode={onCinemaMode} />;
 };
 
 const PostSkeleton = () => (
@@ -142,6 +182,25 @@ const StoriesSlider = ({ stories, onStoryClick, onUserProfileClick }) => {
 
 const FeedView = ({ posts, stories = [], suggestedUsers = [], onCreateClick, loading, onCinemaMode, myStories = [], onStoryClick, onUserProfileClick, onMyStoryClick, currentUser, feedSort = 'popular', onFeedSortChange }) => {
     const maxVisible = 5;
+    const prefetchTriggered = useRef(false);
+
+    // ── Instagram Strategy: Prefetch next feed in background ──
+    useEffect(() => {
+        if (posts.length > 0 && !prefetchTriggered.current && !loading) {
+            // Wait 2 seconds after feed loads, then prefetch for next time
+            const timer = setTimeout(() => {
+                const apiUrl = import.meta.env.VITE_API_URL || 'https://synapse-backend.mrpralay2005.workers.dev';
+                prefetchData(
+                    `${apiUrl}/api/social/feed?sort=${feedSort}`,
+                    'synapse_feed_posts',
+                    CACHE_TTL.FEED
+                );
+                prefetchTriggered.current = true;
+            }, 2000);
+            
+            return () => clearTimeout(timer);
+        }
+    }, [posts.length, loading, feedSort]);
 
     const combinedList = React.useMemo(() => {
         // This is also applied by the API.  Keeping the UI guard means an older
@@ -316,7 +375,8 @@ const FeedView = ({ posts, stories = [], suggestedUsers = [], onCreateClick, loa
                     </>
                 ) : posts.length > 0 ? (
                     posts.map((post, i) => (
-                        <PostCard key={post.id} post={post} index={i} onCinemaMode={onCinemaMode} />
+                        // Instagram strategy: Lazy load posts (only render when near viewport)
+                        <LazyPost key={post.id} post={post} index={i} onCinemaMode={onCinemaMode} />
                     ))
                 ) : (
                     <div className="py-20 text-center">

@@ -7,6 +7,12 @@ compatibility_flags = [ "nodejs_compat" ]
 [ai]
 binding = "AI"
 
+# Cloudflare KV — Ultra-fast cache (Instagram's Redis alternative)
+# FREE: 100k reads/day, 1k writes/day
+[[kv_namespaces]]
+binding = "CACHE"
+id = "1fc7afe380d0411687cd82413c03b54b"
+
 # Keep Neon DB warm — runs every 4 minutes to prevent auto-suspend.
 [triggers]
 crons = ["*/4 * * * *"]

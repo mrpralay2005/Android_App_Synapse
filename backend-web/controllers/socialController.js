@@ -1,14 +1,25 @@
 import getPrisma from '../prisma/db.js';
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { getCache, setCache, feedCacheKey, storiesCacheKey, invalidateCache, CACHE_TTL } from '../utils/cache.js';
 
 export const getFeed = async (c) => {
     try {
         const user = c.get('user');
         const prisma = getPrisma(c.env);
         const sort = c.req.query('sort') === 'latest' ? 'latest' : 'popular';
-
         const viewerId = user?.userId;
+
+        // ── Instagram Strategy: Check cache first (1-10ms) ──
+        const cacheKey = feedCacheKey(viewerId, sort);
+        const cached = await getCache(c.env.CACHE, cacheKey);
+        if (cached) {
+            console.log(`[CACHE HIT] Feed for user ${viewerId || 'public'} - ${sort}`);
+            return c.json(cached);
+        }
+
+        console.log(`[CACHE MISS] Feed for user ${viewerId || 'public'} - ${sort}, fetching from DB`);
+
         const posts = await prisma.post.findMany({
             take: 30,
             where: {
@@ -78,6 +89,9 @@ export const getFeed = async (c) => {
             likes: undefined, // remove raw array
             savedBy: undefined // remove raw array
         }));
+
+        // ── Cache for 5 minutes (Instagram strategy) ──
+        await setCache(c.env.CACHE, cacheKey, formattedPosts, CACHE_TTL.FEED);
 
         return c.json(formattedPosts);
     } catch (error) {
@@ -465,6 +479,16 @@ export const getStories = async (c) => {
 
         console.log('[getStories] ViewerId:', viewerId);
 
+        // ── Instagram Strategy: Check cache first (1-10ms) ──
+        const cacheKey = storiesCacheKey(viewerId);
+        const cached = await getCache(c.env.CACHE, cacheKey);
+        if (cached) {
+            console.log(`[CACHE HIT] Stories for user ${viewerId || 'public'}`);
+            return c.json({ success: true, data: cached });
+        }
+
+        console.log(`[CACHE MISS] Stories for user ${viewerId || 'public'}, fetching from DB`);
+
         // Get ALL unexpired stories first
         const allStories = await prisma.story.findMany({
             where: { expiresAt: { gt: now } },
@@ -500,6 +524,10 @@ export const getStories = async (c) => {
                 isLiked: false
             }));
             console.log('[getStories] No viewer - returning', publicStories.length, 'public stories');
+            
+            // Cache for 1 minute (stories are time-sensitive)
+            await setCache(c.env.CACHE, cacheKey, publicStories, CACHE_TTL.STORIES);
+            
             return c.json({ success: true, data: publicStories });
         }
 
@@ -526,6 +554,10 @@ export const getStories = async (c) => {
         }));
 
         console.log('[getStories] Total:', allStories.length, 'Accessible:', filteredStories.length);
+        
+        // ── Cache for 1 minute (Instagram strategy for stories) ──
+        await setCache(c.env.CACHE, cacheKey, filteredStories, CACHE_TTL.STORIES);
+        
         return c.json({ success: true, data: filteredStories });
     } catch (error) {
         console.error("Story Retrieval Error:", error);

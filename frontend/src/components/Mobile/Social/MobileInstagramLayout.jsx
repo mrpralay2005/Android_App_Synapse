@@ -25,7 +25,7 @@ import NotificationCenter, { useNotificationCount } from './NotificationCenter';
 import DirectInbox from '../../Social/DirectInbox';
 import { updateActivityHeartbeat, markUserInactive } from '../../../utils/chatApi';
 import PriyaAssistant from '../../Priya/PriyaAssistant';
-import { saveToCache, loadFromCache } from '../../../utils/synapseCache';
+import { saveToCache, loadFromCache, isCacheStale, CACHE_TTL, prefetchData } from '../../../utils/synapseCache';
 
 const MobileInstagramLayout = ({ currentUser, onLogout }) => {
     const [view, setView] = useState(() => localStorage.getItem('synapse_mobile_social_tab') || 'feed');
@@ -148,6 +148,7 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
             if (!active) return;
 
             try {
+                // ── Instagram Strategy 1: Load cache INSTANTLY (0ms feel) ──
                 const cachedStories = loadFromCache('synapse_stories');
                 if (cachedStories && active) {
                     setAllStories(cachedStories);
@@ -180,6 +181,7 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                     }
                 }
 
+                // Only show spinner if NO cache exists (Instagram: never show spinner if cached)
                 if (!hasCachedData) setLoading(true);
 
                 const apiUrl = import.meta.env.VITE_API_URL || 'https://synapse-backend.mrpralay2005.workers.dev';
@@ -189,44 +191,61 @@ const MobileInstagramLayout = ({ currentUser, onLogout }) => {
                     headers: { ...(token && { Authorization: `Bearer ${token}` }) }
                 };
 
-                const storyRes = await fetchWithRetry(`${apiUrl}/api/social/stories`, fetchOptions);
-                const storyData = await storyRes.json();
-                if (active && storyData.success) {
-                    console.log('[Story Debug] All stories fetched:', storyData.data.length);
-                    setAllStories(storyData.data);
-                    saveToCache('synapse_stories', storyData.data);
-                    const mine = storyData.data.filter(s => s.userId === currentUserState.id || s.userId === currentUserState.userId);
-                    console.log('[Story Debug] My stories filtered:', mine.length, 'Current user ID:', currentUserState.id || currentUserState.userId);
-                    setMyStories(mine);
+                // ── Instagram Strategy 2: Background refresh (stale-while-revalidate) ──
+                // Only fetch from API if cache is stale
+                const storiesStale = isCacheStale('synapse_stories');
+                const suggestedStale = isCacheStale('synapse_suggested');
+                
+                if (storiesStale) {
+                    const storyRes = await fetchWithRetry(`${apiUrl}/api/social/stories`, fetchOptions);
+                    const storyData = await storyRes.json();
+                    if (active && storyData.success) {
+                        console.log('[Story Debug] Fresh stories fetched:', storyData.data.length);
+                        setAllStories(storyData.data);
+                        saveToCache('synapse_stories', storyData.data, CACHE_TTL.STORIES);
+                        const mine = storyData.data.filter(s => s.userId === currentUserState.id || s.userId === currentUserState.userId);
+                        console.log('[Story Debug] My stories filtered:', mine.length);
+                        setMyStories(mine);
+                    }
                 }
 
-                const userRes = await fetch(`${apiUrl}/api/user/suggested?limit=10`, fetchOptions);
-                const userData = await userRes.json();
-                if (active && userData.success) {
-                    const publicSuggestions = userData.data.filter(user =>
-                        user?.role !== 'ADMIN' && user?.username?.toUpperCase() !== 'ADMIN'
-                    );
-                    setSuggestedUsers(publicSuggestions);
-                    saveToCache('synapse_suggested', publicSuggestions);
+                if (suggestedStale) {
+                    const userRes = await fetch(`${apiUrl}/api/user/suggested?limit=10`, fetchOptions);
+                    const userData = await userRes.json();
+                    if (active && userData.success) {
+                        const publicSuggestions = userData.data.filter(user =>
+                            user?.role !== 'ADMIN' && user?.username?.toUpperCase() !== 'ADMIN'
+                        );
+                        setSuggestedUsers(publicSuggestions);
+                        saveToCache('synapse_suggested', publicSuggestions, CACHE_TTL.SUGGESTED);
+                    }
                 }
 
                 if (view === 'feed' || view === 'reels') {
-                    const res = await fetchWithRetry(`${apiUrl}/api/social/feed?sort=${feedSort}`, fetchOptions);
-                    const data = await res.json();
-                    if (active) {
-                        const newPosts = Array.isArray(data) ? data : [];
-                        setPosts(newPosts);
-                        saveToCache('synapse_feed_posts', newPosts);
+                    const feedStale = isCacheStale('synapse_feed_posts');
+                    if (feedStale || !hasCachedData) {
+                        const res = await fetchWithRetry(`${apiUrl}/api/social/feed?sort=${feedSort}`, fetchOptions);
+                        const data = await res.json();
+                        if (active) {
+                            const newPosts = Array.isArray(data) ? data : [];
+                            setPosts(newPosts);
+                            saveToCache('synapse_feed_posts', newPosts, CACHE_TTL.FEED);
+                        }
                     }
                 } else if (view === 'profile') {
                     const profileToFetch = userProfile?.username || currentUser.username;
-                    const res = await fetch(`${apiUrl}/api/user/profile/${encodeURIComponent(profileToFetch)}`, fetchOptions);
-                    const data = await res.json();
-                    const profileData = data.data || data;
-                    if (active) {
-                        setUserProfile(profileData);
-                        setPosts(profileData.posts || []);
-                        saveToCache(`synapse_profile_${profileToFetch}`, profileData);
+                    const profileCacheKey = `synapse_profile_${profileToFetch}`;
+                    const profileStale = isCacheStale(profileCacheKey);
+                    
+                    if (profileStale || !hasCachedData) {
+                        const res = await fetch(`${apiUrl}/api/user/profile/${encodeURIComponent(profileToFetch)}`, fetchOptions);
+                        const data = await res.json();
+                        const profileData = data.data || data;
+                        if (active) {
+                            setUserProfile(profileData);
+                            setPosts(profileData.posts || []);
+                            saveToCache(`synapse_profile_${profileToFetch}`, profileData, CACHE_TTL.USER_PROFILE);
+                        }
                     }
                 }
             } catch (error) {

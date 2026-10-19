@@ -105,6 +105,11 @@ model Post {
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
   expiresAt    DateTime?
+  
+  // ── Instagram Strategy: Indexes for ultra-fast queries ──
+  @@index([createdAt(sort: Desc)]) // Feed sorted by newest
+  @@index([userId, createdAt(sort: Desc)]) // User's posts
+  @@index([expiresAt]) // Filter expired posts
   @@map("post")
 }
 
@@ -116,7 +121,10 @@ model Follow {
   following   User     @relation("Following", fields: [followingId], references: [id])
   createdAt   DateTime @default(now())
 
+  // ── Instagram Strategy: Fast follower queries ──
   @@unique([followerId, followingId])
+  @@index([followerId]) // Who I follow
+  @@index([followingId]) // My followers
   @@map("follow")
 }
 
@@ -141,7 +149,10 @@ model Like {
   post      Post     @relation(fields: [postId], references: [id])
   createdAt DateTime @default(now())
 
+  // ── Instagram Strategy: Fast like count queries ──
   @@unique([userId, postId])
+  @@index([postId]) // Count likes per post
+  @@index([userId]) // User's liked posts
   @@map("like")
 }
 
@@ -168,6 +179,11 @@ model Story {
   views     StoryView[]
   messages  StoryMessage[]
   likes     StoryLike[]
+  
+  // ── Instagram Strategy: Fast story queries ──
+  @@index([expiresAt]) // Filter expired stories
+  @@index([userId, expiresAt]) // User's active stories
+  @@index([createdAt(sort: Desc)]) // Latest stories first
   @@map("story")
 }
 
