@@ -162,16 +162,23 @@ const FILAMENTS = [];
 const NexusPortalSplash = ({ onComplete }) => {
   const canvasRef = useRef(null);
   const completedRef = useRef(false);
+  // Always call the latest onComplete without restarting the intro when the parent re-renders.
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
 
   useEffect(() => {
     const cvs = canvasRef.current;
     if (!cvs) return;
-    let ctx = cvs.getContext("2d");
+    // alpha:false -> the canvas is opaque (every frame starts with solid black), so the browser skips blending it with the page.
+    let ctx = cvs.getContext("2d", { alpha: false });
     if (!ctx) return;
 
     let W = 0, H = 0, DPR = 1, G = null;
     let running = true, raf = 0, perfStart = 0, audioStart = 0, useAudioClock = false, rate = 1;
     let STEM = null, LAYER_R = null, LAYER_D = null, ROW = null, ROWCTX = null;
+    let SHADE_C = null, VIGN_C = null;                  // full-screen overlays, rendered once per size
+    const RIB_GRAD = [], RIB_GLOW = [], FIL_GLOW = [];  // unit-space gradients, built once and reused
+    const widthCache = new Map();                       // measured glyph widths for the NEXUS title
     let AC = null, master = null;
 
     const safeFinish = () => {
@@ -180,7 +187,7 @@ const NexusPortalSplash = ({ onComplete }) => {
         running = false;
         cancelAnimationFrame(raf);
         stopSound();
-        if (onComplete) onComplete();
+        if (onCompleteRef.current) onCompleteRef.current();
       }
     };
 
@@ -497,19 +504,36 @@ const NexusPortalSplash = ({ onComplete }) => {
 
       ctx.restore();
 
-      const maskGrad = ctx.createLinearGradient(0, yBase, 0, yBase + NH * 0.35);
-      maskGrad.addColorStop(0.00, "rgba(0,0,0,0.2)");
-      maskGrad.addColorStop(0.45, "rgba(0,0,0,0.7)");
-      maskGrad.addColorStop(1.00, "rgba(0,0,0,1.0)");
-      ctx.fillStyle = maskGrad;
+      // Gradients depend only on the layout (not on the frame), so they are built once per size.
+      if (!g.maskGrad) {
+        const mg = ctx.createLinearGradient(0, yBase, 0, yBase + NH * 0.35);
+        mg.addColorStop(0.00, "rgba(0,0,0,0.2)");
+        mg.addColorStop(0.45, "rgba(0,0,0,0.7)");
+        mg.addColorStop(1.00, "rgba(0,0,0,1.0)");
+        g.maskGrad = mg;
+        const fg = ctx.createRadialGradient(x0 + NW / 2, yBase, 2, x0 + NW / 2, yBase, NW * 0.85);
+        fg.addColorStop(0.00, "rgba(168, 85, 247, 0.18)");
+        fg.addColorStop(0.40, "rgba(56, 189, 248, 0.10)");
+        fg.addColorStop(1.00, "rgba(0,0,0,0)");
+        g.floorGlow = fg;
+      }
+      ctx.fillStyle = g.maskGrad;
       ctx.fillRect(x0 - NW * 0.3, yBase, NW * 1.6, NH * 0.36);
 
-      const floorGlow = ctx.createRadialGradient(x0 + NW / 2, yBase, 2, x0 + NW / 2, yBase, NW * 0.85);
-      floorGlow.addColorStop(0.00, `rgba(168, 85, 247, ${0.18 * reflAlpha})`);
-      floorGlow.addColorStop(0.40, `rgba(56, 189, 248, ${0.10 * reflAlpha})`);
-      floorGlow.addColorStop(1.00, "rgba(0,0,0,0)");
-      ctx.fillStyle = floorGlow;
+      // reflAlpha used to be baked into the colour stops; it is applied as global alpha instead (same result).
+      const glowBaseA = ctx.globalAlpha;
+      ctx.globalAlpha = glowBaseA * reflAlpha;
+      ctx.fillStyle = g.floorGlow;
       ctx.fillRect(x0 - NW * 0.5, yBase - 4, NW * 2, NH * 0.35);
+      ctx.globalAlpha = glowBaseA;
+    }
+
+    // Glyph widths only change if the web font finishes loading, so each one is measured once and reused.
+    function charW(ch) {
+      const key = ctx.font + "|" + ch;
+      let w = widthCache.get(key);
+      if (w === undefined) { w = ctx.measureText(ch).width; widthCache.set(key, w); }
+      return w;
     }
 
     function drawBrandTypography(g, t, fade, pz) {
@@ -535,7 +559,7 @@ const NexusPortalSplash = ({ onComplete }) => {
       const letterSpacing = fontSize * 0.42;
       let totalW = 0;
       for (let i = 0; i < mainText.length; i++) {
-        totalW += ctx.measureText(mainText[i]).width + (i < mainText.length - 1 ? letterSpacing : 0);
+        totalW += charW(mainText[i]) + (i < mainText.length - 1 ? letterSpacing : 0);
       }
 
       const badgeGap = fontSize * 0.7;
@@ -547,8 +571,8 @@ const NexusPortalSplash = ({ onComplete }) => {
       ctx.fillStyle = "#ffffff";
       for (let i = 0; i < mainText.length; i++) {
         const char = mainText[i];
-        ctx.fillText(char, startX + ctx.measureText(char).width / 2, cy);
-        startX += ctx.measureText(char).width + letterSpacing;
+        ctx.fillText(char, startX + charW(char) / 2, cy);
+        startX += charW(char) + letterSpacing;
       }
 
       const badgeX = startX + badgeGap - letterSpacing;
@@ -574,7 +598,7 @@ const NexusPortalSplash = ({ onComplete }) => {
       const subSpacing = subFontSize * 0.24;
       let subW = 0;
       for (let i = 0; i < subText.length; i++) {
-        subW += ctx.measureText(subText[i]).width + (i < subText.length - 1 ? subSpacing : 0);
+        subW += charW(subText[i]) + (i < subText.length - 1 ? subSpacing : 0);
       }
 
       const dotRadius = Math.max(2, subFontSize * 0.25);
@@ -594,11 +618,56 @@ const NexusPortalSplash = ({ onComplete }) => {
       let curSubX = dotX + dotRadius + dotGap;
       for (let i = 0; i < subText.length; i++) {
         const char = subText[i];
-        ctx.fillText(char, curSubX + ctx.measureText(char).width / 2, subY);
-        curSubX += ctx.measureText(char).width + subSpacing;
+        ctx.fillText(char, curSubX + charW(char) / 2, subY);
+        curSubX += charW(char) + subSpacing;
       }
 
       ctx.restore();
+    }
+
+    function ensureRow() {
+      if (!ROW || ROW.width !== cvs.width) {
+        ROW = document.createElement("canvas");
+        ROW.width = cvs.width; ROW.height = 3;
+        ROWCTX = ROW.getContext("2d");
+        RIB_GRAD.length = 0; RIB_GLOW.length = 0; FIL_GLOW.length = 0;
+      }
+    }
+
+    // Unit-space gradients (x: 0 -> 1). They are positioned and scaled by the canvas transform at paint time,
+    // which is mathematically identical to creating a fresh gradient every frame, minus the per-frame cost.
+    function ribbonGrad(i) {
+      let gr = RIB_GRAD[i];
+      if (!gr) {
+        gr = ctx.createLinearGradient(0, 0, 1, 0);
+        RIBBONS[i].fib.stops.forEach((st) => gr.addColorStop(st[0], st[1]));
+        RIB_GRAD[i] = gr;
+      }
+      return gr;
+    }
+    function ribbonGlow(i) {
+      let hg = RIB_GLOW[i];
+      if (!hg) {
+        const fs = RIBBONS[i].fib.stops;
+        hg = ctx.createLinearGradient(0, 0, 1, 0);
+        hg.addColorStop(0, "rgba(0,0,0,0)");
+        hg.addColorStop(0.5, fs[Math.floor(fs.length / 2)][1]);
+        hg.addColorStop(1, "rgba(0,0,0,0)");
+        RIB_GLOW[i] = hg;
+      }
+      return hg;
+    }
+    function filamentGlow(i) {
+      let hg = FIL_GLOW[i];
+      if (!hg) {
+        const col = FILAMENTS[i].col;
+        hg = ctx.createLinearGradient(0, 0, 1, 0);
+        hg.addColorStop(0, rgb(col, 1, 0));
+        hg.addColorStop(0.5, rgb(col, 1, 1));
+        hg.addColorStop(1, rgb(col, 1, 0));
+        FIL_GLOW[i] = hg;
+      }
+      return hg;
     }
 
     function drawZoomStem(pz, t, s, ox, oy) {
@@ -607,11 +676,7 @@ const NexusPortalSplash = ({ onComplete }) => {
       const topS = Math.max(-2, oy - g.NH * s / 2);
       const botS = Math.min(H + 2, oy + g.NH * s / 2);
       if (botS <= topS) return;
-      if (!ROW || ROW.width !== cvs.width) {
-        ROW = document.createElement("canvas");
-        ROW.width = cvs.width; ROW.height = 3;
-        ROWCTX = ROW.getContext("2d");
-      }
+      ensureRow();
       const main = ctx;
       ctx = ROWCTX;
       ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -657,22 +722,23 @@ const NexusPortalSplash = ({ onComplete }) => {
         const fW = fullW / (rb.u1 - rb.u0) * (rb.fu1 - rb.fu0) * (w / fullW);
         const gx = cx - w / 2 - (rb.u0 - rb.fu0) / (rb.fu1 - rb.fu0) * fW;
         const gShift = Math.min(0, cx0 - cx);
-        const gr = ctx.createLinearGradient(gx + gShift, 0, gx + gShift + fW + blur, 0);
-        rb.fib.stops.forEach((st) => gr.addColorStop(st[0], st[1]));
+        const gx0 = gx + gShift, gLen = fW + blur;
         const breathe = 1 - 0.05 * q * (0.5 + 0.5 * Math.sin(t * rb.fr + rb.ph));
         ctx.globalAlpha = fade * breathe * (1 - die) * Math.min(1, w / span);
-        ctx.fillStyle = gr;
-        ctx.fillRect(left, top, span + 0.5 * (1 - q), hgt);
+        // Same gradient as before (starts at gx0, length gLen); reused and placed via the transform.
+        ctx.setTransform(DPR * gLen, 0, 0, 1, DPR * gx0, 0);
+        ctx.fillStyle = ribbonGrad(i);
+        ctx.fillRect((left - gx0) / gLen, top, (span + 0.5 * (1 - q)) / gLen, hgt);
+        ctx.setTransform(DPR, 0, 0, 1, 0, 0);
         if (rb.glow && q > 0.1) {
           ctx.globalCompositeOperation = "lighter";
           const hw = w * 2.6 + blur / 2;
           ctx.globalAlpha = fade * q * 0.16 * breathe * (1 - die) * (1 - cls) * Math.min(1, (w * 2.6) / hw);
           const mid = (cx + cx0) / 2;
-          const hg = ctx.createLinearGradient(mid - hw, 0, mid + hw, 0);
-          const c = rb.fib.stops[Math.floor(rb.fib.stops.length / 2)][1];
-          hg.addColorStop(0, "rgba(0,0,0,0)"); hg.addColorStop(0.5, c); hg.addColorStop(1, "rgba(0,0,0,0)");
-          ctx.fillStyle = hg;
-          ctx.fillRect(mid - hw, top, hw * 2, hgt);
+          ctx.setTransform(DPR * hw * 2, 0, 0, 1, DPR * (mid - hw), 0);
+          ctx.fillStyle = ribbonGlow(i);
+          ctx.fillRect(0, top, 1, hgt);
+          ctx.setTransform(DPR, 0, 0, 1, 0, 0);
           ctx.globalCompositeOperation = "source-over";
         }
       }
@@ -705,13 +771,12 @@ const NexusPortalSplash = ({ onComplete }) => {
         if (ignite > 0.001) {
           const hw = w * 4 + blur / 2;
           const ha = 0.10 * a * ignite * Math.min(1, (w * 4) / hw);
-          const hg = ctx.createLinearGradient(xm - hw, 0, xm + hw, 0);
-          hg.addColorStop(0, rgb(fl.col, 1, 0));
-          hg.addColorStop(0.5, rgb(fl.col, 1, ha));
-          hg.addColorStop(1, rgb(fl.col, 1, 0));
-          ctx.globalAlpha = fade;
-          ctx.fillStyle = hg;
-          ctx.fillRect(xm - hw, top, hw * 2, hgt);
+          // The glow colour is constant per filament; its strength (ha) is applied as global alpha.
+          ctx.globalAlpha = fade * ha;
+          ctx.setTransform(DPR * hw * 2, 0, 0, 1, DPR * (xm - hw), 0);
+          ctx.fillStyle = filamentGlow(i);
+          ctx.fillRect(0, top, 1, hgt);
+          ctx.setTransform(DPR, 0, 0, 1, 0, 0);
         }
         const half = w + blur / 2;
         const ca = Math.min(0.9, a) * (w / (w + blur));
@@ -743,14 +808,21 @@ const NexusPortalSplash = ({ onComplete }) => {
       const shade = smooth(0.15, 0.6, pz);
       if (shade > 0) {
         ctx.globalAlpha = shade;
-        const vg = ctx.createLinearGradient(0, 0, 0, H);
-        vg.addColorStop(0, "rgba(0,0,0,0.92)");
-        vg.addColorStop(0.28, "rgba(0,0,0,0.15)");
-        vg.addColorStop(0.5, "rgba(0,0,0,0)");
-        vg.addColorStop(0.72, "rgba(0,0,0,0.15)");
-        vg.addColorStop(1, "rgba(0,0,0,0.92)");
-        ctx.fillStyle = vg;
-        ctx.fillRect(0, 0, W, H);
+        if (SHADE_C) {
+          // Pre-rendered 1px-wide column of the same vertical gradient, repeated across the width (no smoothing = identical pixels).
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.imageSmoothingEnabled = false;
+          ctx.drawImage(SHADE_C, 0, 0, 1, SHADE_C.height, 0, 0, cvs.width, SHADE_C.height);
+        } else {
+          const vg = ctx.createLinearGradient(0, 0, 0, H);
+          vg.addColorStop(0, "rgba(0,0,0,0.92)");
+          vg.addColorStop(0.28, "rgba(0,0,0,0.15)");
+          vg.addColorStop(0.5, "rgba(0,0,0,0)");
+          vg.addColorStop(0.72, "rgba(0,0,0,0.15)");
+          vg.addColorStop(1, "rgba(0,0,0,0.92)");
+          ctx.fillStyle = vg;
+          ctx.fillRect(0, 0, W, H);
+        }
       }
       ctx.restore();
     }
@@ -862,12 +934,16 @@ const NexusPortalSplash = ({ onComplete }) => {
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.globalCompositeOperation = "source-over";
         ctx.globalAlpha = smooth(0.3, 0.8, pz) * 0.55;
-        const vg = ctx.createRadialGradient(cvs.width / 2, cvs.height / 2, Math.min(cvs.width, cvs.height) * 0.25,
-                                            cvs.width / 2, cvs.height / 2, Math.max(cvs.width, cvs.height) * 0.75);
-        vg.addColorStop(0, "rgba(0,0,0,0)");
-        vg.addColorStop(1, "rgba(0,0,0,1)");
-        ctx.fillStyle = vg;
-        ctx.fillRect(0, 0, cvs.width, cvs.height);
+        if (VIGN_C) {
+          ctx.drawImage(VIGN_C, 0, 0);   // pre-rendered once per size; 1:1 pixels
+        } else {
+          const vg = ctx.createRadialGradient(cvs.width / 2, cvs.height / 2, Math.min(cvs.width, cvs.height) * 0.25,
+                                              cvs.width / 2, cvs.height / 2, Math.max(cvs.width, cvs.height) * 0.75);
+          vg.addColorStop(0, "rgba(0,0,0,0)");
+          vg.addColorStop(1, "rgba(0,0,0,1)");
+          ctx.fillStyle = vg;
+          ctx.fillRect(0, 0, cvs.width, cvs.height);
+        }
       }
     }
 
@@ -886,20 +962,32 @@ const NexusPortalSplash = ({ onComplete }) => {
       return AC;
     }
 
+    // One shared fetch + decode of the sound file (the fallback path in playSound used to repeat it).
+    let soundLoad = null;
+    function loadSoundBuffer() {
+      if (soundBuffer) return Promise.resolve(soundBuffer);
+      if (!soundLoad) {
+        soundLoad = fetch('/nexus_sound_effect.mp3')
+          .then(res => res.arrayBuffer())
+          .then(buf => new Promise((resolve, reject) => {
+            const ac = ensureAudio();
+            if (!ac) { reject(new Error('no audio')); return; }
+            const p = ac.decodeAudioData(buf, resolve, reject);
+            if (p && typeof p.then === 'function') p.then(resolve, reject);
+          }))
+          .then(decoded => {
+            soundBuffer = decoded;
+            window.__NEXUS_SOUND_BUFFER__ = decoded;
+            return decoded;
+          });
+        soundLoad.catch(() => { soundLoad = null; });
+      }
+      return soundLoad;
+    }
+
     function preloadSoundFile() {
       if (soundBuffer || typeof window === 'undefined') return;
-      fetch('/nexus_sound_effect.mp3')
-        .then(res => res.arrayBuffer())
-        .then(buf => {
-          const ac = ensureAudio();
-          if (ac) {
-            ac.decodeAudioData(buf, decoded => {
-              soundBuffer = decoded;
-              window.__NEXUS_SOUND_BUFFER__ = decoded;
-            }, () => {});
-          }
-        })
-        .catch(() => {});
+      loadSoundBuffer().catch(() => {});
     }
     preloadSoundFile();
 
@@ -928,9 +1016,7 @@ const NexusPortalSplash = ({ onComplete }) => {
         activeAudioSource = src;
       } else {
         // Fallback: fetch & start at offset if buffer is still decoding
-        fetch('/nexus_sound_effect.mp3')
-          .then(res => res.arrayBuffer())
-          .then(buf => ac.decodeAudioData(buf))
+        loadSoundBuffer()
           .then(decoded => {
             soundBuffer = decoded;
             window.__NEXUS_SOUND_BUFFER__ = decoded;
@@ -1026,12 +1112,51 @@ const NexusPortalSplash = ({ onComplete }) => {
       }
     }
 
+    // Full-screen overlays that never change between frames (only their alpha does) are rendered once per size.
+    function buildOverlays() {
+      SHADE_C = null; VIGN_C = null;
+      try {
+        const sc = document.createElement("canvas");
+        sc.width = 1; sc.height = cvs.height;
+        const sx = sc.getContext("2d");
+        if (sx) {
+          sx.setTransform(1, 0, 0, DPR, 0, 0);
+          const sg = sx.createLinearGradient(0, 0, 0, H);
+          sg.addColorStop(0, "rgba(0,0,0,0.92)");
+          sg.addColorStop(0.28, "rgba(0,0,0,0.15)");
+          sg.addColorStop(0.5, "rgba(0,0,0,0)");
+          sg.addColorStop(0.72, "rgba(0,0,0,0.15)");
+          sg.addColorStop(1, "rgba(0,0,0,0.92)");
+          sx.fillStyle = sg;
+          sx.fillRect(0, 0, 1, H);
+          SHADE_C = sc;
+        }
+        const vc = document.createElement("canvas");
+        vc.width = cvs.width; vc.height = cvs.height;
+        const vx = vc.getContext("2d");
+        if (vx) {
+          const rg = vx.createRadialGradient(cvs.width / 2, cvs.height / 2, Math.min(cvs.width, cvs.height) * 0.25,
+                                             cvs.width / 2, cvs.height / 2, Math.max(cvs.width, cvs.height) * 0.75);
+          rg.addColorStop(0, "rgba(0,0,0,0)");
+          rg.addColorStop(1, "rgba(0,0,0,1)");
+          vx.fillStyle = rg;
+          vx.fillRect(0, 0, cvs.width, cvs.height);
+          VIGN_C = vc;
+        }
+      } catch (e) { SHADE_C = null; VIGN_C = null; }
+    }
+
     function resize() {
-      DPR = Math.min(window.devicePixelRatio || 1, 3);
-      W = window.innerWidth; H = window.innerHeight;
+      const nDPR = Math.min(window.devicePixelRatio || 1, 3);
+      const nW = window.innerWidth, nH = window.innerHeight;
+      // Ignore resize events that do not change the size: rebuilding the caches mid-animation causes a hitch.
+      if (G && nDPR === DPR && nW === W && nH === H) return;
+      DPR = nDPR; W = nW; H = nH;
       cvs.width = Math.round(W * DPR); cvs.height = Math.round(H * DPR);
       buildGeometry();
       buildStemCache();
+      buildOverlays();
+      ensureRow();
       if (!running) render(0);
     }
 
@@ -1077,6 +1202,9 @@ const NexusPortalSplash = ({ onComplete }) => {
     }
 
     window.addEventListener("resize", resize);
+    // If the web font finishes loading mid-intro, glyph widths change: drop the cached measurements.
+    const onFontsLoaded = () => widthCache.clear();
+    if (document.fonts && document.fonts.addEventListener) document.fonts.addEventListener("loadingdone", onFontsLoaded);
     resize();
     play();
 
@@ -1104,8 +1232,9 @@ const NexusPortalSplash = ({ onComplete }) => {
       window.removeEventListener("resize", resize);
       window.removeEventListener("pointerdown", onUserInteraction);
       window.removeEventListener("touchstart", onUserInteraction);
+      if (document.fonts && document.fonts.removeEventListener) document.fonts.removeEventListener("loadingdone", onFontsLoaded);
     };
-  }, [onComplete]);
+  }, []);
 
   return (
     <div
